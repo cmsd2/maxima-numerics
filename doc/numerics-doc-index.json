@@ -264,8 +264,8 @@
     "np_conj": {
       "type": "Function",
       "signature": "np_conj(a)",
-      "summary": "Conjugate transpose (Hermitian transpose).",
-      "body_md": "Conjugate transpose (Hermitian transpose).\n\nFor real matrices, this is the same as `np_transpose`. For complex matrices, it transposes and takes the complex conjugate of each element.\n\n#### Examples\n\n```maxima\n(%i1) A : ndarray(matrix([1, 2], [3, 4]));\n(%o1)            ndarray([2, 2], DOUBLE-FLOAT)\n(%i2) np_to_matrix(np_conj(A));\n(%o2)         matrix([1.0, 3.0], [2.0, 4.0])\n```\n\nSee also: `np_transpose`",
+      "summary": "Element-wise complex conjugate.",
+      "body_md": "Element-wise complex conjugate.\n\nReturns a new ndarray where each element is the complex conjugate of the corresponding element in `a`. For real (double-float) arrays, this returns a copy of `a` unchanged.\n\n#### Examples\n\n```maxima\n(%i1) A : ndarray(matrix([1, 2], [3, 4]));\n(%o1)            ndarray([2, 2], DOUBLE-FLOAT)\n(%i2) np_to_matrix(np_conj(A));\n(%o2)         matrix([1.0, 2.0], [3.0, 4.0])\n```\n\nSee also: `np_ctranspose`, `np_transpose`",
       "examples": [
         {
           "input": "A : ndarray(matrix([1, 2], [3, 4]));",
@@ -273,10 +273,11 @@
         },
         {
           "input": "np_to_matrix(np_conj(A));",
-          "output": "matrix([1.0, 3.0], [2.0, 4.0])"
+          "output": "matrix([1.0, 2.0], [3.0, 4.0])"
         }
       ],
       "see_also": [
+        "np_ctranspose",
         "np_transpose"
       ],
       "section": "Linear Algebra"
@@ -334,6 +335,27 @@
         "np_tan"
       ],
       "section": "Element-wise Operations"
+    },
+    "np_ctranspose": {
+      "type": "Function",
+      "signature": "np_ctranspose(a)",
+      "summary": "Conjugate transpose (Hermitian transpose).",
+      "body_md": "Conjugate transpose (Hermitian transpose).\n\nFor real matrices, this is the same as `np_transpose`. For complex matrices, it transposes and takes the complex conjugate of each element.\n\n#### Examples\n\n```maxima\n(%i1) A : ndarray(matrix([1, 2], [3, 4]));\n(%o1)            ndarray([2, 2], DOUBLE-FLOAT)\n(%i2) np_to_matrix(np_ctranspose(A));\n(%o2)         matrix([1.0, 3.0], [2.0, 4.0])\n```\n\nSee also: `np_conj`, `np_transpose`",
+      "examples": [
+        {
+          "input": "A : ndarray(matrix([1, 2], [3, 4]));",
+          "output": "ndarray([2, 2], DOUBLE-FLOAT)"
+        },
+        {
+          "input": "np_to_matrix(np_ctranspose(A));",
+          "output": "matrix([1.0, 3.0], [2.0, 4.0])"
+        }
+      ],
+      "see_also": [
+        "np_conj",
+        "np_transpose"
+      ],
+      "section": "Linear Algebra"
     },
     "np_cumsum": {
       "type": "Function",
@@ -2093,7 +2115,7 @@
       "type": "Function",
       "signature": "np_transpose(a)",
       "summary": "Matrix transpose.",
-      "body_md": "Matrix transpose.\n\nReturns a new ndarray with rows and columns swapped.\n\n#### Examples\n\n```maxima\n(%i1) A : ndarray(matrix([1, 2], [3, 4]));\n(%o1)            ndarray([2, 2], DOUBLE-FLOAT)\n(%i2) np_to_matrix(np_transpose(A));\n(%o2)         matrix([1.0, 3.0], [2.0, 4.0])\n(%i3) np_shape(np_transpose(ndarray(matrix([1, 2, 3]))));\n(%o3)                        [3, 1]\n```\n\nSee also: `np_conj`, `np_reshape`",
+      "body_md": "Matrix transpose.\n\nReturns a new ndarray with rows and columns swapped.\n\n#### Examples\n\n```maxima\n(%i1) A : ndarray(matrix([1, 2], [3, 4]));\n(%o1)            ndarray([2, 2], DOUBLE-FLOAT)\n(%i2) np_to_matrix(np_transpose(A));\n(%o2)         matrix([1.0, 3.0], [2.0, 4.0])\n(%i3) np_shape(np_transpose(ndarray(matrix([1, 2, 3]))));\n(%o3)                        [3, 1]\n```\n\nSee also: `np_conj`, `np_ctranspose`, `np_reshape`",
       "examples": [
         {
           "input": "A : ndarray(matrix([1, 2], [3, 4]));",
@@ -2110,6 +2132,7 @@
       ],
       "see_also": [
         "np_conj",
+        "np_ctranspose",
         "np_reshape"
       ],
       "section": "Linear Algebra"
