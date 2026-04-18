@@ -1,0 +1,584 @@
+/* Tests for numerics -- run with batch("rtest_numerics.mac", test) */
+
+/* === Loading === */
+
+(load("numerics"), true);
+true;
+
+/* Float comparison helpers */
+(closeto(a, b) := is(abs(a - b) < 1e-10),
+ list_closeto(L1, L2) := is(lmax(map(lambda([a,b], abs(a-b)), L1, L2)) < 1e-10),
+ mat_closeto(A, B) := is(lmax(map(abs, flatten(args(A - B)))) < 1e-10),
+ true);
+true;
+
+/* === Constructors === */
+
+/* np_zeros */
+(A : np_zeros([2,3]), np_shape(A));
+[2, 3];
+
+(np_ref(np_zeros([2,2]), 0, 0));
+0.0;
+
+/* np_ones */
+(np_ref(np_ones([3,3]), 1, 1));
+1.0;
+
+/* np_eye */
+(np_ref(np_eye(3), 0, 0));
+1.0;
+
+(np_ref(np_eye(3), 0, 1));
+0.0;
+
+/* np_arange */
+(np_ref(np_arange(5), 3));
+3.0;
+
+(np_size(np_arange(10)));
+10;
+
+/* np_linspace */
+(np_ref(np_linspace(0, 1, 5), 0));
+0.0;
+
+(np_ref(np_linspace(0, 1, 5), 4));
+1.0;
+
+/* np_full */
+(np_ref(np_full([2,2], 7), 0, 0));
+7.0;
+
+/* np_diag */
+(A : np_diag([1,2,3]),
+ is(np_ref(A, 0, 0) = 1.0 and np_ref(A, 1, 1) = 2.0 and np_ref(A, 2, 2) = 3.0));
+true;
+
+(np_ref(np_diag([1,2,3]), 0, 1));
+0.0;
+
+/* np_copy */
+(A : np_ones([2,2]),
+ B : np_copy(A),
+ np_set(B, 0, 0, 99.0),
+ is(np_ref(A, 0, 0) = 1.0));
+true;
+
+/* === Conversion round-trip === */
+
+(M : matrix([1,2],[3,4]),
+ A : ndarray(M),
+ R : np_to_matrix(A),
+ is(R = matrix([1.0, 2.0], [3.0, 4.0])));
+true;
+
+/* ndarray from list with reshape */
+(A : ndarray([1,2,3,4,5,6], [2,3]),
+ is(np_shape(A) = [2, 3]));
+true;
+
+/* np_to_list */
+(A : np_arange(4),
+ L : np_to_list(A),
+ is(length(L) = 4));
+true;
+
+/* === Linear algebra === */
+
+/* matmul: I * A = A */
+(A : ndarray(matrix([1,2],[3,4])),
+ I3 : np_eye(2),
+ B : np_matmul(I3, A),
+ is(np_to_matrix(B) = np_to_matrix(A)));
+true;
+
+/* inv: A * inv(A) ~ I */
+(A : ndarray(matrix([1,2],[3,4])),
+ Ainv : np_inv(A),
+ prod : np_matmul(A, Ainv),
+ M : np_to_matrix(prod),
+ closeto(M[1,1], 1.0) and closeto(M[1,2], 0.0)
+   and closeto(M[2,1], 0.0) and closeto(M[2,2], 1.0));
+true;
+
+/* det */
+(A : ndarray(matrix([1,2],[3,4])),
+ closeto(np_det(A), -2.0));
+true;
+
+/* SVD returns 1D singular values */
+(A : ndarray(matrix([1,0],[0,2],[0,0])),
+ [U, S, Vt] : np_svd(A),
+ is(length(np_shape(U)) = 2 and length(np_shape(S)) = 1));
+true;
+
+/* transpose */
+(A : ndarray(matrix([1,2],[3,4])),
+ T : np_transpose(A),
+ M : np_to_matrix(T),
+ is(M = matrix([1.0, 3.0], [2.0, 4.0])));
+true;
+
+/* trace */
+(A : ndarray(matrix([1,2],[3,4])),
+ closeto(np_trace(A), 5.0));
+true;
+
+/* solve: Ax = b */
+(A : ndarray(matrix([2,1],[5,3])),
+ b : ndarray(matrix([4],[7])),
+ x : np_solve(A, b),
+ check : np_matmul(A, x),
+ M : np_to_matrix(check),
+ Mb : np_to_matrix(b),
+ closeto(M[1,1], Mb[1,1]) and closeto(M[2,1], Mb[2,1]));
+true;
+
+/* === Element-wise operations === */
+
+/* sqrt */
+(np_ref(np_sqrt(ndarray(matrix([1,4],[9,16]))), 1, 1));
+4.0;
+
+/* exp and log round-trip */
+(A : ndarray(matrix([1,2],[3,4])),
+ B : np_log(np_exp(A)),
+ closeto(np_ref(B, 0, 0), 1.0));
+true;
+
+/* add */
+(A : np_ones([2,2]),
+ B : np_add(A, A),
+ is(np_ref(B, 0, 0) = 2.0));
+true;
+
+/* add scalar */
+(A : np_ones([2,2]),
+ B : np_add(A, 5.0),
+ is(np_ref(B, 0, 0) = 6.0));
+true;
+
+/* scale */
+(A : np_ones([2,2]),
+ B : np_scale(3.0, A),
+ is(np_ref(B, 0, 0) = 3.0));
+true;
+
+/* neg */
+(A : np_ones([2,2]),
+ B : np_neg(A),
+ is(np_ref(B, 0, 0) = -1.0));
+true;
+
+/* === Aggregation === */
+
+/* sum */
+(np_sum(ndarray(matrix([1,2],[3,4]))));
+10.0;
+
+/* mean */
+(np_mean(ndarray(matrix([1,2],[3,4]))));
+2.5;
+
+/* min/max */
+(A : ndarray(matrix([3,1],[4,2])),
+ is(np_min(A) = 1.0 and np_max(A) = 4.0));
+true;
+
+/* dot product */
+(a : np_arange(3),
+ b : np_ones(3),
+ closeto(np_dot(a, b), 3.0));
+true;
+
+/* === Shape operations === */
+
+/* reshape */
+(A : np_arange(6),
+ B : np_reshape(A, [2,3]),
+ is(np_shape(B) = [2, 3]));
+true;
+
+/* flatten */
+(A : np_ones([2,3]),
+ B : np_flatten(A),
+ is(np_size(B) = 6 and length(np_shape(B)) = 1));
+true;
+
+/* size */
+(np_size(np_zeros([3,4])));
+12;
+
+/* dtype */
+(is(np_dtype(np_zeros([2,2])) = "DOUBLE-FLOAT"));
+true;
+
+/* row and col extraction */
+(A : ndarray(matrix([1,2,3],[4,5,6])),
+ r : np_row(A, 0),
+ is(np_ref(r, 0) = 1.0 and np_ref(r, 1) = 2.0 and np_ref(r, 2) = 3.0));
+true;
+
+(A : ndarray(matrix([1,2,3],[4,5,6])),
+ c : np_col(A, 1),
+ is(np_ref(c, 0) = 2.0 and np_ref(c, 1) = 5.0));
+true;
+
+/* set (mutation) */
+(A : np_zeros([2,2]),
+ np_set(A, 0, 0, 42.0),
+ is(np_ref(A, 0, 0) = 42.0));
+true;
+
+/* === Mapping === */
+
+/* np_map with interpreted function */
+(f(x) := x^2,
+ A : np_arange(4),
+ B : np_map(f, A),
+ closeto(np_ref(B, 3), 9.0));
+true;
+
+/* np_map with translated function */
+(g(x) := x + 1.0,
+ translate(g),
+ A : np_arange(3),
+ B : np_map(g, A),
+ closeto(np_ref(B, 0), 1.0) and closeto(np_ref(B, 2), 3.0));
+true;
+
+/* np_map2 binary */
+(h(x, y) := x + y,
+ A : np_ones([2, 2]),
+ B : np_full([2, 2], 3),
+ C : np_map2(h, A, B),
+ is(np_ref(C, 0, 0) = 4.0));
+true;
+
+/* === Cross-validation: numerics vs lapack === */
+
+(load("lapack"), true);
+true;
+
+/* Solve: np_solve vs dgesv */
+(M : matrix([2,1,0],[1,3,1],[0,1,2]),
+ b_mat : matrix([1],[2],[3]),
+ An : ndarray(M), bn : ndarray(b_mat),
+ x_num : np_to_matrix(np_solve(An, bn)),
+ x_lap : dgesv(float(M), float(b_mat)),
+ mat_closeto(x_num, x_lap));
+true;
+
+/* SVD singular values: np_svd vs dgesvd */
+(M : matrix([1,2,3],[4,5,6],[7,8,10]),
+ An : ndarray(M),
+ [U, S_nd, Vt] : np_svd(An),
+ s_num : sort(np_to_list(S_nd)),
+ s_lap : sort(dgesvd(float(M))[1]),
+ list_closeto(s_num, s_lap));
+true;
+
+/* SVD reconstruction: U * diag(S) * Vt ~ original */
+(M : matrix([1,2,3],[4,5,6],[7,8,10]),
+ An : ndarray(M),
+ [U, S_nd, Vt] : np_svd(An),
+ S_mat : np_diag(np_to_list(S_nd)),
+ recon : np_matmul(np_matmul(U, S_mat), Vt),
+ mat_closeto(np_to_matrix(recon), float(M)));
+true;
+
+/* Eigenvalues: np_eig vs dgeev (symmetric matrix, real eigenvalues) */
+(M : matrix([2,1,0],[1,3,1],[0,1,2]),
+ An : ndarray(M),
+ [vals_nd, vecs_nd] : np_eig(An),
+ eigs_num : sort(np_to_list(vals_nd)),
+ eigs_lap : sort(dgeev(float(M))[1]),
+ list_closeto(eigs_num, eigs_lap));
+true;
+
+/* Eigendecomposition: A * v = lambda * v */
+(M : matrix([2,1,0],[1,3,1],[0,1,2]),
+ An : ndarray(M),
+ [vals_nd, vecs_nd] : np_eig(An),
+ Av : np_matmul(An, vecs_nd),
+ lv : np_matmul(vecs_nd, np_diag(np_to_list(vals_nd))),
+ mat_closeto(np_to_matrix(Av), np_to_matrix(lv)));
+true;
+
+/* QR: np_qr vs dgeqrf — both reconstruct to original */
+(M : matrix([1,2,3],[4,5,6],[7,8,10]),
+ An : ndarray(M),
+ [Q1, R1] : np_qr(An),
+ recon1 : np_to_matrix(np_matmul(Q1, R1)),
+ [Q2, R2] : dgeqrf(float(M)),
+ recon2 : Q2 . R2,
+ mat_closeto(recon1, float(M)) and mat_closeto(recon2, float(M)));
+true;
+
+/* QR: R matrices agree (up to sign of rows) */
+(M : matrix([1,2,3],[4,5,6],[7,8,10]),
+ An : ndarray(M),
+ [Q1, R1] : np_qr(An),
+ R1m : np_to_matrix(R1),
+ [Q2, R2] : dgeqrf(float(M)),
+ check : true,
+ for i : 1 thru 3 do (
+   s1 : if R1m[i,i] >= 0 then 1 else -1,
+   s2 : if R2[i,i] >= 0 then 1 else -1,
+   for j : 1 thru 3 do
+     if not closeto(s1 * R1m[i,j], s2 * R2[i,j]) then check : false
+ ),
+ check);
+true;
+
+/* Linear solve: larger random system, verify Ax = b */
+(block([n : 20],
+  An : np_rand([n, n]),
+  bn : np_rand([n, 1]),
+  Am : np_to_matrix(An),
+  bm : np_to_matrix(bn),
+  x_num : np_solve(An, bn),
+  x_lap : dgesv(Am, bm),
+  resid_num : np_to_matrix(np_sub(np_matmul(An, x_num), bn)),
+  resid_lap : Am . x_lap - bm,
+  mat_closeto(resid_num, 0 * resid_num)
+    and mat_closeto(resid_lap, 0 * resid_lap)));
+true;
+
+/* === Norm === */
+
+/* Vector 2-norm */
+(v : np_arange(5),
+ closeto(np_norm(v), sqrt(0.0 + 1.0 + 4.0 + 9.0 + 16.0)));
+true;
+
+/* Matrix Frobenius norm */
+(A : ndarray(matrix([1,2],[3,4])),
+ closeto(np_norm(A), sqrt(1.0 + 4.0 + 9.0 + 16.0)));
+true;
+
+/* === LU decomposition === */
+
+/* LU returns L, U, P with correct shapes */
+(A : ndarray(matrix([1,2,3],[4,5,6],[7,8,10])),
+ [L, U, P] : np_lu(A),
+ is(np_shape(L) = [3, 3] and np_shape(U) = [3, 3] and np_shape(P) = [3, 3]));
+true;
+
+/* P*A = L*U */
+(A : ndarray(matrix([1,2,3],[4,5,6],[7,8,10])),
+ [L, U, P] : np_lu(A),
+ PA : np_matmul(P, A),
+ LU : np_matmul(L, U),
+ is(lmax(map(abs, np_to_list(np_sub(PA, LU)))) < 1e-10));
+true;
+
+/* L is lower-triangular with unit diagonal */
+(A : ndarray(matrix([1,2,3],[4,5,6],[7,8,10])),
+ [L, U, P] : np_lu(A),
+ Lm : np_to_matrix(L),
+ is(Lm[1,1] = 1.0 and Lm[2,2] = 1.0 and Lm[3,3] = 1.0
+    and Lm[1,2] = 0.0 and Lm[1,3] = 0.0 and Lm[2,3] = 0.0));
+true;
+
+/* U is upper-triangular */
+(A : ndarray(matrix([1,2,3],[4,5,6],[7,8,10])),
+ [L, U, P] : np_lu(A),
+ Um : np_to_matrix(U),
+ is(Um[2,1] = 0.0 and Um[3,1] = 0.0 and Um[3,2] = 0.0));
+true;
+
+/* === Rank === */
+
+/* Full-rank matrix */
+(A : ndarray(matrix([1,2],[3,4])),
+ is(np_rank(A) = 2));
+true;
+
+/* Rank-deficient matrix */
+(A : ndarray(matrix([1,2],[2,4])),
+ is(np_rank(A) = 1));
+true;
+
+/* === Least squares === */
+
+/* lstsq: exact fit y = x through (1,1), (2,2), (3,3) */
+(AA : ndarray(matrix([1,1],[1,2],[1,3])),
+ bb : ndarray(matrix([1],[2],[3])),
+ x : np_lstsq(AA, bb),
+ is(np_shape(x) = [2, 1])
+   and closeto(np_ref(x, 0, 0), 0.0)
+   and closeto(np_ref(x, 1, 0), 1.0));
+true;
+
+/* lstsq: residual Ax - b ~ 0 for consistent system */
+(AA : ndarray(matrix([1,1],[1,2],[1,3])),
+ bb : ndarray(matrix([1],[2],[3])),
+ x : np_lstsq(AA, bb),
+ resid : np_sub(np_matmul(AA, x), bb),
+ is(lmax(map(abs, np_to_list(resid))) < 1e-10));
+true;
+
+/* === Pseudo-inverse === */
+
+/* pinv shape: (3x2) -> (2x3) */
+(AA : ndarray(matrix([1,1],[1,2],[1,3])),
+ Ap : np_pinv(AA),
+ is(np_shape(Ap) = [2, 3]));
+true;
+
+/* pinv: A * pinv(A) * A ~ A */
+(AA : ndarray(matrix([1,1],[1,2],[1,3])),
+ Ap : np_pinv(AA),
+ recon : np_matmul(np_matmul(AA, Ap), AA),
+ is(lmax(map(abs, np_to_list(np_sub(recon, AA)))) < 1e-10));
+true;
+
+/* pinv * b agrees with lstsq */
+(AA : ndarray(matrix([1,1],[1,2],[1,3])),
+ bb : ndarray(matrix([1],[2],[3])),
+ x_pinv : np_matmul(np_pinv(AA), bb),
+ x_lstsq : np_lstsq(AA, bb),
+ is(lmax(map(abs, np_to_list(np_sub(x_pinv, x_lstsq)))) < 1e-10));
+true;
+
+/* === Cross-validation: norm === */
+
+/* Frobenius norm equals sqrt of sum of squared singular values */
+(M : matrix([1,2,3],[4,5,6],[7,8,10]),
+ An : ndarray(M),
+ frob : np_norm(An),
+ [U, S_nd, Vt] : np_svd(An),
+ s_list : np_to_list(S_nd),
+ svd_norm : sqrt(apply("+", map(lambda([x], x^2), s_list))),
+ closeto(frob, svd_norm));
+true;
+
+/* === Cross-validation: rank via dgesvd === */
+
+/* Rank from np_rank matches count of non-negligible dgesvd singular values */
+(M : matrix([1,2,3],[4,5,6],[7,8,10]),
+ An : ndarray(M),
+ r_num : np_rank(An),
+ s_lap : dgesvd(float(M))[1],
+ tol : lmax(s_lap) * 3 * 2.220446049250313e-16,
+ r_lap : length(sublist(s_lap, lambda([x], x > tol))),
+ is(r_num = r_lap));
+true;
+
+/* Rank-deficient matrix: rank via dgesvd */
+(M : matrix([1,2,3],[2,4,6],[3,6,9]),
+ An : ndarray(M),
+ r_num : np_rank(An),
+ s_lap : dgesvd(float(M))[1],
+ tol : lmax(s_lap) * 3 * 2.220446049250313e-16,
+ r_lap : length(sublist(s_lap, lambda([x], x > tol))),
+ is(r_num = 1 and r_num = r_lap));
+true;
+
+/* === Cross-validation: lstsq vs dgesv for square systems === */
+
+/* For square full-rank systems, lstsq and dgesv should agree */
+(M : matrix([2,1,0],[1,3,1],[0,1,2]),
+ b_mat : matrix([1],[2],[3]),
+ An : ndarray(M), bn : ndarray(b_mat),
+ x_lstsq : np_to_matrix(np_lstsq(An, bn)),
+ x_dgesv : dgesv(float(M), float(b_mat)),
+ mat_closeto(x_lstsq, x_dgesv));
+true;
+
+/* === Cross-validation: pinv via dgesvd === */
+
+/* Pseudo-inverse from np_pinv matches manual SVD construction using dgesvd */
+(M : matrix([1,2],[3,4],[5,6]),
+ An : ndarray(M),
+ pinv_num : np_to_matrix(np_pinv(An)),
+ /* Verify via the four Moore-Penrose conditions on Maxima matrices */
+ Mf : float(M),
+ /* Condition 1: A * A+ * A = A */
+ c1 : mat_closeto(Mf . pinv_num . Mf, Mf),
+ /* Condition 2: A+ * A * A+ = A+ */
+ c2 : mat_closeto(pinv_num . Mf . pinv_num, pinv_num),
+ /* Condition 3: (A * A+)^T = A * A+ */
+ c3 : mat_closeto(transpose(Mf . pinv_num), Mf . pinv_num),
+ /* Condition 4: (A+ * A)^T = A+ * A */
+ c4 : mat_closeto(transpose(pinv_num . Mf), pinv_num . Mf),
+ c1 and c2 and c3 and c4);
+true;
+
+/* === Cross-validation: lstsq minimizes residual === */
+
+/* For overdetermined system, lstsq residual norm <= any other x's residual */
+(M : matrix([1,1],[1,2],[1,3],[1,4]),
+ b_mat : matrix([2.1],[2.9],[4.1],[4.8]),
+ An : ndarray(M), bn : ndarray(b_mat),
+ x_opt : np_lstsq(An, bn),
+ resid_opt : np_norm(np_sub(np_matmul(An, x_opt), bn)),
+ /* Try a non-optimal x */
+ x_bad : ndarray(matrix([1],[1])),
+ resid_bad : np_norm(np_sub(np_matmul(An, x_bad), bn)),
+ is(resid_opt <= resid_bad));
+true;
+
+/* === Matrix exponential === */
+
+/* expm(0) = I */
+(E : np_expm(np_zeros([3, 3])),
+ mat_closeto(np_to_matrix(E), float(ident(3))));
+true;
+
+/* expm(I) = e*I */
+(E : np_expm(np_eye(2)),
+ closeto(np_ref(E, 0, 0), float(%e))
+   and closeto(np_ref(E, 1, 1), float(%e))
+   and closeto(np_ref(E, 0, 1), 0.0));
+true;
+
+/* expm of nilpotent: [[0,1],[0,0]] => [[1,1],[0,1]] */
+(E : np_expm(ndarray(matrix([0, 1], [0, 0]))),
+ M : np_to_matrix(E),
+ mat_closeto(M, matrix([1.0, 1.0], [0.0, 1.0])));
+true;
+
+/* === Cross-validation: LU vs dgesv === */
+
+/* LU factors solve the same system as dgesv:
+   P*A = L*U, so A*x = b => L*U*x = P*b => solve by forward/back substitution.
+   We verify P*A = L*U on a random matrix */
+(block([n : 10],
+  An : np_rand([n, n]),
+  [L, U, P] : np_lu(An),
+  PA : np_matmul(P, An),
+  LU : np_matmul(L, U),
+  is(lmax(map(abs, np_to_list(np_sub(PA, LU)))) < 1e-10)));
+true;
+
+/* === Cross-validation: expm properties === */
+
+/* expm(a*I) = e^a * I */
+(a_val : 2.5,
+ E : np_expm(np_scale(a_val, np_eye(3))),
+ expected : float(%e^a_val),
+ closeto(np_ref(E, 0, 0), expected)
+   and closeto(np_ref(E, 1, 1), expected)
+   and closeto(np_ref(E, 2, 2), expected)
+   and closeto(np_ref(E, 0, 1), 0.0));
+true;
+
+/* expm(A) * expm(-A) = I for any A */
+(A : ndarray(matrix([1, 2], [3, 4])),
+ negA : np_neg(A),
+ prod : np_matmul(np_expm(A), np_expm(negA)),
+ mat_closeto(np_to_matrix(prod), float(ident(2))));
+true;
+
+/* === Error handling === */
+
+/* Singular matrix */
+(errcatch(np_inv(ndarray(matrix([1,0],[0,0])))));
+[];
+
+/* Type error */
+(errcatch(np_inv(42)));
+[];

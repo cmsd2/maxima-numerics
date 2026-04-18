@@ -1,0 +1,15 @@
+[package]
+name = "numerics"
+version = "0.1.0"
+description = "NumPy-like numerical computing for Maxima (SBCL only)"
+license = "MIT"
+entry = "numerics.mac"
+doc = "doc/numerics.md"
+repository = "https://github.com/cmsd2/maxima-numerics"
+keywords = ["numerics", "linear-algebra", "blas", "lapack", "ndarray"]
+
+[lisp]
+quicklisp_systems = ["magicl", "trivial-garbage", "alexandria", "cffi", "static-vectors"]
+
+[test]
+files = ["rtest_numerics.mac"]

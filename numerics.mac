@@ -1,0 +1,8 @@
+/* numerics -- NumPy-like numerical computing for Maxima (SBCL only) */
+
+/* Verify SBCL */
+if not is(build_info()@lisp_name = "SBCL") then
+  error("numerics requires SBCL; current Lisp is", build_info()@lisp_name)$
+
+/* Load the Lisp bootstrap (Quicklisp + ASDF system) */
+load("numerics-loader.lisp")$
