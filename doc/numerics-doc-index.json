@@ -5,9 +5,9 @@
   "symbols": {
     "ndarray": {
       "type": "Function",
-      "signature": "ndarray(a)",
+      "signature": "ndarray(a) / ndarray (a, complex)",
       "summary": "Convert a Maxima matrix or list to an ndarray.",
-      "body_md": "Convert a Maxima matrix or list to an ndarray.\n\nIf `a` is a Maxima matrix, it is converted element-by-element into a double-float ndarray with column-major layout. If `a` is a Maxima list, it creates a 1D ndarray unless a shape argument is provided.\n\nIf `a` is already an ndarray, it is returned unchanged.\n\nCalling forms:\n\n- `ndarray(matrix)` -- convert a Maxima matrix to a 2D ndarray\n- `ndarray(list)` -- convert a flat Maxima list to a 1D ndarray\n- `ndarray(list, shape)` -- convert a list and reshape to the given dimensions\n\nThe shape argument is a Maxima list of dimensions, e.g. `[2, 3]`. The total number of elements in the list must match the product of the dimensions.\n\nElements are filled in row-major order from the list, matching the convention that `ndarray([1,2,3,4], [2,2])` produces a matrix with first row `[1, 2]` and second row `[3, 4]`.\n\n#### Examples\n\n```maxima\n(%i1) load(\"numerics\")$\n(%i2) A : ndarray(matrix([1, 2], [3, 4]));\n(%o2)            ndarray([2, 2], DOUBLE-FLOAT)\n(%i3) np_ref(A, 0, 0);\n(%o3)                          1.0\n(%i4) B : ndarray([1, 2, 3, 4, 5, 6], [2, 3]);\n(%o4)            ndarray([2, 3], DOUBLE-FLOAT)\n(%i5) np_shape(B);\n(%o5)                        [2, 3]\n(%i6) C : ndarray([10, 20, 30]);\n(%o6)            ndarray([3], DOUBLE-FLOAT)\n```\n\nSee also: `np_to_matrix`, `np_to_list`, `ndarray_p`",
+      "body_md": "Convert a Maxima matrix or list to an ndarray.\n\nIf `a` is a Maxima matrix, it is converted element-by-element into a `double-float` ndarray with column-major layout. If `a` is a Maxima list, it creates a 1D ndarray unless a shape argument is provided. Pass `complex` as the last argument to create a `complex-double-float` array.\n\nIf `a` is already an ndarray, it is returned unchanged.\n\nCalling forms:\n\n- `ndarray(matrix)` -- convert a Maxima matrix to a 2D ndarray\n- `ndarray(matrix, complex)` -- convert to a complex 2D ndarray\n- `ndarray(list)` -- convert a flat Maxima list to a 1D ndarray\n- `ndarray(list, shape)` -- convert a list and reshape to the given dimensions\n- `ndarray(list, shape, complex)` -- convert a list to a complex ndarray with shape\n\nThe shape argument is a Maxima list of dimensions, e.g. `[2, 3]`. The total number of elements in the list must match the product of the dimensions.\n\nElements are filled in row-major order from the list, matching the convention that `ndarray([1,2,3,4], [2,2])` produces a matrix with first row `[1, 2]` and second row `[3, 4]`.\n\n#### Examples\n\n```maxima\n(%i1) load(\"numerics\")$\n(%i2) A : ndarray(matrix([1, 2], [3, 4]));\n(%o2)            ndarray([2, 2], DOUBLE-FLOAT)\n(%i3) np_ref(A, 0, 0);\n(%o3)                          1.0\n(%i4) B : ndarray([1, 2, 3, 4, 5, 6], [2, 3]);\n(%o4)            ndarray([2, 3], DOUBLE-FLOAT)\n(%i5) np_shape(B);\n(%o5)                        [2, 3]\n(%i6) C : ndarray([10, 20, 30]);\n(%o6)            ndarray([3], DOUBLE-FLOAT)\n(%i7) D : ndarray(matrix([1+%i, 2-3*%i], [4, 5+%i]), complex);\n(%o7)            ndarray([2, 2], COMPLEX-DOUBLE-FLOAT)\n```\n\nSee also: `np_to_matrix`, `np_to_list`, `ndarray_p`",
       "examples": [
         {
           "input": "load(\"numerics\")$",
@@ -32,6 +32,10 @@
         {
           "input": "C : ndarray([10, 20, 30]);",
           "output": "ndarray([3], DOUBLE-FLOAT)"
+        },
+        {
+          "input": "D : ndarray(matrix([1+%i, 2-3*%i], [4, 5+%i]), complex);",
+          "output": "ndarray([2, 2], COMPLEX-DOUBLE-FLOAT)"
         }
       ],
       "see_also": [
@@ -69,7 +73,7 @@
       "type": "Function",
       "signature": "np_abs(a)",
       "summary": "Element-wise absolute value.",
-      "body_md": "Element-wise absolute value.\n\nReturns a new ndarray where each element is the absolute value of the corresponding element in `a`.\n\n#### Examples\n\n```maxima\n(%i1) A : ndarray(matrix([-1, 2], [-3, 4]));\n(%o1)            ndarray([2, 2], DOUBLE-FLOAT)\n(%i2) np_to_matrix(np_abs(A));\n(%o2)         matrix([1.0, 2.0], [3.0, 4.0])\n```\n\nSee also: `np_neg`",
+      "body_md": "Element-wise absolute value.\n\nReturns a new ndarray where each element is the absolute value of the corresponding element in `a`. For complex arrays, returns the magnitude (modulus) as `double-float`.\n\n#### Examples\n\n```maxima\n(%i1) A : ndarray(matrix([-1, 2], [-3, 4]));\n(%o1)            ndarray([2, 2], DOUBLE-FLOAT)\n(%i2) np_to_matrix(np_abs(A));\n(%o2)         matrix([1.0, 2.0], [3.0, 4.0])\n```\n\nSee also: `np_neg`",
       "examples": [
         {
           "input": "A : ndarray(matrix([-1, 2], [-3, 4]));",
@@ -140,7 +144,7 @@
       "type": "Function",
       "signature": "np_arange(stop) / np_arange (start, stop) / np_arange (start, stop, step)",
       "summary": "Create a 1D ndarray of evenly spaced values.",
-      "body_md": "Create a 1D ndarray of evenly spaced values.\n\nGenerates values from `start` (inclusive) to `stop` (exclusive) with the given `step`. Supports non-integer step values.\n\nCalling forms:\n\n- `np_arange(stop)` -- values 0, 1, ..., stop-1\n- `np_arange(start, stop)` -- values start, start+1, ..., stop-1\n- `np_arange(start, stop, step)` -- values start, start+step, start+2*step, ...\n\n#### Examples\n\n```maxima\n(%i1) np_to_list(np_arange(5));\n(%o1)           [0.0, 1.0, 2.0, 3.0, 4.0]\n(%i2) np_to_list(np_arange(2, 6));\n(%o2)           [2.0, 3.0, 4.0, 5.0]\n(%i3) np_to_list(np_arange(0, 1, 0.25));\n(%o3)            [0.0, 0.25, 0.5, 0.75]\n(%i4) np_to_list(np_arange(10, 0, -2));\n(%o4)          [10.0, 8.0, 6.0, 4.0, 2.0]\n```\n\nSee also: `np_linspace`, `np_zeros`",
+      "body_md": "Create a 1D ndarray of evenly spaced values.\n\nGenerates values from `start` (inclusive) to `stop` (exclusive) with the given `step`. Supports non-integer step values. Always returns `double-float`.\n\nCalling forms:\n\n- `np_arange(stop)` -- values 0, 1, ..., stop-1\n- `np_arange(start, stop)` -- values start, start+1, ..., stop-1\n- `np_arange(start, stop, step)` -- values start, start+step, start+2*step, ...\n\n#### Examples\n\n```maxima\n(%i1) np_to_list(np_arange(5));\n(%o1)           [0.0, 1.0, 2.0, 3.0, 4.0]\n(%i2) np_to_list(np_arange(2, 6));\n(%o2)           [2.0, 3.0, 4.0, 5.0]\n(%i3) np_to_list(np_arange(0, 1, 0.25));\n(%o3)            [0.0, 0.25, 0.5, 0.75]\n(%i4) np_to_list(np_arange(10, 0, -2));\n(%o4)          [10.0, 8.0, 6.0, 4.0, 2.0]\n```\n\nSee also: `np_linspace`, `np_zeros`",
       "examples": [
         {
           "input": "np_to_list(np_arange(5));",
@@ -168,8 +172,8 @@
     "np_argmax": {
       "type": "Function",
       "signature": "np_argmax(a) / np_argmax (a, axis)",
-      "summary": "Index of the maximum element.",
-      "body_md": "Index of the maximum element.\n\nWithout an axis argument, returns a 0-based integer index into the flattened (column-major) storage. With an axis argument, returns a 1D ndarray of indices along the specified axis.\n\nCalling forms:\n\n- `np_argmax(a)` -- flat index of global maximum, returns an integer\n- `np_argmax(a, 0)` -- row index of maximum per column, returns a 1D ndarray\n- `np_argmax(a, 1)` -- column index of maximum per row, returns a 1D ndarray\n\n#### Examples\n\n```maxima\n(%i1) A : ndarray(matrix([3, 1], [4, 2]));\n(%o1)            ndarray([2, 2], DOUBLE-FLOAT)\n(%i2) np_argmax(A);\n(%o2)                           1\n(%i3) np_to_list(np_argmax(A, 0));\n(%o3)                     [1.0, 1.0]\n(%i4) np_to_list(np_argmax(A, 1));\n(%o4)                     [0.0, 0.0]\n```\n\nSee also: `np_argmin`, `np_max`",
+      "summary": "Index of the maximum element. Signals an error for complex arrays.",
+      "body_md": "Index of the maximum element. Signals an error for complex arrays.\n\nWithout an axis argument, returns a 0-based integer index into the flattened (column-major) storage. With an axis argument, returns a 1D ndarray of indices along the specified axis.\n\nCalling forms:\n\n- `np_argmax(a)` -- flat index of global maximum, returns an integer\n- `np_argmax(a, 0)` -- row index of maximum per column, returns a 1D ndarray\n- `np_argmax(a, 1)` -- column index of maximum per row, returns a 1D ndarray\n\n#### Examples\n\n```maxima\n(%i1) A : ndarray(matrix([3, 1], [4, 2]));\n(%o1)            ndarray([2, 2], DOUBLE-FLOAT)\n(%i2) np_argmax(A);\n(%o2)                           1\n(%i3) np_to_list(np_argmax(A, 0));\n(%o3)                     [1.0, 1.0]\n(%i4) np_to_list(np_argmax(A, 1));\n(%o4)                     [0.0, 0.0]\n```\n\nSee also: `np_argmin`, `np_max`",
       "examples": [
         {
           "input": "A : ndarray(matrix([3, 1], [4, 2]));",
@@ -197,8 +201,8 @@
     "np_argmin": {
       "type": "Function",
       "signature": "np_argmin(a) / np_argmin (a, axis)",
-      "summary": "Index of the minimum element.",
-      "body_md": "Index of the minimum element.\n\nWithout an axis argument, returns a 0-based integer index into the flattened (column-major) storage. With an axis argument, returns a 1D ndarray of indices along the specified axis.\n\nCalling forms:\n\n- `np_argmin(a)` -- flat index of global minimum, returns an integer\n- `np_argmin(a, 0)` -- row index of minimum per column, returns a 1D ndarray\n- `np_argmin(a, 1)` -- column index of minimum per row, returns a 1D ndarray\n\n#### Examples\n\n```maxima\n(%i1) A : ndarray(matrix([3, 1], [4, 2]));\n(%o1)            ndarray([2, 2], DOUBLE-FLOAT)\n(%i2) np_argmin(A);\n(%o2)                           2\n(%i3) np_to_list(np_argmin(A, 0));\n(%o3)                     [0.0, 0.0]\n(%i4) np_to_list(np_argmin(A, 1));\n(%o4)                     [1.0, 1.0]\n```\n\nSee also: `np_argmax`, `np_min`",
+      "summary": "Index of the minimum element. Signals an error for complex arrays.",
+      "body_md": "Index of the minimum element. Signals an error for complex arrays.\n\nWithout an axis argument, returns a 0-based integer index into the flattened (column-major) storage. With an axis argument, returns a 1D ndarray of indices along the specified axis.\n\nCalling forms:\n\n- `np_argmin(a)` -- flat index of global minimum, returns an integer\n- `np_argmin(a, 0)` -- row index of minimum per column, returns a 1D ndarray\n- `np_argmin(a, 1)` -- column index of minimum per row, returns a 1D ndarray\n\n#### Examples\n\n```maxima\n(%i1) A : ndarray(matrix([3, 1], [4, 2]));\n(%o1)            ndarray([2, 2], DOUBLE-FLOAT)\n(%i2) np_argmin(A);\n(%o2)                           2\n(%i3) np_to_list(np_argmin(A, 0));\n(%o3)                     [0.0, 0.0]\n(%i4) np_to_list(np_argmin(A, 1));\n(%o4)                     [1.0, 1.0]\n```\n\nSee also: `np_argmax`, `np_min`",
       "examples": [
         {
           "input": "A : ndarray(matrix([3, 1], [4, 2]));",
@@ -226,8 +230,8 @@
     "np_argsort": {
       "type": "Function",
       "signature": "np_argsort(a) / np_argsort (a, axis)",
-      "summary": "Indices that would sort array elements in ascending order.",
-      "body_md": "Indices that would sort array elements in ascending order.\n\nWithout an axis argument, returns flat indices for the flattened array. With an axis argument, returns indices along the specified axis. Indices are stored as double-float values. Uses a stable sort.\n\nCalling forms:\n\n- `np_argsort(a)` -- flat indices, returns a 1D ndarray\n- `np_argsort(a, 0)` -- row indices that sort each column, returns same shape\n- `np_argsort(a, 1)` -- column indices that sort each row, returns same shape\n\n#### Examples\n\n```maxima\n(%i1) A : ndarray([3, 1, 2], [3]);\n(%o1)            ndarray([3], DOUBLE-FLOAT)\n(%i2) np_to_list(np_argsort(A));\n(%o2)                  [1.0, 2.0, 0.0]\n(%i3) B : ndarray(matrix([3, 1], [1, 4]));\n(%o3)            ndarray([2, 2], DOUBLE-FLOAT)\n(%i4) np_to_matrix(np_argsort(B, 0));\n(%o4)         matrix([1.0, 0.0], [0.0, 1.0])\n(%i5) np_to_matrix(np_argsort(B, 1));\n(%o5)         matrix([1.0, 0.0], [0.0, 1.0])\n```\n\nSee also: `np_sort`, `np_argmin`, `np_argmax`",
+      "summary": "Indices that would sort array elements in ascending order. Signals an error for complex arrays.",
+      "body_md": "Indices that would sort array elements in ascending order. Signals an error for complex arrays.\n\nWithout an axis argument, returns flat indices for the flattened array. With an axis argument, returns indices along the specified axis. Indices are stored as double-float values. Uses a stable sort.\n\nCalling forms:\n\n- `np_argsort(a)` -- flat indices, returns a 1D ndarray\n- `np_argsort(a, 0)` -- row indices that sort each column, returns same shape\n- `np_argsort(a, 1)` -- column indices that sort each row, returns same shape\n\n#### Examples\n\n```maxima\n(%i1) A : ndarray([3, 1, 2], [3]);\n(%o1)            ndarray([3], DOUBLE-FLOAT)\n(%i2) np_to_list(np_argsort(A));\n(%o2)                  [1.0, 2.0, 0.0]\n(%i3) B : ndarray(matrix([3, 1], [1, 4]));\n(%o3)            ndarray([2, 2], DOUBLE-FLOAT)\n(%i4) np_to_matrix(np_argsort(B, 0));\n(%o4)         matrix([1.0, 0.0], [0.0, 1.0])\n(%i5) np_to_matrix(np_argsort(B, 1));\n(%o5)         matrix([1.0, 0.0], [0.0, 1.0])\n```\n\nSee also: `np_sort`, `np_argmin`, `np_argmax`",
       "examples": [
         {
           "input": "A : ndarray([3, 1, 2], [3]);",
@@ -314,7 +318,7 @@
       "type": "Function",
       "signature": "np_copy(a)",
       "summary": "Create a deep copy of an ndarray.",
-      "body_md": "Create a deep copy of an ndarray.\n\nReturns a new ndarray with the same shape and values. Modifications to the copy do not affect the original.\n\n#### Examples\n\n```maxima\n(%i1) A : np_ones([2, 2]);\n(%o1)            ndarray([2, 2], DOUBLE-FLOAT)\n(%i2) B : np_copy(A);\n(%o2)            ndarray([2, 2], DOUBLE-FLOAT)\n(%i3) np_set(B, 0, 0, 99.0);\n(%o3)            ndarray([2, 2], DOUBLE-FLOAT)\n(%i4) np_ref(A, 0, 0);\n(%o4)                          1.0\n(%i5) np_ref(B, 0, 0);\n(%o5)                         99.0\n```\n\nSee also: `ndarray`, `np_reshape`",
+      "body_md": "Create a deep copy of an ndarray.\n\nReturns a new ndarray with the same shape, dtype, and values. Modifications to the copy do not affect the original.\n\n#### Examples\n\n```maxima\n(%i1) A : np_ones([2, 2]);\n(%o1)            ndarray([2, 2], DOUBLE-FLOAT)\n(%i2) B : np_copy(A);\n(%o2)            ndarray([2, 2], DOUBLE-FLOAT)\n(%i3) np_set(B, 0, 0, 99.0);\n(%o3)            ndarray([2, 2], DOUBLE-FLOAT)\n(%i4) np_ref(A, 0, 0);\n(%o4)                          1.0\n(%i5) np_ref(B, 0, 0);\n(%o5)                         99.0\n```\n\nSee also: `ndarray`, `np_reshape`",
       "examples": [
         {
           "input": "A : np_ones([2, 2]);",
@@ -388,8 +392,8 @@
     "np_cumsum": {
       "type": "Function",
       "signature": "np_cumsum(a)",
-      "summary": "Cumulative sum of a 1D ndarray.",
-      "body_md": "Cumulative sum of a 1D ndarray.\n\nReturns a new 1D ndarray where element `i` is the sum of elements 0 through `i` of the input.\n\n#### Examples\n\n```maxima\n(%i1) A : np_arange(5);\n(%o1)            ndarray([5], DOUBLE-FLOAT)\n(%i2) np_to_list(np_cumsum(A));\n(%o2)           [0.0, 1.0, 3.0, 6.0, 10.0]\n(%i3) np_to_list(np_cumsum(np_ones(4)));\n(%o3)              [1.0, 2.0, 3.0, 4.0]\n```\n\nSee also: `np_sum`",
+      "summary": "Cumulative sum of a 1D ndarray. Supports complex arrays.",
+      "body_md": "Cumulative sum of a 1D ndarray. Supports complex arrays.\n\nReturns a new 1D ndarray where element `i` is the sum of elements 0 through `i` of the input.\n\n#### Examples\n\n```maxima\n(%i1) A : np_arange(5);\n(%o1)            ndarray([5], DOUBLE-FLOAT)\n(%i2) np_to_list(np_cumsum(A));\n(%o2)           [0.0, 1.0, 3.0, 6.0, 10.0]\n(%i3) np_to_list(np_cumsum(np_ones(4)));\n(%o3)              [1.0, 2.0, 3.0, 4.0]\n```\n\nSee also: `np_sum`",
       "examples": [
         {
           "input": "A : np_arange(5);",
@@ -413,7 +417,7 @@
       "type": "Function",
       "signature": "np_det(a)",
       "summary": "Determinant of a square matrix.",
-      "body_md": "Determinant of a square matrix.\n\nReturns a scalar. Uses LAPACK for computation.\n\n#### Examples\n\n```maxima\n(%i1) A : ndarray(matrix([1, 2], [3, 4]));\n(%o1)            ndarray([2, 2], DOUBLE-FLOAT)\n(%i2) np_det(A);\n(%o2)                         -2.0\n(%i3) np_det(np_eye(5));\n(%o3)                          1.0\n```\n\nSee also: `np_inv`, `np_rank`",
+      "body_md": "Determinant of a square matrix.\n\nReturns a scalar (complex for complex input). Uses LAPACK for computation.\n\n#### Examples\n\n```maxima\n(%i1) A : ndarray(matrix([1, 2], [3, 4]));\n(%o1)            ndarray([2, 2], DOUBLE-FLOAT)\n(%i2) np_det(A);\n(%o2)                         -2.0\n(%i3) np_det(np_eye(5));\n(%o3)                          1.0\n```\n\nSee also: `np_inv`, `np_rank`",
       "examples": [
         {
           "input": "A : ndarray(matrix([1, 2], [3, 4]));",
@@ -436,9 +440,9 @@
     },
     "np_diag": {
       "type": "Function",
-      "signature": "np_diag(list)",
+      "signature": "np_diag(list) / np_diag (list, dtype)",
       "summary": "Create a diagonal matrix from a Maxima list.",
-      "body_md": "Create a diagonal matrix from a Maxima list.\n\nThe argument must be a Maxima list of numbers. Returns a square ndarray with the list elements on the main diagonal and zeros elsewhere.\n\n#### Examples\n\n```maxima\n(%i1) np_diag([1, 2, 3]);\n(%o1)            ndarray([3, 3], DOUBLE-FLOAT)\n(%i2) np_to_matrix(np_diag([1, 2, 3]));\n(%o2)  matrix([1.0, 0.0, 0.0], [0.0, 2.0, 0.0], [0.0, 0.0, 3.0])\n(%i3) np_ref(np_diag([5, 10]), 0, 1);\n(%o3)                          0.0\n```\n\nSee also: `np_eye`, `np_zeros`",
+      "body_md": "Create a diagonal matrix from a Maxima list.\n\nThe argument must be a Maxima list of numbers. Returns a square ndarray with the list elements on the main diagonal and zeros elsewhere. Pass `complex` as the optional second argument to create a complex array.\n\n#### Examples\n\n```maxima\n(%i1) np_diag([1, 2, 3]);\n(%o1)            ndarray([3, 3], DOUBLE-FLOAT)\n(%i2) np_to_matrix(np_diag([1, 2, 3]));\n(%o2)  matrix([1.0, 0.0, 0.0], [0.0, 2.0, 0.0], [0.0, 0.0, 3.0])\n(%i3) np_ref(np_diag([5, 10]), 0, 1);\n(%o3)                          0.0\n(%i4) np_diag([1+%i, 2-%i], complex);\n(%o4)            ndarray([2, 2], COMPLEX-DOUBLE-FLOAT)\n```\n\nSee also: `np_eye`, `np_zeros`",
       "examples": [
         {
           "input": "np_diag([1, 2, 3]);",
@@ -451,6 +455,10 @@
         {
           "input": "np_ref(np_diag([5, 10]), 0, 1);",
           "output": "0.0"
+        },
+        {
+          "input": "np_diag([1+%i, 2-%i], complex);",
+          "output": "ndarray([2, 2], COMPLEX-DOUBLE-FLOAT)"
         }
       ],
       "see_also": [
@@ -490,8 +498,8 @@
     "np_dot": {
       "type": "Function",
       "signature": "np_dot(a, b)",
-      "summary": "Dot product of two 1D vectors.",
-      "body_md": "Dot product of two 1D vectors.\n\nBoth arguments must be 1D ndarrays of the same length. Returns a scalar.\n\n#### Examples\n\n```maxima\n(%i1) a : np_arange(3);\n(%o1)            ndarray([3], DOUBLE-FLOAT)\n(%i2) b : np_ones(3);\n(%o2)            ndarray([3], DOUBLE-FLOAT)\n(%i3) np_dot(a, b);\n(%o3)                          3.0\n(%i4) np_dot(a, a);\n(%o4)                          5.0\n```\n\nSee also: `np_matmul`, `np_sum`",
+      "summary": "Dot product of two 1D vectors. Supports complex arrays.",
+      "body_md": "Dot product of two 1D vectors. Supports complex arrays.\n\nBoth arguments must be 1D ndarrays of the same length. Returns a scalar.\n\n#### Examples\n\n```maxima\n(%i1) a : np_arange(3);\n(%o1)            ndarray([3], DOUBLE-FLOAT)\n(%i2) b : np_ones(3);\n(%o2)            ndarray([3], DOUBLE-FLOAT)\n(%i3) np_dot(a, b);\n(%o3)                          3.0\n(%i4) np_dot(a, a);\n(%o4)                          5.0\n```\n\nSee also: `np_matmul`, `np_sum`",
       "examples": [
         {
           "input": "a : np_arange(3);",
@@ -520,7 +528,7 @@
       "type": "Function",
       "signature": "np_dtype(a)",
       "summary": "Return the element type of an ndarray as a string.",
-      "body_md": "Return the element type of an ndarray as a string.\n\nCurrently all ndarrays use `\"DOUBLE-FLOAT\"` (64-bit IEEE 754 floating point).\n\n#### Examples\n\n```maxima\n(%i1) np_dtype(np_zeros([2, 2]));\n(%o1)                    DOUBLE-FLOAT\n```\n\nSee also: `np_shape`, `np_size`",
+      "body_md": "Return the element type of an ndarray as a string.\n\nReturns `\"DOUBLE-FLOAT\"` for real arrays or `\"COMPLEX-DOUBLE-FLOAT\"` for complex arrays.\n\n#### Examples\n\n```maxima\n(%i1) np_dtype(np_zeros([2, 2]));\n(%o1)                    DOUBLE-FLOAT\n```\n\nSee also: `np_shape`, `np_size`",
       "examples": [
         {
           "input": "np_dtype(np_zeros([2, 2]));",
@@ -563,9 +571,9 @@
     },
     "np_empty": {
       "type": "Function",
-      "signature": "np_empty(shape)",
+      "signature": "np_empty(shape) / np_empty (shape, dtype)",
       "summary": "Create an uninitialized ndarray.",
-      "body_md": "Create an uninitialized ndarray.\n\nThe contents are unspecified and may contain arbitrary values. Use this when you plan to fill every element before reading, as it avoids the cost of zero-initialization.\n\n#### Examples\n\n```maxima\n(%i1) A : np_empty([3, 3]);\n(%o1)            ndarray([3, 3], DOUBLE-FLOAT)\n(%i2) np_shape(A);\n(%o2)                        [3, 3]\n```\n\nSee also: `np_zeros`, `np_full`",
+      "body_md": "Create an uninitialized ndarray.\n\nThe contents are unspecified and may contain arbitrary values. Use this when you plan to fill every element before reading, as it avoids the cost of zero-initialization. Pass `complex` as the optional second argument to create a complex array.\n\n#### Examples\n\n```maxima\n(%i1) A : np_empty([3, 3]);\n(%o1)            ndarray([3, 3], DOUBLE-FLOAT)\n(%i2) np_shape(A);\n(%o2)                        [3, 3]\n(%i3) np_empty([2, 2], complex);\n(%o3)            ndarray([2, 2], COMPLEX-DOUBLE-FLOAT)\n```\n\nSee also: `np_zeros`, `np_full`",
       "examples": [
         {
           "input": "A : np_empty([3, 3]);",
@@ -574,6 +582,10 @@
         {
           "input": "np_shape(A);",
           "output": "[3, 3]"
+        },
+        {
+          "input": "np_empty([2, 2], complex);",
+          "output": "ndarray([2, 2], COMPLEX-DOUBLE-FLOAT)"
         }
       ],
       "see_also": [
@@ -585,8 +597,8 @@
     "np_equal": {
       "type": "Function",
       "signature": "np_equal(a, b)",
-      "summary": "Element-wise equality comparison. Returns 1.0/0.0 ndarray.",
-      "body_md": "Element-wise equality comparison. Returns 1.0/0.0 ndarray.\n\nSee also: `np_not_equal`",
+      "summary": "Element-wise equality comparison. Returns 1.0/0.0 ndarray. Supports complex arrays.",
+      "body_md": "Element-wise equality comparison. Returns 1.0/0.0 ndarray. Supports complex arrays.\n\nSee also: `np_not_equal`",
       "examples": [],
       "see_also": [
         "np_not_equal"
@@ -625,8 +637,8 @@
     "np_expm": {
       "type": "Function",
       "signature": "np_expm(a)",
-      "summary": "Matrix exponential.",
-      "body_md": "Matrix exponential.\n\nComputes the matrix exponential e^A, which is defined as the infinite series I + A + A^2/2! + A^3/3! + .... This is different from element-wise `np_exp`, which applies the scalar exponential to each element independently.\n\nUses the scaling-and-squaring method with adaptive diagonal Pade approximation (orders 3, 5, 7, 9, or 13 selected automatically based on the matrix 1-norm). The algorithm follows Higham (2005), \"The Scaling and Squaring Method for the Matrix Exponential Revisited\".\n\n#### Examples\n\n```maxima\n(%i1) /* expm(0) = I */\n      np_to_matrix(np_expm(np_zeros([2, 2])));\n(%o1)         matrix([1.0, 0.0], [0.0, 1.0])\n(%i2) /* expm(I) = e*I */\n      np_ref(np_expm(np_eye(2)), 0, 0);\n(%o2)                    2.718281828459045\n(%i3) /* Rotation matrix from skew-symmetric */\n      R : ndarray(matrix([0, -1], [1, 0]));\n(%o3)            ndarray([2, 2], DOUBLE-FLOAT)\n(%i4) E : np_to_matrix(np_expm(R));\n(%o4)  matrix([0.5403023058681398, -0.8414709848078965],\n              [0.8414709848078965,  0.5403023058681398])\n(%i5) /* expm(A) * expm(-A) = I */\n      A : ndarray(matrix([1, 2], [3, 4]));\n(%o5)            ndarray([2, 2], DOUBLE-FLOAT)\n(%i6) np_to_matrix(np_matmul(np_expm(A), np_expm(np_neg(A))));\n(%o6)         matrix([1.0, 0.0], [0.0, 1.0])\n```\n\nSee also: `np_exp`, `np_matmul`",
+      "summary": "Matrix exponential. Supports complex arrays.",
+      "body_md": "Matrix exponential. Supports complex arrays.\n\nComputes the matrix exponential e^A, which is defined as the infinite series I + A + A^2/2! + A^3/3! + .... This is different from element-wise `np_exp`, which applies the scalar exponential to each element independently.\n\nUses the scaling-and-squaring method with adaptive diagonal Pade approximation (orders 3, 5, 7, 9, or 13 selected automatically based on the matrix 1-norm). The algorithm follows Higham (2005), \"The Scaling and Squaring Method for the Matrix Exponential Revisited\".\n\n#### Examples\n\n```maxima\n(%i1) /* expm(0) = I */\n      np_to_matrix(np_expm(np_zeros([2, 2])));\n(%o1)         matrix([1.0, 0.0], [0.0, 1.0])\n(%i2) /* expm(I) = e*I */\n      np_ref(np_expm(np_eye(2)), 0, 0);\n(%o2)                    2.718281828459045\n(%i3) /* Rotation matrix from skew-symmetric */\n      R : ndarray(matrix([0, -1], [1, 0]));\n(%o3)            ndarray([2, 2], DOUBLE-FLOAT)\n(%i4) E : np_to_matrix(np_expm(R));\n(%o4)  matrix([0.5403023058681398, -0.8414709848078965],\n              [0.8414709848078965,  0.5403023058681398])\n(%i5) /* expm(A) * expm(-A) = I */\n      A : ndarray(matrix([1, 2], [3, 4]));\n(%o5)            ndarray([2, 2], DOUBLE-FLOAT)\n(%i6) np_to_matrix(np_matmul(np_expm(A), np_expm(np_neg(A))));\n(%o6)         matrix([1.0, 0.0], [0.0, 1.0])\n```\n\nSee also: `np_exp`, `np_matmul`",
       "examples": [
         {
           "input": "/* expm(0) = I */\n      np_to_matrix(np_expm(np_zeros([2, 2])));",
@@ -691,9 +703,9 @@
     },
     "np_eye": {
       "type": "Function",
-      "signature": "np_eye(n)",
+      "signature": "np_eye(n) / np_eye (n, m) / np_eye (n, m, dtype)",
       "summary": "Create an identity matrix.",
-      "body_md": "Create an identity matrix.\n\nReturns an `n` x `n` identity matrix (ones on the diagonal, zeros elsewhere). An optional second argument `m` creates an `n` x `m` rectangular identity matrix.\n\nCalling forms:\n\n- `np_eye(n)` -- square identity matrix\n- `np_eye(n, m)` -- rectangular identity matrix\n\n#### Examples\n\n```maxima\n(%i1) np_eye(3);\n(%o1)            ndarray([3, 3], DOUBLE-FLOAT)\n(%i2) np_to_matrix(np_eye(3));\n(%o2)  matrix([1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0])\n(%i3) np_ref(np_eye(3), 0, 0);\n(%o3)                          1.0\n(%i4) np_ref(np_eye(3), 0, 1);\n(%o4)                          0.0\n```\n\nSee also: `np_diag`, `np_zeros`, `np_ones`",
+      "body_md": "Create an identity matrix.\n\nReturns an `n` x `n` identity matrix (ones on the diagonal, zeros elsewhere). An optional second argument `m` creates an `n` x `m` rectangular identity matrix. Pass `complex` as the last argument to create a complex array.\n\nCalling forms:\n\n- `np_eye(n)` -- square identity matrix\n- `np_eye(n, m)` -- rectangular identity matrix\n- `np_eye(n, m, complex)` -- complex identity matrix\n\n#### Examples\n\n```maxima\n(%i1) np_eye(3);\n(%o1)            ndarray([3, 3], DOUBLE-FLOAT)\n(%i2) np_to_matrix(np_eye(3));\n(%o2)  matrix([1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0])\n(%i3) np_ref(np_eye(3), 0, 0);\n(%o3)                          1.0\n(%i4) np_ref(np_eye(3), 0, 1);\n(%o4)                          0.0\n```\n\nSee also: `np_diag`, `np_zeros`, `np_ones`",
       "examples": [
         {
           "input": "np_eye(3);",
@@ -750,9 +762,9 @@
     },
     "np_full": {
       "type": "Function",
-      "signature": "np_full(shape, val)",
+      "signature": "np_full(shape, val) / np_full (shape, val, dtype)",
       "summary": "Create an ndarray filled with a constant value.",
-      "body_md": "Create an ndarray filled with a constant value.\n\nEvery element is set to `val`, which is coerced to double-float.\n\n#### Examples\n\n```maxima\n(%i1) np_full([2, 3], 7);\n(%o1)            ndarray([2, 3], DOUBLE-FLOAT)\n(%i2) np_ref(np_full([2, 2], 42), 0, 0);\n(%o2)                         42.0\n(%i3) np_to_list(np_full(3, %pi));\n(%o3)  [3.141592653589793, 3.141592653589793, 3.141592653589793]\n```\n\nSee also: `np_zeros`, `np_ones`",
+      "body_md": "Create an ndarray filled with a constant value.\n\nEvery element is set to `val`. Pass `complex` as the optional third argument to create a complex array; otherwise values are coerced to `double-float`.\n\n#### Examples\n\n```maxima\n(%i1) np_full([2, 3], 7);\n(%o1)            ndarray([2, 3], DOUBLE-FLOAT)\n(%i2) np_ref(np_full([2, 2], 42), 0, 0);\n(%o2)                         42.0\n(%i3) np_to_list(np_full(3, %pi));\n(%o3)  [3.141592653589793, 3.141592653589793, 3.141592653589793]\n(%i4) np_full([2, 2], 1+2*%i, complex);\n(%o4)            ndarray([2, 2], COMPLEX-DOUBLE-FLOAT)\n```\n\nSee also: `np_zeros`, `np_ones`",
       "examples": [
         {
           "input": "np_full([2, 3], 7);",
@@ -765,6 +777,10 @@
         {
           "input": "np_to_list(np_full(3, %pi));",
           "output": "[3.141592653589793, 3.141592653589793, 3.141592653589793]"
+        },
+        {
+          "input": "np_full([2, 2], 1+2*%i, complex);",
+          "output": "ndarray([2, 2], COMPLEX-DOUBLE-FLOAT)"
         }
       ],
       "see_also": [
@@ -777,7 +793,7 @@
       "type": "Function",
       "signature": "np_greater(a, b)",
       "summary": "Element-wise greater-than comparison.",
-      "body_md": "Element-wise greater-than comparison.\n\nReturns a new ndarray with 1.0 where `a > b` and 0.0 elsewhere. Supports ndarray + ndarray, ndarray + scalar, and scalar + ndarray.\n\n#### Examples\n\n```maxima\n(%i1) A : ndarray([1, 5, 3, 7, 2], [5]);\n(%o1)            ndarray([5], DOUBLE-FLOAT)\n(%i2) np_to_list(np_greater(A, 3));\n(%o2)           [0.0, 1.0, 0.0, 1.0, 0.0]\n(%i3) B : ndarray([2, 4, 3], [3]);\n(%o3)            ndarray([3], DOUBLE-FLOAT)\n(%i4) np_to_list(np_greater(ndarray([1,5,3],[3]), B));\n(%o4)                  [0.0, 1.0, 0.0]\n```\n\nSee also: `np_less`, `np_greater_equal`, `np_equal`",
+      "body_md": "Element-wise greater-than comparison.\n\nReturns a new ndarray with 1.0 where `a > b` and 0.0 elsewhere. Supports ndarray + ndarray, ndarray + scalar, and scalar + ndarray. Signals an error for complex arrays (complex numbers are not ordered).\n\n#### Examples\n\n```maxima\n(%i1) A : ndarray([1, 5, 3, 7, 2], [5]);\n(%o1)            ndarray([5], DOUBLE-FLOAT)\n(%i2) np_to_list(np_greater(A, 3));\n(%o2)           [0.0, 1.0, 0.0, 1.0, 0.0]\n(%i3) B : ndarray([2, 4, 3], [3]);\n(%o3)            ndarray([3], DOUBLE-FLOAT)\n(%i4) np_to_list(np_greater(ndarray([1,5,3],[3]), B));\n(%o4)                  [0.0, 1.0, 0.0]\n```\n\nSee also: `np_less`, `np_greater_equal`, `np_equal`",
       "examples": [
         {
           "input": "A : ndarray([1, 5, 3, 7, 2], [5]);",
@@ -806,8 +822,8 @@
     "np_greater_equal": {
       "type": "Function",
       "signature": "np_greater_equal(a, b)",
-      "summary": "Element-wise greater-than-or-equal comparison. Returns 1.0/0.0 ndarray.",
-      "body_md": "Element-wise greater-than-or-equal comparison. Returns 1.0/0.0 ndarray.\n\nSee also: `np_greater`, `np_less_equal`",
+      "summary": "Element-wise greater-than-or-equal comparison. Returns 1.0/0.0 ndarray. Signals an error for complex arrays.",
+      "body_md": "Element-wise greater-than-or-equal comparison. Returns 1.0/0.0 ndarray. Signals an error for complex arrays.\n\nSee also: `np_greater`, `np_less_equal`",
       "examples": [],
       "see_also": [
         "np_greater",
@@ -819,7 +835,7 @@
       "type": "Function",
       "signature": "np_hstack(a, b)",
       "summary": "Concatenate two 2D ndarrays horizontally (along columns).",
-      "body_md": "Concatenate two 2D ndarrays horizontally (along columns).\n\nBoth arrays must have the same number of rows. The result has the combined number of columns.\n\n#### Examples\n\n```maxima\n(%i1) A : ndarray(matrix([1, 2], [3, 4]));\n(%o1)            ndarray([2, 2], DOUBLE-FLOAT)\n(%i2) B : ndarray(matrix([5], [6]));\n(%o2)            ndarray([2, 1], DOUBLE-FLOAT)\n(%i3) C : np_hstack(A, B);\n(%o3)            ndarray([2, 3], DOUBLE-FLOAT)\n(%i4) np_to_matrix(C);\n(%o4)      matrix([1.0, 2.0, 5.0], [3.0, 4.0, 6.0])\n```\n\nSee also: `np_vstack`",
+      "body_md": "Concatenate two 2D ndarrays horizontally (along columns).\n\nBoth arrays must have the same number of rows. The result has the combined number of columns. Promotes to complex if either input is complex.\n\n#### Examples\n\n```maxima\n(%i1) A : ndarray(matrix([1, 2], [3, 4]));\n(%o1)            ndarray([2, 2], DOUBLE-FLOAT)\n(%i2) B : ndarray(matrix([5], [6]));\n(%o2)            ndarray([2, 1], DOUBLE-FLOAT)\n(%i3) C : np_hstack(A, B);\n(%o3)            ndarray([2, 3], DOUBLE-FLOAT)\n(%i4) np_to_matrix(C);\n(%o4)      matrix([1.0, 2.0, 5.0], [3.0, 4.0, 6.0])\n```\n\nSee also: `np_vstack`",
       "examples": [
         {
           "input": "A : ndarray(matrix([1, 2], [3, 4]));",
@@ -868,8 +884,8 @@
     "np_inv": {
       "type": "Function",
       "signature": "np_inv(a)",
-      "summary": "Matrix inverse.",
-      "body_md": "Matrix inverse.\n\nComputes the inverse of a square matrix using LAPACK. Signals an error if the matrix is singular or nearly singular.\n\n#### Examples\n\n```maxima\n(%i1) A : ndarray(matrix([1, 2], [3, 4]));\n(%o1)            ndarray([2, 2], DOUBLE-FLOAT)\n(%i2) Ainv : np_inv(A);\n(%o2)            ndarray([2, 2], DOUBLE-FLOAT)\n(%i3) np_to_matrix(np_matmul(A, Ainv));\n(%o3)         matrix([1.0, 0.0], [0.0, 1.0])\n(%i4) errcatch(np_inv(ndarray(matrix([1, 0], [0, 0]))));\n(%o4)                          []\n```\n\nSee also: `np_solve`, `np_det`, `np_pinv`",
+      "summary": "Matrix inverse. Supports complex arrays.",
+      "body_md": "Matrix inverse. Supports complex arrays.\n\nComputes the inverse of a square matrix using LAPACK. Signals an error if the matrix is singular or nearly singular.\n\n#### Examples\n\n```maxima\n(%i1) A : ndarray(matrix([1, 2], [3, 4]));\n(%o1)            ndarray([2, 2], DOUBLE-FLOAT)\n(%i2) Ainv : np_inv(A);\n(%o2)            ndarray([2, 2], DOUBLE-FLOAT)\n(%i3) np_to_matrix(np_matmul(A, Ainv));\n(%o3)         matrix([1.0, 0.0], [0.0, 1.0])\n(%i4) errcatch(np_inv(ndarray(matrix([1, 0], [0, 0]))));\n(%o4)                          []\n```\n\nSee also: `np_solve`, `np_det`, `np_pinv`",
       "examples": [
         {
           "input": "A : ndarray(matrix([1, 2], [3, 4]));",
@@ -898,8 +914,8 @@
     "np_less": {
       "type": "Function",
       "signature": "np_less(a, b)",
-      "summary": "Element-wise less-than comparison. Returns 1.0/0.0 ndarray.",
-      "body_md": "Element-wise less-than comparison. Returns 1.0/0.0 ndarray.\n\nSee also: `np_greater`, `np_less_equal`",
+      "summary": "Element-wise less-than comparison. Returns 1.0/0.0 ndarray. Signals an error for complex arrays.",
+      "body_md": "Element-wise less-than comparison. Returns 1.0/0.0 ndarray. Signals an error for complex arrays.\n\nSee also: `np_greater`, `np_less_equal`",
       "examples": [],
       "see_also": [
         "np_greater",
@@ -910,8 +926,8 @@
     "np_less_equal": {
       "type": "Function",
       "signature": "np_less_equal(a, b)",
-      "summary": "Element-wise less-than-or-equal comparison. Returns 1.0/0.0 ndarray.",
-      "body_md": "Element-wise less-than-or-equal comparison. Returns 1.0/0.0 ndarray.\n\nSee also: `np_less`, `np_greater_equal`",
+      "summary": "Element-wise less-than-or-equal comparison. Returns 1.0/0.0 ndarray. Signals an error for complex arrays.",
+      "body_md": "Element-wise less-than-or-equal comparison. Returns 1.0/0.0 ndarray. Signals an error for complex arrays.\n\nSee also: `np_less`, `np_greater_equal`",
       "examples": [],
       "see_also": [
         "np_less",
@@ -923,7 +939,7 @@
       "type": "Function",
       "signature": "np_linspace(start, stop, n)",
       "summary": "Create n evenly spaced points from start to stop (inclusive).",
-      "body_md": "Create `n` evenly spaced points from `start` to `stop` (inclusive).\n\nBoth endpoints are included. If `n` is 1, returns a single-element array containing `start`.\n\n#### Examples\n\n```maxima\n(%i1) np_linspace(0, 1, 5);\n(%o1)            ndarray([5], DOUBLE-FLOAT)\n(%i2) np_to_list(np_linspace(0, 1, 5));\n(%o2)           [0.0, 0.25, 0.5, 0.75, 1.0]\n(%i3) np_to_list(np_linspace(0, 10, 3));\n(%o3)                 [0.0, 5.0, 10.0]\n```\n\nSee also: `np_arange`",
+      "body_md": "Create `n` evenly spaced points from `start` to `stop` (inclusive).\n\nBoth endpoints are included. If `n` is 1, returns a single-element array containing `start`. Always returns `double-float`.\n\n#### Examples\n\n```maxima\n(%i1) np_linspace(0, 1, 5);\n(%o1)            ndarray([5], DOUBLE-FLOAT)\n(%i2) np_to_list(np_linspace(0, 1, 5));\n(%o2)           [0.0, 0.25, 0.5, 0.75, 1.0]\n(%i3) np_to_list(np_linspace(0, 10, 3));\n(%o3)                 [0.0, 5.0, 10.0]\n```\n\nSee also: `np_arange`",
       "examples": [
         {
           "input": "np_linspace(0, 1, 5);",
@@ -1015,8 +1031,8 @@
     "np_lstsq": {
       "type": "Function",
       "signature": "np_lstsq(a, b)",
-      "summary": "Least-squares solution to Ax = b.",
-      "body_md": "Least-squares solution to Ax = b.\n\nFinds x that minimizes ||Ax - b||_2 using SVD. Works for over-determined systems (more equations than unknowns) and under-determined systems. For square full-rank matrices, gives the same result as `np_solve`.\n\nReturns a Maxima list `[x, residuals, rank, S]` where:\n\n- **x** — n-by-p solution ndarray\n- **residuals** — 1D ndarray of squared residual norms `||Ax_j - b_j||^2` for each column j of b. Only non-empty when `m > n` (overdetermined) and A is full rank; otherwise an empty list `[]`.\n- **rank** — effective rank of A (integer)\n- **S** — 1D ndarray of singular values of A\n\n**Breaking change:** Previous versions returned only `x`. Update callers from `x : np_lstsq(A, b)` to `[x, residuals, rank, S] : np_lstsq(A, b)`.\n\n#### Examples\n\n```maxima\n(%i1) /* Linear fit: y = a + b*x through (1,1), (2,2), (3,3) */\n      A : ndarray(matrix([1, 1], [1, 2], [1, 3]));\n(%o1)            ndarray([3, 2], DOUBLE-FLOAT)\n(%i2) b : ndarray(matrix([1], [2], [3]));\n(%o2)            ndarray([3, 1], DOUBLE-FLOAT)\n(%i3) [x, residuals, rank, S] : np_lstsq(A, b);\n(%o3)        [ndarray, ndarray, 2, ndarray]\n(%i4) np_to_list(x);\n(%o4)                  [0.0, 1.0]\n(%i5) rank;\n(%o5)                           2\n(%i6) np_to_list(S);\n(%o6)             [3.86..., 0.64...]\n```\n\nSee also: `np_solve`, `np_pinv`, `np_svd`",
+      "summary": "Least-squares solution to Ax = b. Supports complex arrays.",
+      "body_md": "Least-squares solution to Ax = b. Supports complex arrays.\n\nFinds x that minimizes ||Ax - b||_2 using SVD. Works for over-determined systems (more equations than unknowns) and under-determined systems. For square full-rank matrices, gives the same result as `np_solve`.\n\nReturns a Maxima list `[x, residuals, rank, S]` where:\n\n- **x** — n-by-p solution ndarray\n- **residuals** — 1D ndarray of squared residual norms `||Ax_j - b_j||^2` for each column j of b (always `double-float`). Only non-empty when `m > n` (overdetermined) and A is full rank; otherwise an empty list `[]`.\n- **rank** — effective rank of A (integer)\n- **S** — 1D ndarray of singular values of A (always `double-float`)\n\n**Breaking change:** Previous versions returned only `x`. Update callers from `x : np_lstsq(A, b)` to `[x, residuals, rank, S] : np_lstsq(A, b)`.\n\n#### Examples\n\n```maxima\n(%i1) /* Linear fit: y = a + b*x through (1,1), (2,2), (3,3) */\n      A : ndarray(matrix([1, 1], [1, 2], [1, 3]));\n(%o1)            ndarray([3, 2], DOUBLE-FLOAT)\n(%i2) b : ndarray(matrix([1], [2], [3]));\n(%o2)            ndarray([3, 1], DOUBLE-FLOAT)\n(%i3) [x, residuals, rank, S] : np_lstsq(A, b);\n(%o3)        [ndarray, ndarray, 2, ndarray]\n(%i4) np_to_list(x);\n(%o4)                  [0.0, 1.0]\n(%i5) rank;\n(%o5)                           2\n(%i6) np_to_list(S);\n(%o6)             [3.86..., 0.64...]\n```\n\nSee also: `np_solve`, `np_pinv`, `np_svd`",
       "examples": [
         {
           "input": "/* Linear fit: y = a + b*x through (1,1), (2,2), (3,3) */\n      A : ndarray(matrix([1, 1], [1, 2], [1, 3]));",
@@ -1053,8 +1069,8 @@
     "np_lu": {
       "type": "Function",
       "signature": "np_lu(a)",
-      "summary": "LU decomposition with partial pivoting.",
-      "body_md": "LU decomposition with partial pivoting.\n\nDecomposes `a` into a lower triangular matrix L (unit diagonal), an upper triangular matrix U, and a permutation matrix P such that P * A = L * U. Returns a Maxima list `[L, U, P]`.\n\nFor an m-by-n matrix, L is m-by-min(m,n), U is min(m,n)-by-n, and P is m-by-m.\n\n#### Examples\n\n```maxima\n(%i1) A : ndarray(matrix([1, 2, 3], [4, 5, 6], [7, 8, 10]));\n(%o1)            ndarray([3, 3], DOUBLE-FLOAT)\n(%i2) [L, U, P] : np_lu(A);\n(%o2)        [ndarray, ndarray, ndarray]\n(%i3) /* Verify P*A = L*U */\n      np_to_matrix(np_sub(np_matmul(P, A), np_matmul(L, U)));\n(%o3)  matrix([0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0])\n```\n\nSee also: `np_qr`, `np_svd`, `np_solve`",
+      "summary": "LU decomposition with partial pivoting. Supports complex arrays.",
+      "body_md": "LU decomposition with partial pivoting. Supports complex arrays.\n\nDecomposes `a` into a lower triangular matrix L (unit diagonal), an upper triangular matrix U, and a permutation matrix P such that P * A = L * U. Returns a Maxima list `[L, U, P]`.\n\nFor an m-by-n matrix, L is m-by-min(m,n), U is min(m,n)-by-n, and P is m-by-m.\n\n#### Examples\n\n```maxima\n(%i1) A : ndarray(matrix([1, 2, 3], [4, 5, 6], [7, 8, 10]));\n(%o1)            ndarray([3, 3], DOUBLE-FLOAT)\n(%i2) [L, U, P] : np_lu(A);\n(%o2)        [ndarray, ndarray, ndarray]\n(%i3) /* Verify P*A = L*U */\n      np_to_matrix(np_sub(np_matmul(P, A), np_matmul(L, U)));\n(%o3)  matrix([0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0])\n```\n\nSee also: `np_qr`, `np_svd`, `np_solve`",
       "examples": [
         {
           "input": "A : ndarray(matrix([1, 2, 3], [4, 5, 6], [7, 8, 10]));",
@@ -1159,8 +1175,8 @@
     "np_matmul": {
       "type": "Function",
       "signature": "np_matmul(a, b)",
-      "summary": "Matrix multiplication.",
-      "body_md": "Matrix multiplication.\n\nComputes the matrix product of two 2D ndarrays using BLAS. The number of columns of `a` must equal the number of rows of `b`.\n\n#### Examples\n\n```maxima\n(%i1) A : ndarray(matrix([1, 2], [3, 4]));\n(%o1)            ndarray([2, 2], DOUBLE-FLOAT)\n(%i2) I : np_eye(2);\n(%o2)            ndarray([2, 2], DOUBLE-FLOAT)\n(%i3) np_to_matrix(np_matmul(I, A));\n(%o3)         matrix([1.0, 2.0], [3.0, 4.0])\n(%i4) np_to_matrix(np_matmul(A, A));\n(%o4)       matrix([7.0, 10.0], [15.0, 22.0])\n```\n\nSee also: `np_dot`, `np_inv`, `np_solve`",
+      "summary": "Matrix multiplication. Supports complex arrays.",
+      "body_md": "Matrix multiplication. Supports complex arrays.\n\nComputes the matrix product of two 2D ndarrays using BLAS. The number of columns of `a` must equal the number of rows of `b`.\n\n#### Examples\n\n```maxima\n(%i1) A : ndarray(matrix([1, 2], [3, 4]));\n(%o1)            ndarray([2, 2], DOUBLE-FLOAT)\n(%i2) I : np_eye(2);\n(%o2)            ndarray([2, 2], DOUBLE-FLOAT)\n(%i3) np_to_matrix(np_matmul(I, A));\n(%o3)         matrix([1.0, 2.0], [3.0, 4.0])\n(%i4) np_to_matrix(np_matmul(A, A));\n(%o4)       matrix([7.0, 10.0], [15.0, 22.0])\n```\n\nSee also: `np_dot`, `np_inv`, `np_solve`",
       "examples": [
         {
           "input": "A : ndarray(matrix([1, 2], [3, 4]));",
@@ -1189,8 +1205,8 @@
     "np_max": {
       "type": "Function",
       "signature": "np_max(a) / np_max (a, axis)",
-      "summary": "Maximum element of an ndarray.",
-      "body_md": "Maximum element of an ndarray.\n\nWithout an axis argument, returns the largest element as a scalar. With an axis argument, computes the maximum along that axis and returns an ndarray.\n\nCalling forms:\n\n- `np_max(a)` -- global maximum, returns a scalar\n- `np_max(a, 0)` -- maximum across rows (column maxes), returns a 1D ndarray of length `ncol`\n- `np_max(a, 1)` -- maximum across columns (row maxes), returns a 1D ndarray of length `nrow`\n\n#### Examples\n\n```maxima\n(%i1) A : ndarray(matrix([3, 1], [4, 2]));\n(%o1)            ndarray([2, 2], DOUBLE-FLOAT)\n(%i2) np_max(A);\n(%o2)                          4.0\n(%i3) np_to_list(np_max(A, 0));\n(%o3)                     [4.0, 2.0]\n(%i4) np_to_list(np_max(A, 1));\n(%o4)                     [3.0, 4.0]\n```\n\nSee also: `np_min`, `np_argmax`",
+      "summary": "Maximum element of an ndarray. Signals an error for complex arrays.",
+      "body_md": "Maximum element of an ndarray. Signals an error for complex arrays.\n\nWithout an axis argument, returns the largest element as a scalar. With an axis argument, computes the maximum along that axis and returns an ndarray.\n\nCalling forms:\n\n- `np_max(a)` -- global maximum, returns a scalar\n- `np_max(a, 0)` -- maximum across rows (column maxes), returns a 1D ndarray of length `ncol`\n- `np_max(a, 1)` -- maximum across columns (row maxes), returns a 1D ndarray of length `nrow`\n\n#### Examples\n\n```maxima\n(%i1) A : ndarray(matrix([3, 1], [4, 2]));\n(%o1)            ndarray([2, 2], DOUBLE-FLOAT)\n(%i2) np_max(A);\n(%o2)                          4.0\n(%i3) np_to_list(np_max(A, 0));\n(%o3)                     [4.0, 2.0]\n(%i4) np_to_list(np_max(A, 1));\n(%o4)                     [3.0, 4.0]\n```\n\nSee also: `np_min`, `np_argmax`",
       "examples": [
         {
           "input": "A : ndarray(matrix([3, 1], [4, 2]));",
@@ -1218,8 +1234,8 @@
     "np_mean": {
       "type": "Function",
       "signature": "np_mean(a)",
-      "summary": "Mean (average) of array elements.",
-      "body_md": "Mean (average) of array elements.\n\nWithout an axis argument, returns the scalar mean of all elements. With an axis argument, computes the mean along that axis.\n\nCalling forms:\n\n- `np_mean(a)` -- total mean, returns a scalar\n- `np_mean(a, 0)` -- column means, returns a 1D ndarray\n- `np_mean(a, 1)` -- row means, returns a 1D ndarray\n\n#### Examples\n\n```maxima\n(%i1) A : ndarray(matrix([1, 2], [3, 4]));\n(%o1)            ndarray([2, 2], DOUBLE-FLOAT)\n(%i2) np_mean(A);\n(%o2)                          2.5\n(%i3) np_to_list(np_mean(A, 0));\n(%o3)                     [2.0, 3.0]\n(%i4) np_to_list(np_mean(A, 1));\n(%o4)                    [1.5, 3.5]\n```\n\nSee also: `np_sum`, `np_std`, `np_var`",
+      "summary": "Mean (average) of array elements. Supports complex arrays.",
+      "body_md": "Mean (average) of array elements. Supports complex arrays.\n\nWithout an axis argument, returns the scalar mean of all elements. With an axis argument, computes the mean along that axis.\n\nCalling forms:\n\n- `np_mean(a)` -- total mean, returns a scalar\n- `np_mean(a, 0)` -- column means, returns a 1D ndarray\n- `np_mean(a, 1)` -- row means, returns a 1D ndarray\n\n#### Examples\n\n```maxima\n(%i1) A : ndarray(matrix([1, 2], [3, 4]));\n(%o1)            ndarray([2, 2], DOUBLE-FLOAT)\n(%i2) np_mean(A);\n(%o2)                          2.5\n(%i3) np_to_list(np_mean(A, 0));\n(%o3)                     [2.0, 3.0]\n(%i4) np_to_list(np_mean(A, 1));\n(%o4)                    [1.5, 3.5]\n```\n\nSee also: `np_sum`, `np_std`, `np_var`",
       "examples": [
         {
           "input": "A : ndarray(matrix([1, 2], [3, 4]));",
@@ -1248,8 +1264,8 @@
     "np_min": {
       "type": "Function",
       "signature": "np_min(a) / np_min (a, axis)",
-      "summary": "Minimum element of an ndarray.",
-      "body_md": "Minimum element of an ndarray.\n\nWithout an axis argument, returns the smallest element as a scalar. With an axis argument, computes the minimum along that axis and returns an ndarray.\n\nCalling forms:\n\n- `np_min(a)` -- global minimum, returns a scalar\n- `np_min(a, 0)` -- minimum across rows (column mins), returns a 1D ndarray of length `ncol`\n- `np_min(a, 1)` -- minimum across columns (row mins), returns a 1D ndarray of length `nrow`\n\n#### Examples\n\n```maxima\n(%i1) A : ndarray(matrix([3, 1], [4, 2]));\n(%o1)            ndarray([2, 2], DOUBLE-FLOAT)\n(%i2) np_min(A);\n(%o2)                          1.0\n(%i3) np_to_list(np_min(A, 0));\n(%o3)                     [3.0, 1.0]\n(%i4) np_to_list(np_min(A, 1));\n(%o4)                     [1.0, 2.0]\n```\n\nSee also: `np_max`, `np_argmin`",
+      "summary": "Minimum element of an ndarray. Signals an error for complex arrays.",
+      "body_md": "Minimum element of an ndarray. Signals an error for complex arrays.\n\nWithout an axis argument, returns the smallest element as a scalar. With an axis argument, computes the minimum along that axis and returns an ndarray.\n\nCalling forms:\n\n- `np_min(a)` -- global minimum, returns a scalar\n- `np_min(a, 0)` -- minimum across rows (column mins), returns a 1D ndarray of length `ncol`\n- `np_min(a, 1)` -- minimum across columns (row mins), returns a 1D ndarray of length `nrow`\n\n#### Examples\n\n```maxima\n(%i1) A : ndarray(matrix([3, 1], [4, 2]));\n(%o1)            ndarray([2, 2], DOUBLE-FLOAT)\n(%i2) np_min(A);\n(%o2)                          1.0\n(%i3) np_to_list(np_min(A, 0));\n(%o3)                     [3.0, 1.0]\n(%i4) np_to_list(np_min(A, 1));\n(%o4)                     [1.0, 2.0]\n```\n\nSee also: `np_max`, `np_argmin`",
       "examples": [
         {
           "input": "A : ndarray(matrix([3, 1], [4, 2]));",
@@ -1324,8 +1340,8 @@
     "np_norm": {
       "type": "Function",
       "signature": "np_norm(a) / np_norm (a, ord)",
-      "summary": "Matrix or vector norm.",
-      "body_md": "Matrix or vector norm.\n\nBy default, computes the 2-norm for vectors and the Frobenius norm for matrices. The optional `ord` parameter selects the norm type.\n\nCalling forms:\n\n- `np_norm(a)` -- default norm (2-norm for vectors, Frobenius for matrices)\n- `np_norm(a, 1)` -- 1-norm (sum of abs for vectors, max column sum for matrices)\n- `np_norm(a, 2)` -- 2-norm (Euclidean for vectors, spectral/largest singular value for matrices)\n- `np_norm(a, inf)` -- infinity norm (max abs for vectors, max row sum for matrices)\n- `np_norm(a, fro)` -- Frobenius norm (matrices only, same as default)\n\n#### Examples\n\n```maxima\n(%i1) v : ndarray([1, -2, 3], [3]);\n(%o1)            ndarray([3], DOUBLE-FLOAT)\n(%i2) np_norm(v);\n(%o2)                    3.7416573867739413\n(%i3) np_norm(v, 1);\n(%o3)                          6.0\n(%i4) np_norm(v, inf);\n(%o4)                          3.0\n(%i5) A : ndarray(matrix([1, -7], [2, -3]));\n(%o5)            ndarray([2, 2], DOUBLE-FLOAT)\n(%i6) np_norm(A, 1);\n(%o6)                         10.0\n(%i7) np_norm(A, inf);\n(%o7)                          8.0\n(%i8) np_norm(A, 2);\n(%o8)                    7.649700064568801\n```\n\nSee also: `np_det`, `np_rank`",
+      "summary": "Matrix or vector norm. Supports complex arrays.",
+      "body_md": "Matrix or vector norm. Supports complex arrays.\n\nBy default, computes the 2-norm for vectors and the Frobenius norm for matrices. The optional `ord` parameter selects the norm type. The result is always real (`double-float`).\n\nCalling forms:\n\n- `np_norm(a)` -- default norm (2-norm for vectors, Frobenius for matrices)\n- `np_norm(a, 1)` -- 1-norm (sum of abs for vectors, max column sum for matrices)\n- `np_norm(a, 2)` -- 2-norm (Euclidean for vectors, spectral/largest singular value for matrices)\n- `np_norm(a, inf)` -- infinity norm (max abs for vectors, max row sum for matrices)\n- `np_norm(a, fro)` -- Frobenius norm (matrices only, same as default)\n\n#### Examples\n\n```maxima\n(%i1) v : ndarray([1, -2, 3], [3]);\n(%o1)            ndarray([3], DOUBLE-FLOAT)\n(%i2) np_norm(v);\n(%o2)                    3.7416573867739413\n(%i3) np_norm(v, 1);\n(%o3)                          6.0\n(%i4) np_norm(v, inf);\n(%o4)                          3.0\n(%i5) A : ndarray(matrix([1, -7], [2, -3]));\n(%o5)            ndarray([2, 2], DOUBLE-FLOAT)\n(%i6) np_norm(A, 1);\n(%o6)                         10.0\n(%i7) np_norm(A, inf);\n(%o7)                          8.0\n(%i8) np_norm(A, 2);\n(%o8)                    7.649700064568801\n```\n\nSee also: `np_det`, `np_rank`",
       "examples": [
         {
           "input": "v : ndarray([1, -2, 3], [3]);",
@@ -1369,8 +1385,8 @@
     "np_not_equal": {
       "type": "Function",
       "signature": "np_not_equal(a, b)",
-      "summary": "Element-wise not-equal comparison. Returns 1.0/0.0 ndarray.",
-      "body_md": "Element-wise not-equal comparison. Returns 1.0/0.0 ndarray.\n\nSee also: `np_equal`",
+      "summary": "Element-wise not-equal comparison. Returns 1.0/0.0 ndarray. Supports complex arrays.",
+      "body_md": "Element-wise not-equal comparison. Returns 1.0/0.0 ndarray. Supports complex arrays.\n\nSee also: `np_equal`",
       "examples": [],
       "see_also": [
         "np_equal"
@@ -1379,9 +1395,9 @@
     },
     "np_ones": {
       "type": "Function",
-      "signature": "np_ones(shape)",
+      "signature": "np_ones(shape) / np_ones (shape, dtype)",
       "summary": "Create an ndarray filled with ones.",
-      "body_md": "Create an ndarray filled with ones.\n\nThe `shape` argument is either an integer (for 1D) or a Maxima list of dimensions.\n\n#### Examples\n\n```maxima\n(%i1) np_ones(4);\n(%o1)            ndarray([4], DOUBLE-FLOAT)\n(%i2) np_to_list(np_ones(3));\n(%o2)                  [1.0, 1.0, 1.0]\n(%i3) np_ones([2, 2]);\n(%o3)            ndarray([2, 2], DOUBLE-FLOAT)\n(%i4) np_ref(np_ones([3, 3]), 1, 1);\n(%o4)                          1.0\n```\n\nSee also: `np_zeros`, `np_full`, `np_empty`",
+      "body_md": "Create an ndarray filled with ones.\n\nThe `shape` argument is either an integer (for 1D) or a Maxima list of dimensions. Pass `complex` as the optional second argument to create a complex array.\n\n#### Examples\n\n```maxima\n(%i1) np_ones(4);\n(%o1)            ndarray([4], DOUBLE-FLOAT)\n(%i2) np_to_list(np_ones(3));\n(%o2)                  [1.0, 1.0, 1.0]\n(%i3) np_ones([2, 2]);\n(%o3)            ndarray([2, 2], DOUBLE-FLOAT)\n(%i4) np_ref(np_ones([3, 3]), 1, 1);\n(%o4)                          1.0\n(%i5) np_ones([2, 2], complex);\n(%o5)            ndarray([2, 2], COMPLEX-DOUBLE-FLOAT)\n```\n\nSee also: `np_zeros`, `np_full`, `np_empty`",
       "examples": [
         {
           "input": "np_ones(4);",
@@ -1398,6 +1414,10 @@
         {
           "input": "np_ref(np_ones([3, 3]), 1, 1);",
           "output": "1.0"
+        },
+        {
+          "input": "np_ones([2, 2], complex);",
+          "output": "ndarray([2, 2], COMPLEX-DOUBLE-FLOAT)"
         }
       ],
       "see_also": [
@@ -1410,8 +1430,8 @@
     "np_pinv": {
       "type": "Function",
       "signature": "np_pinv(a)",
-      "summary": "Moore-Penrose pseudo-inverse.",
-      "body_md": "Moore-Penrose pseudo-inverse.\n\nComputed via SVD as A+ = V * S+ * Ut, where S+ inverts the non-zero singular values. For invertible square matrices, this is equivalent to `np_inv`. For non-square or rank-deficient matrices, it gives the best least-squares inverse.\n\nThe pseudo-inverse satisfies the four Moore-Penrose conditions: A*A+*A = A, A+*A*A+ = A+, (A*A+)^T = A*A+, and (A+*A)^T = A+*A.\n\nFor an m-by-n matrix, the pseudo-inverse is n-by-m.\n\n#### Examples\n\n```maxima\n(%i1) A : ndarray(matrix([1, 2], [3, 4], [5, 6]));\n(%o1)            ndarray([3, 2], DOUBLE-FLOAT)\n(%i2) Ap : np_pinv(A);\n(%o2)            ndarray([2, 3], DOUBLE-FLOAT)\n(%i3) /* Verify A * pinv(A) * A = A */\n      np_to_matrix(np_sub(np_matmul(np_matmul(A, Ap), A), A));\n(%o3)  matrix([0.0, 0.0], [0.0, 0.0], [0.0, 0.0])\n(%i4) /* pinv(A) * b gives least-squares solution */\n      b : ndarray(matrix([1], [2], [3]));\n(%o4)            ndarray([3, 1], DOUBLE-FLOAT)\n(%i5) np_to_list(np_matmul(Ap, b));\n(%o5)                  [0.0, 1.0]\n```\n\nSee also: `np_inv`, `np_lstsq`, `np_svd`",
+      "summary": "Moore-Penrose pseudo-inverse. Supports complex arrays.",
+      "body_md": "Moore-Penrose pseudo-inverse. Supports complex arrays.\n\nComputed via SVD as A+ = V * S+ * Ut, where S+ inverts the non-zero singular values. For invertible square matrices, this is equivalent to `np_inv`. For non-square or rank-deficient matrices, it gives the best least-squares inverse.\n\nThe pseudo-inverse satisfies the four Moore-Penrose conditions: A*A+*A = A, A+*A*A+ = A+, (A*A+)^T = A*A+, and (A+*A)^T = A+*A.\n\nFor an m-by-n matrix, the pseudo-inverse is n-by-m.\n\n#### Examples\n\n```maxima\n(%i1) A : ndarray(matrix([1, 2], [3, 4], [5, 6]));\n(%o1)            ndarray([3, 2], DOUBLE-FLOAT)\n(%i2) Ap : np_pinv(A);\n(%o2)            ndarray([2, 3], DOUBLE-FLOAT)\n(%i3) /* Verify A * pinv(A) * A = A */\n      np_to_matrix(np_sub(np_matmul(np_matmul(A, Ap), A), A));\n(%o3)  matrix([0.0, 0.0], [0.0, 0.0], [0.0, 0.0])\n(%i4) /* pinv(A) * b gives least-squares solution */\n      b : ndarray(matrix([1], [2], [3]));\n(%o4)            ndarray([3, 1], DOUBLE-FLOAT)\n(%i5) np_to_list(np_matmul(Ap, b));\n(%o5)                  [0.0, 1.0]\n```\n\nSee also: `np_inv`, `np_lstsq`, `np_svd`",
       "examples": [
         {
           "input": "A : ndarray(matrix([1, 2], [3, 4], [5, 6]));",
@@ -1470,8 +1490,8 @@
     "np_qr": {
       "type": "Function",
       "signature": "np_qr(a)",
-      "summary": "QR decomposition.",
-      "body_md": "QR decomposition.\n\nDecomposes `a` into an orthogonal matrix Q and an upper triangular matrix R such that A = Q * R. Returns a Maxima list `[Q, R]`.\n\n#### Examples\n\n```maxima\n(%i1) A : ndarray(matrix([1, 2], [3, 4], [5, 6]));\n(%o1)            ndarray([3, 2], DOUBLE-FLOAT)\n(%i2) [Q, R] : np_qr(A);\n(%o2)              [ndarray, ndarray]\n(%i3) np_shape(Q);\n(%o3)                        [3, 3]\n(%i4) np_shape(R);\n(%o4)                        [3, 2]\n```\n\nSee also: `np_lu`, `np_svd`",
+      "summary": "QR decomposition. Supports complex arrays.",
+      "body_md": "QR decomposition. Supports complex arrays.\n\nDecomposes `a` into an orthogonal (or unitary for complex) matrix Q and an upper triangular matrix R such that A = Q * R. Returns a Maxima list `[Q, R]`.\n\n#### Examples\n\n```maxima\n(%i1) A : ndarray(matrix([1, 2], [3, 4], [5, 6]));\n(%o1)            ndarray([3, 2], DOUBLE-FLOAT)\n(%i2) [Q, R] : np_qr(A);\n(%o2)              [ndarray, ndarray]\n(%i3) np_shape(Q);\n(%o3)                        [3, 3]\n(%i4) np_shape(R);\n(%o4)                        [3, 2]\n```\n\nSee also: `np_lu`, `np_svd`",
       "examples": [
         {
           "input": "A : ndarray(matrix([1, 2], [3, 4], [5, 6]));",
@@ -1500,7 +1520,7 @@
       "type": "Function",
       "signature": "np_rand(shape)",
       "summary": "Create an ndarray filled with uniform random values in [0, 1).",
-      "body_md": "Create an ndarray filled with uniform random values in [0, 1).\n\nEach element is independently drawn from a uniform distribution on the interval [0, 1).\n\n#### Examples\n\n```maxima\n(%i1) np_rand([2, 3]);\n(%o1)            ndarray([2, 3], DOUBLE-FLOAT)\n(%i2) A : np_rand(5);\n(%o2)            ndarray([5], DOUBLE-FLOAT)\n(%i3) is(np_min(A) >= 0 and np_max(A) < 1);\n(%o3)                         true\n```\n\nSee also: `np_randn`, `np_zeros`, `np_ones`",
+      "body_md": "Create an ndarray filled with uniform random values in [0, 1).\n\nEach element is independently drawn from a uniform distribution on the interval [0, 1). Always returns `double-float`.\n\n#### Examples\n\n```maxima\n(%i1) np_rand([2, 3]);\n(%o1)            ndarray([2, 3], DOUBLE-FLOAT)\n(%i2) A : np_rand(5);\n(%o2)            ndarray([5], DOUBLE-FLOAT)\n(%i3) is(np_min(A) >= 0 and np_max(A) < 1);\n(%o3)                         true\n```\n\nSee also: `np_randn`, `np_zeros`, `np_ones`",
       "examples": [
         {
           "input": "np_rand([2, 3]);",
@@ -1526,7 +1546,7 @@
       "type": "Function",
       "signature": "np_randn(shape)",
       "summary": "Create an ndarray filled with standard normal random values.",
-      "body_md": "Create an ndarray filled with standard normal random values.\n\nEach element is independently drawn from a normal distribution with mean 0 and standard deviation 1, using the Box-Muller transform.\n\n#### Examples\n\n```maxima\n(%i1) np_randn([3, 3]);\n(%o1)            ndarray([3, 3], DOUBLE-FLOAT)\n(%i2) A : np_randn(10000);\n(%o2)            ndarray([10000], DOUBLE-FLOAT)\n```\n\nSee also: `np_rand`",
+      "body_md": "Create an ndarray filled with standard normal random values.\n\nEach element is independently drawn from a normal distribution with mean 0 and standard deviation 1, using the Box-Muller transform. Always returns `double-float`.\n\n#### Examples\n\n```maxima\n(%i1) np_randn([3, 3]);\n(%o1)            ndarray([3, 3], DOUBLE-FLOAT)\n(%i2) A : np_randn(10000);\n(%o2)            ndarray([10000], DOUBLE-FLOAT)\n```\n\nSee also: `np_rand`",
       "examples": [
         {
           "input": "np_randn([3, 3]);",
@@ -1844,8 +1864,8 @@
     "np_solve": {
       "type": "Function",
       "signature": "np_solve(a, b)",
-      "summary": "Solve the linear system Ax = b.",
-      "body_md": "Solve the linear system Ax = b.\n\nComputes the solution to a system of linear equations where `a` is a square coefficient matrix and `b` is a right-hand side vector or matrix. Uses LAPACK.\n\n#### Examples\n\n```maxima\n(%i1) A : ndarray(matrix([2, 1], [5, 3]));\n(%o1)            ndarray([2, 2], DOUBLE-FLOAT)\n(%i2) b : ndarray(matrix([4], [7]));\n(%o2)            ndarray([2, 1], DOUBLE-FLOAT)\n(%i3) x : np_solve(A, b);\n(%o3)            ndarray([2, 1], DOUBLE-FLOAT)\n(%i4) np_to_matrix(np_matmul(A, x));\n(%o4)            matrix([4.0], [7.0])\n```\n\nSee also: `np_inv`, `np_lstsq`",
+      "summary": "Solve the linear system Ax = b. Supports complex arrays.",
+      "body_md": "Solve the linear system Ax = b. Supports complex arrays.\n\nComputes the solution to a system of linear equations where `a` is a square coefficient matrix and `b` is a right-hand side vector or matrix. Uses LAPACK.\n\n#### Examples\n\n```maxima\n(%i1) A : ndarray(matrix([2, 1], [5, 3]));\n(%o1)            ndarray([2, 2], DOUBLE-FLOAT)\n(%i2) b : ndarray(matrix([4], [7]));\n(%o2)            ndarray([2, 1], DOUBLE-FLOAT)\n(%i3) x : np_solve(A, b);\n(%o3)            ndarray([2, 1], DOUBLE-FLOAT)\n(%i4) np_to_matrix(np_matmul(A, x));\n(%o4)            matrix([4.0], [7.0])\n```\n\nSee also: `np_inv`, `np_lstsq`",
       "examples": [
         {
           "input": "A : ndarray(matrix([2, 1], [5, 3]));",
@@ -1873,8 +1893,8 @@
     "np_sort": {
       "type": "Function",
       "signature": "np_sort(a) / np_sort (a, axis)",
-      "summary": "Sort array elements in ascending order.",
-      "body_md": "Sort array elements in ascending order.\n\nWithout an axis argument, flattens to 1D and sorts. With an axis argument, sorts along the specified axis (preserving shape). Uses a stable sort — equal elements maintain their relative order. Returns a new ndarray; the input is not modified.\n\nCalling forms:\n\n- `np_sort(a)` -- flatten and sort, returns a 1D ndarray\n- `np_sort(a, 0)` -- sort each column independently, returns same shape\n- `np_sort(a, 1)` -- sort each row independently, returns same shape\n\n#### Examples\n\n```maxima\n(%i1) A : ndarray([3, 1, 4, 1, 5], [5]);\n(%o1)            ndarray([5], DOUBLE-FLOAT)\n(%i2) np_to_list(np_sort(A));\n(%o2)           [1.0, 1.0, 3.0, 4.0, 5.0]\n(%i3) B : ndarray(matrix([3, 1], [1, 4]));\n(%o3)            ndarray([2, 2], DOUBLE-FLOAT)\n(%i4) np_to_matrix(np_sort(B, 0));\n(%o4)         matrix([1.0, 1.0], [3.0, 4.0])\n(%i5) np_to_matrix(np_sort(B, 1));\n(%o5)         matrix([1.0, 3.0], [1.0, 4.0])\n```\n\nSee also: `np_argsort`, `np_min`, `np_max`",
+      "summary": "Sort array elements in ascending order. Signals an error for complex arrays.",
+      "body_md": "Sort array elements in ascending order. Signals an error for complex arrays.\n\nWithout an axis argument, flattens to 1D and sorts. With an axis argument, sorts along the specified axis (preserving shape). Uses a stable sort — equal elements maintain their relative order. Returns a new ndarray; the input is not modified.\n\nCalling forms:\n\n- `np_sort(a)` -- flatten and sort, returns a 1D ndarray\n- `np_sort(a, 0)` -- sort each column independently, returns same shape\n- `np_sort(a, 1)` -- sort each row independently, returns same shape\n\n#### Examples\n\n```maxima\n(%i1) A : ndarray([3, 1, 4, 1, 5], [5]);\n(%o1)            ndarray([5], DOUBLE-FLOAT)\n(%i2) np_to_list(np_sort(A));\n(%o2)           [1.0, 1.0, 3.0, 4.0, 5.0]\n(%i3) B : ndarray(matrix([3, 1], [1, 4]));\n(%o3)            ndarray([2, 2], DOUBLE-FLOAT)\n(%i4) np_to_matrix(np_sort(B, 0));\n(%o4)         matrix([1.0, 1.0], [3.0, 4.0])\n(%i5) np_to_matrix(np_sort(B, 1));\n(%o5)         matrix([1.0, 3.0], [1.0, 4.0])\n```\n\nSee also: `np_argsort`, `np_min`, `np_max`",
       "examples": [
         {
           "input": "A : ndarray([3, 1, 4, 1, 5], [5]);",
@@ -1929,7 +1949,7 @@
       "type": "Function",
       "signature": "np_std(a) / np_std (a, axis)",
       "summary": "Standard deviation of array elements.",
-      "body_md": "Standard deviation of array elements.\n\nComputes the population standard deviation (divides by N, not N-1). Without an axis argument, returns a scalar. With an axis argument, computes standard deviation along that axis.\n\nCalling forms:\n\n- `np_std(a)` -- total standard deviation, returns a scalar\n- `np_std(a, 0)` -- column standard deviations, returns a 1D ndarray\n- `np_std(a, 1)` -- row standard deviations, returns a 1D ndarray\n\n#### Examples\n\n```maxima\n(%i1) A : ndarray(matrix([1, 5], [3, 7]));\n(%o1)            ndarray([2, 2], DOUBLE-FLOAT)\n(%i2) np_std(A);\n(%o2)                    2.23606797749979\n(%i3) np_to_list(np_std(A, 0));\n(%o3)                     [1.0, 1.0]\n(%i4) np_to_list(np_std(A, 1));\n(%o4)                     [2.0, 2.0]\n```\n\nSee also: `np_var`, `np_mean`",
+      "body_md": "Standard deviation of array elements.\n\nComputes the population standard deviation (divides by N, not N-1). Without an axis argument, returns a scalar. With an axis argument, computes standard deviation along that axis. The result is always `double-float`, even for complex input.\n\nCalling forms:\n\n- `np_std(a)` -- total standard deviation, returns a scalar\n- `np_std(a, 0)` -- column standard deviations, returns a 1D ndarray\n- `np_std(a, 1)` -- row standard deviations, returns a 1D ndarray\n\n#### Examples\n\n```maxima\n(%i1) A : ndarray(matrix([1, 5], [3, 7]));\n(%o1)            ndarray([2, 2], DOUBLE-FLOAT)\n(%i2) np_std(A);\n(%o2)                    2.23606797749979\n(%i3) np_to_list(np_std(A, 0));\n(%o3)                     [1.0, 1.0]\n(%i4) np_to_list(np_std(A, 1));\n(%o4)                     [2.0, 2.0]\n```\n\nSee also: `np_var`, `np_mean`",
       "examples": [
         {
           "input": "A : ndarray(matrix([1, 5], [3, 7]));",
@@ -1986,8 +2006,8 @@
     "np_sum": {
       "type": "Function",
       "signature": "np_sum(a)",
-      "summary": "Sum of array elements.",
-      "body_md": "Sum of array elements.\n\nWithout an axis argument, returns the scalar sum of all elements. With an axis argument, sums along that axis and returns an ndarray.\n\nCalling forms:\n\n- `np_sum(a)` -- total sum, returns a scalar\n- `np_sum(a, 0)` -- sum across rows (column sums), returns a 1D ndarray of length `ncol`\n- `np_sum(a, 1)` -- sum across columns (row sums), returns a 1D ndarray of length `nrow`\n\n#### Examples\n\n```maxima\n(%i1) A : ndarray(matrix([1, 2], [3, 4]));\n(%o1)            ndarray([2, 2], DOUBLE-FLOAT)\n(%i2) np_sum(A);\n(%o2)                         10.0\n(%i3) np_to_list(np_sum(A, 0));\n(%o3)                     [4.0, 6.0]\n(%i4) np_to_list(np_sum(A, 1));\n(%o4)                     [3.0, 7.0]\n```\n\nSee also: `np_mean`, `np_cumsum`",
+      "summary": "Sum of array elements. Supports complex arrays.",
+      "body_md": "Sum of array elements. Supports complex arrays.\n\nWithout an axis argument, returns the scalar sum of all elements. With an axis argument, sums along that axis and returns an ndarray.\n\nCalling forms:\n\n- `np_sum(a)` -- total sum, returns a scalar\n- `np_sum(a, 0)` -- sum across rows (column sums), returns a 1D ndarray of length `ncol`\n- `np_sum(a, 1)` -- sum across columns (row sums), returns a 1D ndarray of length `nrow`\n\n#### Examples\n\n```maxima\n(%i1) A : ndarray(matrix([1, 2], [3, 4]));\n(%o1)            ndarray([2, 2], DOUBLE-FLOAT)\n(%i2) np_sum(A);\n(%o2)                         10.0\n(%i3) np_to_list(np_sum(A, 0));\n(%o3)                     [4.0, 6.0]\n(%i4) np_to_list(np_sum(A, 1));\n(%o4)                     [3.0, 7.0]\n```\n\nSee also: `np_mean`, `np_cumsum`",
       "examples": [
         {
           "input": "A : ndarray(matrix([1, 2], [3, 4]));",
@@ -2015,8 +2035,8 @@
     "np_svd": {
       "type": "Function",
       "signature": "np_svd(a)",
-      "summary": "Singular Value Decomposition.",
-      "body_md": "Singular Value Decomposition.\n\nDecomposes `a` into U, S, and Vt such that A = U * diag(S) * Vt, where U and Vt are orthogonal matrices. S is returned as a **1D ndarray** of singular values (not a diagonal matrix). Returns a Maxima list `[U, S, Vt]`.\n\nFor an m-by-n matrix, U is m-by-m, S has min(m,n) elements, and Vt is n-by-n.\n\nTo reconstruct A, build a diagonal matrix from S: `np_matmul(np_matmul(U, np_diag(np_to_list(S))), Vt)`.\n\n#### Examples\n\n```maxima\n(%i1) A : ndarray(matrix([1, 0], [0, 2], [0, 0]));\n(%o1)            ndarray([3, 2], DOUBLE-FLOAT)\n(%i2) [U, S, Vt] : np_svd(A);\n(%o2)        [ndarray, ndarray, ndarray]\n(%i3) np_shape(S);\n(%o3)                          [2]\n(%i4) np_to_list(S);\n(%o4)                      [2.0, 1.0]\n(%i5) /* Reconstruct */\n      S_mat : np_diag(np_to_list(S));\n(%o5)            ndarray([2, 2], DOUBLE-FLOAT)\n```\n\nSee also: `np_eig`, `np_rank`, `np_lstsq`, `np_pinv`",
+      "summary": "Singular Value Decomposition. Supports complex arrays.",
+      "body_md": "Singular Value Decomposition. Supports complex arrays.\n\nDecomposes `a` into U, S, and Vt such that A = U * diag(S) * Vt, where U and Vt are orthogonal (or unitary for complex) matrices. S is returned as a **1D ndarray** of singular values (not a diagonal matrix), always `double-float`. Returns a Maxima list `[U, S, Vt]`.\n\nFor an m-by-n matrix, U is m-by-m, S has min(m,n) elements, and Vt is n-by-n.\n\nTo reconstruct A, build a diagonal matrix from S: `np_matmul(np_matmul(U, np_diag(np_to_list(S))), Vt)`.\n\n#### Examples\n\n```maxima\n(%i1) A : ndarray(matrix([1, 0], [0, 2], [0, 0]));\n(%o1)            ndarray([3, 2], DOUBLE-FLOAT)\n(%i2) [U, S, Vt] : np_svd(A);\n(%o2)        [ndarray, ndarray, ndarray]\n(%i3) np_shape(S);\n(%o3)                          [2]\n(%i4) np_to_list(S);\n(%o4)                      [2.0, 1.0]\n(%i5) /* Reconstruct */\n      S_mat : np_diag(np_to_list(S));\n(%o5)            ndarray([2, 2], DOUBLE-FLOAT)\n```\n\nSee also: `np_eig`, `np_rank`, `np_lstsq`, `np_pinv`",
       "examples": [
         {
           "input": "A : ndarray(matrix([1, 0], [0, 2], [0, 0]));",
@@ -2102,7 +2122,7 @@
       "type": "Function",
       "signature": "np_to_list(a)",
       "summary": "Flatten an ndarray to a Maxima list.",
-      "body_md": "Flatten an ndarray to a Maxima list.\n\nReturns all elements as a flat Maxima list in row-major order (rows first, matching NumPy convention). Works for ndarrays of any dimensionality.\n\nRound-tripping is consistent: `ndarray(list, shape)` fills in row-major order, and `np_to_list` returns elements in row-major order.\n\n#### Examples\n\n```maxima\n(%i1) A : np_arange(4);\n(%o1)            ndarray([4], DOUBLE-FLOAT)\n(%i2) np_to_list(A);\n(%o2)              [0.0, 1.0, 2.0, 3.0]\n(%i3) B : ndarray(matrix([1, 2], [3, 4]));\n(%o3)            ndarray([2, 2], DOUBLE-FLOAT)\n(%i4) np_to_list(B);\n(%o4)              [1.0, 2.0, 3.0, 4.0]\n```\n\nSee also: `ndarray`, `np_to_matrix`, `np_flatten`",
+      "body_md": "Flatten an ndarray to a Maxima list.\n\nReturns all elements as a flat Maxima list in row-major order (rows first, matching NumPy convention). Works for ndarrays of any dimensionality. Complex elements are returned in Maxima form (`a + b*%i`).\n\nRound-tripping is consistent: `ndarray(list, shape)` fills in row-major order, and `np_to_list` returns elements in row-major order.\n\n#### Examples\n\n```maxima\n(%i1) A : np_arange(4);\n(%o1)            ndarray([4], DOUBLE-FLOAT)\n(%i2) np_to_list(A);\n(%o2)              [0.0, 1.0, 2.0, 3.0]\n(%i3) B : ndarray(matrix([1, 2], [3, 4]));\n(%o3)            ndarray([2, 2], DOUBLE-FLOAT)\n(%i4) np_to_list(B);\n(%o4)              [1.0, 2.0, 3.0, 4.0]\n```\n\nSee also: `ndarray`, `np_to_matrix`, `np_flatten`",
       "examples": [
         {
           "input": "A : np_arange(4);",
@@ -2132,7 +2152,7 @@
       "type": "Function",
       "signature": "np_to_matrix(a)",
       "summary": "Convert a 2D ndarray back to a Maxima matrix.",
-      "body_md": "Convert a 2D ndarray back to a Maxima matrix.\n\nThe ndarray must be 2-dimensional. For 1D ndarrays, use `np_to_list` instead, or reshape to 2D first with `np_reshape`.\n\n#### Examples\n\n```maxima\n(%i1) A : ndarray(matrix([1, 2], [3, 4]));\n(%o1)            ndarray([2, 2], DOUBLE-FLOAT)\n(%i2) np_to_matrix(A);\n(%o2)         matrix([1.0, 2.0], [3.0, 4.0])\n(%i3) B : np_eye(3);\n(%o3)            ndarray([3, 3], DOUBLE-FLOAT)\n(%i4) np_to_matrix(B);\n(%o4)  matrix([1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0])\n```\n\nSee also: `ndarray`, `np_to_list`, `np_reshape`",
+      "body_md": "Convert a 2D ndarray back to a Maxima matrix.\n\nThe ndarray must be 2-dimensional. For 1D ndarrays, use `np_to_list` instead, or reshape to 2D first with `np_reshape`. Complex elements are returned in Maxima form (`a + b*%i`).\n\n#### Examples\n\n```maxima\n(%i1) A : ndarray(matrix([1, 2], [3, 4]));\n(%o1)            ndarray([2, 2], DOUBLE-FLOAT)\n(%i2) np_to_matrix(A);\n(%o2)         matrix([1.0, 2.0], [3.0, 4.0])\n(%i3) B : np_eye(3);\n(%o3)            ndarray([3, 3], DOUBLE-FLOAT)\n(%i4) np_to_matrix(B);\n(%o4)  matrix([1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0])\n```\n\nSee also: `ndarray`, `np_to_list`, `np_reshape`",
       "examples": [
         {
           "input": "A : ndarray(matrix([1, 2], [3, 4]));",
@@ -2162,7 +2182,7 @@
       "type": "Function",
       "signature": "np_trace(a)",
       "summary": "Matrix trace (sum of diagonal elements).",
-      "body_md": "Matrix trace (sum of diagonal elements).\n\nReturns a scalar equal to the sum of the elements on the main diagonal.\n\n#### Examples\n\n```maxima\n(%i1) A : ndarray(matrix([1, 2], [3, 4]));\n(%o1)            ndarray([2, 2], DOUBLE-FLOAT)\n(%i2) np_trace(A);\n(%o2)                          5.0\n(%i3) np_trace(np_eye(5));\n(%o3)                          5.0\n```\n\nSee also: `np_det`, `np_diag`",
+      "body_md": "Matrix trace (sum of diagonal elements).\n\nReturns a scalar equal to the sum of the elements on the main diagonal (complex for complex input).\n\n#### Examples\n\n```maxima\n(%i1) A : ndarray(matrix([1, 2], [3, 4]));\n(%o1)            ndarray([2, 2], DOUBLE-FLOAT)\n(%i2) np_trace(A);\n(%o2)                          5.0\n(%i3) np_trace(np_eye(5));\n(%o3)                          5.0\n```\n\nSee also: `np_det`, `np_diag`",
       "examples": [
         {
           "input": "A : ndarray(matrix([1, 2], [3, 4]));",
@@ -2186,8 +2206,8 @@
     "np_transpose": {
       "type": "Function",
       "signature": "np_transpose(a)",
-      "summary": "Matrix transpose.",
-      "body_md": "Matrix transpose.\n\nReturns a new ndarray with rows and columns swapped.\n\n#### Examples\n\n```maxima\n(%i1) A : ndarray(matrix([1, 2], [3, 4]));\n(%o1)            ndarray([2, 2], DOUBLE-FLOAT)\n(%i2) np_to_matrix(np_transpose(A));\n(%o2)         matrix([1.0, 3.0], [2.0, 4.0])\n(%i3) np_shape(np_transpose(ndarray(matrix([1, 2, 3]))));\n(%o3)                        [3, 1]\n```\n\nSee also: `np_conj`, `np_ctranspose`, `np_reshape`",
+      "summary": "Matrix transpose. Supports complex arrays (transpose only, no conjugation; see np_ctranspose).",
+      "body_md": "Matrix transpose. Supports complex arrays (transpose only, no conjugation; see `np_ctranspose`).\n\nReturns a new ndarray with rows and columns swapped.\n\n#### Examples\n\n```maxima\n(%i1) A : ndarray(matrix([1, 2], [3, 4]));\n(%o1)            ndarray([2, 2], DOUBLE-FLOAT)\n(%i2) np_to_matrix(np_transpose(A));\n(%o2)         matrix([1.0, 3.0], [2.0, 4.0])\n(%i3) np_shape(np_transpose(ndarray(matrix([1, 2, 3]))));\n(%o3)                        [3, 1]\n```\n\nSee also: `np_conj`, `np_ctranspose`, `np_reshape`",
       "examples": [
         {
           "input": "A : ndarray(matrix([1, 2], [3, 4]));",
@@ -2213,7 +2233,7 @@
       "type": "Function",
       "signature": "np_var(a) / np_var (a, axis)",
       "summary": "Variance of array elements.",
-      "body_md": "Variance of array elements.\n\nComputes the population variance (divides by N, not N-1). Without an axis argument, returns a scalar. With an axis argument, computes variance along that axis.\n\nCalling forms:\n\n- `np_var(a)` -- total variance, returns a scalar\n- `np_var(a, 0)` -- column variances, returns a 1D ndarray\n- `np_var(a, 1)` -- row variances, returns a 1D ndarray\n\n#### Examples\n\n```maxima\n(%i1) A : ndarray(matrix([1, 5], [3, 7]));\n(%o1)            ndarray([2, 2], DOUBLE-FLOAT)\n(%i2) np_var(A);\n(%o2)                          5.0\n(%i3) np_to_list(np_var(A, 0));\n(%o3)                     [1.0, 1.0]\n(%i4) np_to_list(np_var(A, 1));\n(%o4)                     [4.0, 4.0]\n```\n\nSee also: `np_std`, `np_mean`",
+      "body_md": "Variance of array elements.\n\nComputes the population variance (divides by N, not N-1). Without an axis argument, returns a scalar. With an axis argument, computes variance along that axis. For complex arrays, computes |x - mean|^2; the result is always `double-float`.\n\nCalling forms:\n\n- `np_var(a)` -- total variance, returns a scalar\n- `np_var(a, 0)` -- column variances, returns a 1D ndarray\n- `np_var(a, 1)` -- row variances, returns a 1D ndarray\n\n#### Examples\n\n```maxima\n(%i1) A : ndarray(matrix([1, 5], [3, 7]));\n(%o1)            ndarray([2, 2], DOUBLE-FLOAT)\n(%i2) np_var(A);\n(%o2)                          5.0\n(%i3) np_to_list(np_var(A, 0));\n(%o3)                     [1.0, 1.0]\n(%i4) np_to_list(np_var(A, 1));\n(%o4)                     [4.0, 4.0]\n```\n\nSee also: `np_std`, `np_mean`",
       "examples": [
         {
           "input": "A : ndarray(matrix([1, 5], [3, 7]));",
@@ -2242,7 +2262,7 @@
       "type": "Function",
       "signature": "np_vstack(a, b)",
       "summary": "Concatenate two 2D ndarrays vertically (along rows).",
-      "body_md": "Concatenate two 2D ndarrays vertically (along rows).\n\nBoth arrays must have the same number of columns. The result has the combined number of rows.\n\n#### Examples\n\n```maxima\n(%i1) A : ndarray(matrix([1, 2], [3, 4]));\n(%o1)            ndarray([2, 2], DOUBLE-FLOAT)\n(%i2) B : ndarray(matrix([5, 6]));\n(%o2)            ndarray([1, 2], DOUBLE-FLOAT)\n(%i3) C : np_vstack(A, B);\n(%o3)            ndarray([3, 2], DOUBLE-FLOAT)\n(%i4) np_to_matrix(C);\n(%o4)  matrix([1.0, 2.0], [3.0, 4.0], [5.0, 6.0])\n```\n\nSee also: `np_hstack`",
+      "body_md": "Concatenate two 2D ndarrays vertically (along rows).\n\nBoth arrays must have the same number of columns. The result has the combined number of rows. Promotes to complex if either input is complex.\n\n#### Examples\n\n```maxima\n(%i1) A : ndarray(matrix([1, 2], [3, 4]));\n(%o1)            ndarray([2, 2], DOUBLE-FLOAT)\n(%i2) B : ndarray(matrix([5, 6]));\n(%o2)            ndarray([1, 2], DOUBLE-FLOAT)\n(%i3) C : np_vstack(A, B);\n(%o3)            ndarray([3, 2], DOUBLE-FLOAT)\n(%i4) np_to_matrix(C);\n(%o4)  matrix([1.0, 2.0], [3.0, 4.0], [5.0, 6.0])\n```\n\nSee also: `np_hstack`",
       "examples": [
         {
           "input": "A : ndarray(matrix([1, 2], [3, 4]));",
@@ -2314,9 +2334,9 @@
     },
     "np_zeros": {
       "type": "Function",
-      "signature": "np_zeros(shape)",
+      "signature": "np_zeros(shape) / np_zeros (shape, dtype)",
       "summary": "Create a zero-filled ndarray.",
-      "body_md": "Create a zero-filled ndarray.\n\nThe `shape` argument is either an integer (for 1D) or a Maxima list of dimensions (for 2D or higher).\n\n#### Examples\n\n```maxima\n(%i1) np_zeros(5);\n(%o1)            ndarray([5], DOUBLE-FLOAT)\n(%i2) np_to_list(np_zeros(3));\n(%o2)                  [0.0, 0.0, 0.0]\n(%i3) np_zeros([2, 3]);\n(%o3)            ndarray([2, 3], DOUBLE-FLOAT)\n(%i4) np_ref(np_zeros([2, 2]), 0, 0);\n(%o4)                          0.0\n```\n\nSee also: `np_ones`, `np_full`, `np_empty`",
+      "body_md": "Create a zero-filled ndarray.\n\nThe `shape` argument is either an integer (for 1D) or a Maxima list of dimensions (for 2D or higher). Pass `complex` as the optional second argument to create a complex array.\n\n#### Examples\n\n```maxima\n(%i1) np_zeros(5);\n(%o1)            ndarray([5], DOUBLE-FLOAT)\n(%i2) np_to_list(np_zeros(3));\n(%o2)                  [0.0, 0.0, 0.0]\n(%i3) np_zeros([2, 3]);\n(%o3)            ndarray([2, 3], DOUBLE-FLOAT)\n(%i4) np_ref(np_zeros([2, 2]), 0, 0);\n(%o4)                          0.0\n(%i5) np_zeros([2, 2], complex);\n(%o5)            ndarray([2, 2], COMPLEX-DOUBLE-FLOAT)\n```\n\nSee also: `np_ones`, `np_full`, `np_empty`",
       "examples": [
         {
           "input": "np_zeros(5);",
@@ -2333,6 +2353,10 @@
         {
           "input": "np_ref(np_zeros([2, 2]), 0, 0);",
           "output": "0.0"
+        },
+        {
+          "input": "np_zeros([2, 2], complex);",
+          "output": "ndarray([2, 2], COMPLEX-DOUBLE-FLOAT)"
         }
       ],
       "see_also": [
@@ -2362,11 +2386,11 @@
         },
         {
           "title": "Slicing",
-          "body_md": ""
+          "body_md": "All slicing and indexing operations preserve the dtype of the input array."
         },
         {
           "title": "Element-wise Operations",
-          "body_md": ""
+          "body_md": "All element-wise arithmetic and math operations support complex arrays unless noted otherwise. When one operand is complex and the other is real, the result is complex."
         },
         {
           "title": "Aggregation",
