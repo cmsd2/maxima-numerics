@@ -178,7 +178,7 @@ File: numerics.info,  Node: Conversion,  Prev: Definitions for numerics,  Up: Pa
 * Function np_eye n::
 * Function np_rand shape::
 * Function np_randn shape::
-* Function np_arange n::
+* Function np_arange stop / np_arange start stop / np_arange start stop step::
 * Function np_linspace start stop n::
 * Function np_full shape val::
 * Function np_empty shape::
@@ -212,16 +212,19 @@ File: numerics.info,  Node: Conversion,  Prev: Definitions for numerics,  Up: Pa
 * Function np_scale alpha a::
 * Function np_map f a::
 * Function np_map2 f a b::
+* Function np_where condition / np_where condition x y::
 * Function np_sum a::
 * Function np_mean a::
-* Function np_min a::
-* Function np_max a::
-* Function np_argmin a::
-* Function np_argmax a::
-* Function np_std a::
-* Function np_var a::
+* Function np_min a / np_min a axis::
+* Function np_max a / np_max a axis::
+* Function np_argmin a / np_argmin a axis::
+* Function np_argmax a / np_argmax a axis::
+* Function np_var a / np_var a axis::
+* Function np_std a / np_std a axis::
 * Function np_cumsum a::
 * Function np_dot a b::
+* Function np_sort a / np_sort a axis::
+* Function np_argsort a / np_argsort a axis::
 * Function np_matmul a b::
 * Function np_inv a::
 * Function np_det a::
@@ -230,7 +233,7 @@ File: numerics.info,  Node: Conversion,  Prev: Definitions for numerics,  Up: Pa
 * Function np_eig a::
 * Function np_qr a::
 * Function np_lu a::
-* Function np_norm a::
+* Function np_norm a / np_norm a ord::
 * Function np_rank a::
 * Function np_trace a::
 * Function np_transpose a::
@@ -489,7 +492,7 @@ File: numerics.info,  Node: Function np_rand shape,  Next: Function np_randn sha
 See also: ‘np_randn’, ‘np_zeros’, ‘np_ones’
 
 
-File: numerics.info,  Node: Function np_randn shape,  Next: Function np_arange n,  Prev: Function np_rand shape,  Up: Conversion
+File: numerics.info,  Node: Function np_randn shape,  Next: Function np_arange stop / np_arange start stop / np_arange start stop step,  Prev: Function np_rand shape,  Up: Conversion
 
  -- Function: np_randn (SHAPE)
      Create an ndarray filled with standard normal random values.
@@ -512,13 +515,21 @@ File: numerics.info,  Node: Function np_randn shape,  Next: Function np_arange n
 See also: ‘np_rand’
 
 
-File: numerics.info,  Node: Function np_arange n,  Next: Function np_linspace start stop n,  Prev: Function np_randn shape,  Up: Conversion
+File: numerics.info,  Node: Function np_arange stop / np_arange start stop / np_arange start stop step,  Next: Function np_linspace start stop n,  Prev: Function np_randn shape,  Up: Conversion
 
- -- Function: np_arange (N)
-     Create a 1D ndarray with values 0, 1, 2, ..., n-1.
+ -- Function: np_arange (STOP) / NP_ARANGE (START, STOP) / NP_ARANGE
+          (START, STOP, STEP)
+     Create a 1D ndarray of evenly spaced values.
 
-     The argument ‘n’ is truncated to an integer.  Returned values are
-     double-float.
+     Generates values from ‘start’ (inclusive) to ‘stop’ (exclusive)
+     with the given ‘step’.  Supports non-integer step values.
+
+     Calling forms:
+
+        • ‘np_arange(stop)’ - values 0, 1, ..., stop-1
+        • ‘np_arange(start, stop)’ - values start, start+1, ..., stop-1
+        • ‘np_arange(start, stop, step)’ - values start, start+step,
+          start+2*step, ...
 
 * Menu:
 
@@ -527,17 +538,19 @@ File: numerics.info,  Node: Function np_arange n,  Next: Function np_linspace st
 1.3.1.9 Examples
 ................
 
-(%i1) np_arange(5);
-(%o1)            ndarray([5], DOUBLE-FLOAT)
-(%i2) np_to_list(np_arange(5));
-(%o2)           [0.0, 1.0, 2.0, 3.0, 4.0]
-(%i3) np_ref(np_arange(10), 7);
-(%o3)                          7.0
+(%i1) np_to_list(np_arange(5));
+(%o1)           [0.0, 1.0, 2.0, 3.0, 4.0]
+(%i2) np_to_list(np_arange(2, 6));
+(%o2)           [2.0, 3.0, 4.0, 5.0]
+(%i3) np_to_list(np_arange(0, 1, 0.25));
+(%o3)            [0.0, 0.25, 0.5, 0.75]
+(%i4) np_to_list(np_arange(10, 0, -2));
+(%o4)          [10.0, 8.0, 6.0, 4.0, 2.0]
 
 See also: ‘np_linspace’, ‘np_zeros’
 
 
-File: numerics.info,  Node: Function np_linspace start stop n,  Next: Function np_full shape val,  Prev: Function np_arange n,  Up: Conversion
+File: numerics.info,  Node: Function np_linspace start stop n,  Next: Function np_full shape val,  Prev: Function np_arange stop / np_arange start stop / np_arange start stop step,  Up: Conversion
 
  -- Function: np_linspace (START, STOP, N)
      Create ‘n’ evenly spaced points from ‘start’ to ‘stop’ (inclusive).
@@ -1386,7 +1399,7 @@ For best performance on large arrays, translate the function first:
 See also: ‘np_map2’, ‘np_sqrt’, ‘np_exp’
 
 
-File: numerics.info,  Node: Function np_map2 f a b,  Next: Function np_sum a,  Prev: Function np_map f a,  Up: Conversion
+File: numerics.info,  Node: Function np_map2 f a b,  Next: Function np_where condition / np_where condition x y,  Prev: Function np_map f a,  Up: Conversion
 
  -- Function: np_map2 (F, A, B)
      Apply a binary function element-wise to two ndarrays.
@@ -1412,10 +1425,57 @@ File: numerics.info,  Node: Function np_map2 f a b,  Next: Function np_sum a,  P
 (%i4) np_to_list(np_map2(f, A, B));
 (%o4)                 [1.0, 2.0, 5.0]
 
-See also: ‘np_map’, ‘np_add’, ‘np_mul’ ## Aggregation
+See also: ‘np_map’, ‘np_add’, ‘np_mul’
 
 
-File: numerics.info,  Node: Function np_sum a,  Next: Function np_mean a,  Prev: Function np_map2 f a b,  Up: Conversion
+File: numerics.info,  Node: Function np_where condition / np_where condition x y,  Next: Function np_sum a,  Prev: Function np_map2 f a b,  Up: Conversion
+
+ -- Function: np_where (CONDITION) / NP_WHERE (CONDITION, X, Y)
+     Conditional selection.
+
+     *Form 1: ‘np_where(condition)’* -- returns a Maxima list of index
+     arrays indicating where the condition ndarray has nonzero elements.
+
+        • For 1D input: returns ‘[indices]’ (a list containing one 1D
+          ndarray).
+        • For 2D input: returns ‘[row_indices, col_indices]’ (two 1D
+          ndarrays).
+
+     *Form 2: ‘np_where(condition, x, y)’* -- element-wise selection.
+     All three arguments must be ndarrays of the same shape.  Returns a
+     new ndarray: takes from ‘x’ where condition is nonzero, from ‘y’
+     where condition is zero.
+
+* Menu:
+
+     * Examples::
+
+1.3.1.43 Examples
+.................
+
+(%i1) /* Form 1: find nonzero indices */
+      A : ndarray([0, 1, 0, 3, 0], [5]);
+(%o1)            ndarray([5], DOUBLE-FLOAT)
+(%i2) np_to_list(np_where(A)[1]);
+(%o2)                     [1.0, 3.0]
+(%i3) /* Form 1: 2D */
+      B : ndarray(matrix([1, 0], [0, 4]));
+(%o3)            ndarray([2, 2], DOUBLE-FLOAT)
+(%i4) [rows, cols] : np_where(B);
+(%o4)              [ndarray, ndarray]
+(%i5) np_to_list(rows);
+(%o5)                     [0.0, 1.0]
+(%i6) /* Form 2: select from x or y */
+      cond : ndarray([1, 0, 1], [3]);
+(%o6)            ndarray([3], DOUBLE-FLOAT)
+(%i7) np_to_list(np_where(cond, ndarray([10,20,30],[3]),
+                                ndarray([100,200,300],[3])));
+(%o7)               [10.0, 200.0, 30.0]
+
+See also: ‘np_map’, ‘np_sort’ ## Aggregation
+
+
+File: numerics.info,  Node: Function np_sum a,  Next: Function np_mean a,  Prev: Function np_where condition / np_where condition x y,  Up: Conversion
 
  -- Function: np_sum (A)
      Sum of array elements.
@@ -1435,7 +1495,7 @@ File: numerics.info,  Node: Function np_sum a,  Next: Function np_mean a,  Prev:
 
      * Examples::
 
-1.3.1.43 Examples
+1.3.1.44 Examples
 .................
 
 (%i1) A : ndarray(matrix([1, 2], [3, 4]));
@@ -1450,7 +1510,7 @@ File: numerics.info,  Node: Function np_sum a,  Next: Function np_mean a,  Prev:
 See also: ‘np_mean’, ‘np_cumsum’
 
 
-File: numerics.info,  Node: Function np_mean a,  Next: Function np_min a,  Prev: Function np_sum a,  Up: Conversion
+File: numerics.info,  Node: Function np_mean a,  Next: Function np_min a / np_min a axis,  Prev: Function np_sum a,  Up: Conversion
 
  -- Function: np_mean (A)
      Mean (average) of array elements.
@@ -1468,7 +1528,7 @@ File: numerics.info,  Node: Function np_mean a,  Next: Function np_min a,  Prev:
 
      * Examples::
 
-1.3.1.44 Examples
+1.3.1.45 Examples
 .................
 
 (%i1) A : ndarray(matrix([1, 2], [3, 4]));
@@ -1483,36 +1543,22 @@ File: numerics.info,  Node: Function np_mean a,  Next: Function np_min a,  Prev:
 See also: ‘np_sum’, ‘np_std’, ‘np_var’
 
 
-File: numerics.info,  Node: Function np_min a,  Next: Function np_max a,  Prev: Function np_mean a,  Up: Conversion
+File: numerics.info,  Node: Function np_min a / np_min a axis,  Next: Function np_max a / np_max a axis,  Prev: Function np_mean a,  Up: Conversion
 
- -- Function: np_min (A)
+ -- Function: np_min (A) / NP_MIN (A, AXIS)
      Minimum element of an ndarray.
 
-     Returns the smallest element as a scalar.
+     Without an axis argument, returns the smallest element as a scalar.
+     With an axis argument, computes the minimum along that axis and
+     returns an ndarray.
 
-* Menu:
+     Calling forms:
 
-     * Examples::
-
-1.3.1.45 Examples
-.................
-
-(%i1) A : ndarray(matrix([3, 1], [4, 2]));
-(%o1)            ndarray([2, 2], DOUBLE-FLOAT)
-(%i2) np_min(A);
-(%o2)                          1.0
-(%i3) np_min(np_arange(10));
-(%o3)                          0.0
-
-See also: ‘np_max’, ‘np_argmin’
-
-
-File: numerics.info,  Node: Function np_max a,  Next: Function np_argmin a,  Prev: Function np_min a,  Up: Conversion
-
- -- Function: np_max (A)
-     Maximum element of an ndarray.
-
-     Returns the largest element as a scalar.
+        • ‘np_min(a)’ - global minimum, returns a scalar
+        • ‘np_min(a, 0)’ - minimum across rows (column mins), returns a
+          1D ndarray of length ‘ncol’
+        • ‘np_min(a, 1)’ - minimum across columns (row mins), returns a
+          1D ndarray of length ‘nrow’
 
 * Menu:
 
@@ -1523,21 +1569,32 @@ File: numerics.info,  Node: Function np_max a,  Next: Function np_argmin a,  Pre
 
 (%i1) A : ndarray(matrix([3, 1], [4, 2]));
 (%o1)            ndarray([2, 2], DOUBLE-FLOAT)
-(%i2) np_max(A);
-(%o2)                          4.0
-(%i3) np_max(np_arange(10));
-(%o3)                          9.0
+(%i2) np_min(A);
+(%o2)                          1.0
+(%i3) np_to_list(np_min(A, 0));
+(%o3)                     [3.0, 1.0]
+(%i4) np_to_list(np_min(A, 1));
+(%o4)                     [1.0, 2.0]
 
-See also: ‘np_min’, ‘np_argmax’
+See also: ‘np_max’, ‘np_argmin’
 
 
-File: numerics.info,  Node: Function np_argmin a,  Next: Function np_argmax a,  Prev: Function np_max a,  Up: Conversion
+File: numerics.info,  Node: Function np_max a / np_max a axis,  Next: Function np_argmin a / np_argmin a axis,  Prev: Function np_min a / np_min a axis,  Up: Conversion
 
- -- Function: np_argmin (A)
-     Index of the minimum element in storage order.
+ -- Function: np_max (A) / NP_MAX (A, AXIS)
+     Maximum element of an ndarray.
 
-     Returns a 0-based integer index into the flattened (column-major)
-     storage of the array.
+     Without an axis argument, returns the largest element as a scalar.
+     With an axis argument, computes the maximum along that axis and
+     returns an ndarray.
+
+     Calling forms:
+
+        • ‘np_max(a)’ - global maximum, returns a scalar
+        • ‘np_max(a, 0)’ - maximum across rows (column maxes), returns a
+          1D ndarray of length ‘ncol’
+        • ‘np_max(a, 1)’ - maximum across columns (row maxes), returns a
+          1D ndarray of length ‘nrow’
 
 * Menu:
 
@@ -1548,21 +1605,33 @@ File: numerics.info,  Node: Function np_argmin a,  Next: Function np_argmax a,  
 
 (%i1) A : ndarray(matrix([3, 1], [4, 2]));
 (%o1)            ndarray([2, 2], DOUBLE-FLOAT)
-(%i2) np_argmin(A);
-(%o2)                           2
-(%i3) np_argmin(np_arange(5));
-(%o3)                           0
+(%i2) np_max(A);
+(%o2)                          4.0
+(%i3) np_to_list(np_max(A, 0));
+(%o3)                     [4.0, 2.0]
+(%i4) np_to_list(np_max(A, 1));
+(%o4)                     [3.0, 4.0]
 
-See also: ‘np_argmax’, ‘np_min’
+See also: ‘np_min’, ‘np_argmax’
 
 
-File: numerics.info,  Node: Function np_argmax a,  Next: Function np_std a,  Prev: Function np_argmin a,  Up: Conversion
+File: numerics.info,  Node: Function np_argmin a / np_argmin a axis,  Next: Function np_argmax a / np_argmax a axis,  Prev: Function np_max a / np_max a axis,  Up: Conversion
 
- -- Function: np_argmax (A)
-     Index of the maximum element in storage order.
+ -- Function: np_argmin (A) / NP_ARGMIN (A, AXIS)
+     Index of the minimum element.
 
-     Returns a 0-based integer index into the flattened (column-major)
-     storage of the array.
+     Without an axis argument, returns a 0-based integer index into the
+     flattened (column-major) storage.  With an axis argument, returns a
+     1D ndarray of indices along the specified axis.
+
+     Calling forms:
+
+        • ‘np_argmin(a)’ - flat index of global minimum, returns an
+          integer
+        • ‘np_argmin(a, 0)’ - row index of minimum per column, returns a
+          1D ndarray
+        • ‘np_argmin(a, 1)’ - column index of minimum per row, returns a
+          1D ndarray
 
 * Menu:
 
@@ -1573,21 +1642,33 @@ File: numerics.info,  Node: Function np_argmax a,  Next: Function np_std a,  Pre
 
 (%i1) A : ndarray(matrix([3, 1], [4, 2]));
 (%o1)            ndarray([2, 2], DOUBLE-FLOAT)
-(%i2) np_argmax(A);
-(%o2)                           1
-(%i3) np_argmax(np_arange(5));
-(%o3)                           4
+(%i2) np_argmin(A);
+(%o2)                           2
+(%i3) np_to_list(np_argmin(A, 0));
+(%o3)                     [0.0, 0.0]
+(%i4) np_to_list(np_argmin(A, 1));
+(%o4)                     [1.0, 1.0]
 
-See also: ‘np_argmin’, ‘np_max’
+See also: ‘np_argmax’, ‘np_min’
 
 
-File: numerics.info,  Node: Function np_std a,  Next: Function np_var a,  Prev: Function np_argmax a,  Up: Conversion
+File: numerics.info,  Node: Function np_argmax a / np_argmax a axis,  Next: Function np_var a / np_var a axis,  Prev: Function np_argmin a / np_argmin a axis,  Up: Conversion
 
- -- Function: np_std (A)
-     Standard deviation of array elements.
+ -- Function: np_argmax (A) / NP_ARGMAX (A, AXIS)
+     Index of the maximum element.
 
-     Computes the population standard deviation (divides by N, not N-1).
-     Returns a scalar.
+     Without an axis argument, returns a 0-based integer index into the
+     flattened (column-major) storage.  With an axis argument, returns a
+     1D ndarray of indices along the specified axis.
+
+     Calling forms:
+
+        • ‘np_argmax(a)’ - flat index of global maximum, returns an
+          integer
+        • ‘np_argmax(a, 0)’ - row index of maximum per column, returns a
+          1D ndarray
+        • ‘np_argmax(a, 1)’ - column index of maximum per row, returns a
+          1D ndarray
 
 * Menu:
 
@@ -1596,21 +1677,32 @@ File: numerics.info,  Node: Function np_std a,  Next: Function np_var a,  Prev: 
 1.3.1.49 Examples
 .................
 
-(%i1) A : ndarray(matrix([2, 4], [4, 4]));
+(%i1) A : ndarray(matrix([3, 1], [4, 2]));
 (%o1)            ndarray([2, 2], DOUBLE-FLOAT)
-(%i2) np_std(A);
-(%o2)                    0.8660254037844386
+(%i2) np_argmax(A);
+(%o2)                           1
+(%i3) np_to_list(np_argmax(A, 0));
+(%o3)                     [1.0, 1.0]
+(%i4) np_to_list(np_argmax(A, 1));
+(%o4)                     [0.0, 0.0]
 
-See also: ‘np_var’, ‘np_mean’
+See also: ‘np_argmin’, ‘np_max’
 
 
-File: numerics.info,  Node: Function np_var a,  Next: Function np_cumsum a,  Prev: Function np_std a,  Up: Conversion
+File: numerics.info,  Node: Function np_var a / np_var a axis,  Next: Function np_std a / np_std a axis,  Prev: Function np_argmax a / np_argmax a axis,  Up: Conversion
 
- -- Function: np_var (A)
+ -- Function: np_var (A) / NP_VAR (A, AXIS)
      Variance of array elements.
 
-     Computes the population variance (divides by N, not N-1).  Returns
-     a scalar.
+     Computes the population variance (divides by N, not N-1).  Without
+     an axis argument, returns a scalar.  With an axis argument,
+     computes variance along that axis.
+
+     Calling forms:
+
+        • ‘np_var(a)’ - total variance, returns a scalar
+        • ‘np_var(a, 0)’ - column variances, returns a 1D ndarray
+        • ‘np_var(a, 1)’ - row variances, returns a 1D ndarray
 
 * Menu:
 
@@ -1619,17 +1711,54 @@ File: numerics.info,  Node: Function np_var a,  Next: Function np_cumsum a,  Pre
 1.3.1.50 Examples
 .................
 
-(%i1) A : ndarray(matrix([2, 4], [4, 4]));
+(%i1) A : ndarray(matrix([1, 5], [3, 7]));
 (%o1)            ndarray([2, 2], DOUBLE-FLOAT)
 (%i2) np_var(A);
-(%o2)                          0.75
-(%i3) is(np_std(A)^2 - np_var(A) < 1e-10);
-(%o3)                         true
+(%o2)                          5.0
+(%i3) np_to_list(np_var(A, 0));
+(%o3)                     [1.0, 1.0]
+(%i4) np_to_list(np_var(A, 1));
+(%o4)                     [4.0, 4.0]
 
 See also: ‘np_std’, ‘np_mean’
 
 
-File: numerics.info,  Node: Function np_cumsum a,  Next: Function np_dot a b,  Prev: Function np_var a,  Up: Conversion
+File: numerics.info,  Node: Function np_std a / np_std a axis,  Next: Function np_cumsum a,  Prev: Function np_var a / np_var a axis,  Up: Conversion
+
+ -- Function: np_std (A) / NP_STD (A, AXIS)
+     Standard deviation of array elements.
+
+     Computes the population standard deviation (divides by N, not N-1).
+     Without an axis argument, returns a scalar.  With an axis argument,
+     computes standard deviation along that axis.
+
+     Calling forms:
+
+        • ‘np_std(a)’ - total standard deviation, returns a scalar
+        • ‘np_std(a, 0)’ - column standard deviations, returns a 1D
+          ndarray
+        • ‘np_std(a, 1)’ - row standard deviations, returns a 1D ndarray
+
+* Menu:
+
+     * Examples::
+
+1.3.1.51 Examples
+.................
+
+(%i1) A : ndarray(matrix([1, 5], [3, 7]));
+(%o1)            ndarray([2, 2], DOUBLE-FLOAT)
+(%i2) np_std(A);
+(%o2)                    2.23606797749979
+(%i3) np_to_list(np_std(A, 0));
+(%o3)                     [1.0, 1.0]
+(%i4) np_to_list(np_std(A, 1));
+(%o4)                     [2.0, 2.0]
+
+See also: ‘np_var’, ‘np_mean’
+
+
+File: numerics.info,  Node: Function np_cumsum a,  Next: Function np_dot a b,  Prev: Function np_std a / np_std a axis,  Up: Conversion
 
  -- Function: np_cumsum (A)
      Cumulative sum of a 1D ndarray.
@@ -1641,7 +1770,7 @@ File: numerics.info,  Node: Function np_cumsum a,  Next: Function np_dot a b,  P
 
      * Examples::
 
-1.3.1.51 Examples
+1.3.1.52 Examples
 .................
 
 (%i1) A : np_arange(5);
@@ -1654,7 +1783,7 @@ File: numerics.info,  Node: Function np_cumsum a,  Next: Function np_dot a b,  P
 See also: ‘np_sum’
 
 
-File: numerics.info,  Node: Function np_dot a b,  Next: Function np_matmul a b,  Prev: Function np_cumsum a,  Up: Conversion
+File: numerics.info,  Node: Function np_dot a b,  Next: Function np_sort a / np_sort a axis,  Prev: Function np_cumsum a,  Up: Conversion
 
  -- Function: np_dot (A, B)
      Dot product of two 1D vectors.
@@ -1666,7 +1795,7 @@ File: numerics.info,  Node: Function np_dot a b,  Next: Function np_matmul a b, 
 
      * Examples::
 
-1.3.1.52 Examples
+1.3.1.53 Examples
 .................
 
 (%i1) a : np_arange(3);
@@ -1678,10 +1807,88 @@ File: numerics.info,  Node: Function np_dot a b,  Next: Function np_matmul a b, 
 (%i4) np_dot(a, a);
 (%o4)                          5.0
 
-See also: ‘np_matmul’, ‘np_sum’ ## Linear Algebra
+See also: ‘np_matmul’, ‘np_sum’
 
 
-File: numerics.info,  Node: Function np_matmul a b,  Next: Function np_inv a,  Prev: Function np_dot a b,  Up: Conversion
+File: numerics.info,  Node: Function np_sort a / np_sort a axis,  Next: Function np_argsort a / np_argsort a axis,  Prev: Function np_dot a b,  Up: Conversion
+
+ -- Function: np_sort (A) / NP_SORT (A, AXIS)
+     Sort array elements in ascending order.
+
+     Without an axis argument, flattens to 1D and sorts.  With an axis
+     argument, sorts along the specified axis (preserving shape).  Uses
+     a stable sort -- equal elements maintain their relative order.
+     Returns a new ndarray; the input is not modified.
+
+     Calling forms:
+
+        • ‘np_sort(a)’ - flatten and sort, returns a 1D ndarray
+        • ‘np_sort(a, 0)’ - sort each column independently, returns same
+          shape
+        • ‘np_sort(a, 1)’ - sort each row independently, returns same
+          shape
+
+* Menu:
+
+     * Examples::
+
+1.3.1.54 Examples
+.................
+
+(%i1) A : ndarray([3, 1, 4, 1, 5], [5]);
+(%o1)            ndarray([5], DOUBLE-FLOAT)
+(%i2) np_to_list(np_sort(A));
+(%o2)           [1.0, 1.0, 3.0, 4.0, 5.0]
+(%i3) B : ndarray(matrix([3, 1], [1, 4]));
+(%o3)            ndarray([2, 2], DOUBLE-FLOAT)
+(%i4) np_to_matrix(np_sort(B, 0));
+(%o4)         matrix([1.0, 1.0], [3.0, 4.0])
+(%i5) np_to_matrix(np_sort(B, 1));
+(%o5)         matrix([1.0, 3.0], [1.0, 4.0])
+
+See also: ‘np_argsort’, ‘np_min’, ‘np_max’
+
+
+File: numerics.info,  Node: Function np_argsort a / np_argsort a axis,  Next: Function np_matmul a b,  Prev: Function np_sort a / np_sort a axis,  Up: Conversion
+
+ -- Function: np_argsort (A) / NP_ARGSORT (A, AXIS)
+     Indices that would sort array elements in ascending order.
+
+     Without an axis argument, returns flat indices for the flattened
+     array.  With an axis argument, returns indices along the specified
+     axis.  Indices are stored as double-float values.  Uses a stable
+     sort.
+
+     Calling forms:
+
+        • ‘np_argsort(a)’ - flat indices, returns a 1D ndarray
+        • ‘np_argsort(a, 0)’ - row indices that sort each column,
+          returns same shape
+        • ‘np_argsort(a, 1)’ - column indices that sort each row,
+          returns same shape
+
+* Menu:
+
+     * Examples::
+
+1.3.1.55 Examples
+.................
+
+(%i1) A : ndarray([3, 1, 2], [3]);
+(%o1)            ndarray([3], DOUBLE-FLOAT)
+(%i2) np_to_list(np_argsort(A));
+(%o2)                  [1.0, 2.0, 0.0]
+(%i3) B : ndarray(matrix([3, 1], [1, 4]));
+(%o3)            ndarray([2, 2], DOUBLE-FLOAT)
+(%i4) np_to_matrix(np_argsort(B, 0));
+(%o4)         matrix([1.0, 0.0], [0.0, 1.0])
+(%i5) np_to_matrix(np_argsort(B, 1));
+(%o5)         matrix([1.0, 0.0], [0.0, 1.0])
+
+See also: ‘np_sort’, ‘np_argmin’, ‘np_argmax’ ## Linear Algebra
+
+
+File: numerics.info,  Node: Function np_matmul a b,  Next: Function np_inv a,  Prev: Function np_argsort a / np_argsort a axis,  Up: Conversion
 
  -- Function: np_matmul (A, B)
      Matrix multiplication.
@@ -1693,7 +1900,7 @@ File: numerics.info,  Node: Function np_matmul a b,  Next: Function np_inv a,  P
 
      * Examples::
 
-1.3.1.53 Examples
+1.3.1.56 Examples
 .................
 
 (%i1) A : ndarray(matrix([1, 2], [3, 4]));
@@ -1720,7 +1927,7 @@ File: numerics.info,  Node: Function np_inv a,  Next: Function np_det a,  Prev: 
 
      * Examples::
 
-1.3.1.54 Examples
+1.3.1.57 Examples
 .................
 
 (%i1) A : ndarray(matrix([1, 2], [3, 4]));
@@ -1746,7 +1953,7 @@ File: numerics.info,  Node: Function np_det a,  Next: Function np_solve a b,  Pr
 
      * Examples::
 
-1.3.1.55 Examples
+1.3.1.58 Examples
 .................
 
 (%i1) A : ndarray(matrix([1, 2], [3, 4]));
@@ -1772,7 +1979,7 @@ File: numerics.info,  Node: Function np_solve a b,  Next: Function np_svd a,  Pr
 
      * Examples::
 
-1.3.1.56 Examples
+1.3.1.59 Examples
 .................
 
 (%i1) A : ndarray(matrix([2, 1], [5, 3]));
@@ -1807,7 +2014,7 @@ File: numerics.info,  Node: Function np_svd a,  Next: Function np_eig a,  Prev: 
 
      * Examples::
 
-1.3.1.57 Examples
+1.3.1.60 Examples
 .................
 
 (%i1) A : ndarray(matrix([1, 0], [0, 2], [0, 0]));
@@ -1844,7 +2051,7 @@ File: numerics.info,  Node: Function np_eig a,  Next: Function np_qr a,  Prev: F
 
      * Examples::
 
-1.3.1.58 Examples
+1.3.1.61 Examples
 .................
 
 (%i1) A : ndarray(matrix([2, 1, 0], [1, 3, 1], [0, 1, 2]));
@@ -1873,7 +2080,7 @@ File: numerics.info,  Node: Function np_qr a,  Next: Function np_lu a,  Prev: Fu
 
      * Examples::
 
-1.3.1.59 Examples
+1.3.1.62 Examples
 .................
 
 (%i1) A : ndarray(matrix([1, 2], [3, 4], [5, 6]));
@@ -1888,7 +2095,7 @@ File: numerics.info,  Node: Function np_qr a,  Next: Function np_lu a,  Prev: Fu
 See also: ‘np_lu’, ‘np_svd’
 
 
-File: numerics.info,  Node: Function np_lu a,  Next: Function np_norm a,  Prev: Function np_qr a,  Up: Conversion
+File: numerics.info,  Node: Function np_lu a,  Next: Function np_norm a / np_norm a ord,  Prev: Function np_qr a,  Up: Conversion
 
  -- Function: np_lu (A)
      LU decomposition with partial pivoting.
@@ -1904,7 +2111,7 @@ File: numerics.info,  Node: Function np_lu a,  Next: Function np_norm a,  Prev: 
 
      * Examples::
 
-1.3.1.60 Examples
+1.3.1.63 Examples
 .................
 
 (%i1) A : ndarray(matrix([1, 2, 3], [4, 5, 6], [7, 8, 10]));
@@ -1918,37 +2125,55 @@ File: numerics.info,  Node: Function np_lu a,  Next: Function np_norm a,  Prev: 
 See also: ‘np_qr’, ‘np_svd’, ‘np_solve’
 
 
-File: numerics.info,  Node: Function np_norm a,  Next: Function np_rank a,  Prev: Function np_lu a,  Up: Conversion
+File: numerics.info,  Node: Function np_norm a / np_norm a ord,  Next: Function np_rank a,  Prev: Function np_lu a,  Up: Conversion
 
- -- Function: np_norm (A)
+ -- Function: np_norm (A) / NP_NORM (A, ORD)
      Matrix or vector norm.
 
-     For 1D arrays (vectors), computes the Euclidean (L2) norm: sqrt(sum
-     of squares).  For 2D arrays (matrices), computes the Frobenius
-     norm: sqrt(sum of all squared elements).  Returns a scalar.
+     By default, computes the 2-norm for vectors and the Frobenius norm
+     for matrices.  The optional ‘ord’ parameter selects the norm type.
+
+     Calling forms:
+
+        • ‘np_norm(a)’ - default norm (2-norm for vectors, Frobenius for
+          matrices)
+        • ‘np_norm(a, 1)’ - 1-norm (sum of abs for vectors, max column
+          sum for matrices)
+        • ‘np_norm(a, 2)’ - 2-norm (Euclidean for vectors,
+          spectral/largest singular value for matrices)
+        • ‘np_norm(a, inf)’ - infinity norm (max abs for vectors, max
+          row sum for matrices)
+        • ‘np_norm(a, fro)’ - Frobenius norm (matrices only, same as
+          default)
 
 * Menu:
 
      * Examples::
 
-1.3.1.61 Examples
+1.3.1.64 Examples
 .................
 
-(%i1) v : np_arange(5);
-(%o1)            ndarray([5], DOUBLE-FLOAT)
+(%i1) v : ndarray([1, -2, 3], [3]);
+(%o1)            ndarray([3], DOUBLE-FLOAT)
 (%i2) np_norm(v);
-(%o2)                    5.477225575051661
-(%i3) A : ndarray(matrix([1, 2], [3, 4]));
-(%o3)            ndarray([2, 2], DOUBLE-FLOAT)
-(%i4) np_norm(A);
-(%o4)                    5.477225575051661
-(%i5) np_norm(np_eye(3));
-(%o5)                    1.7320508075688772
+(%o2)                    3.7416573867739413
+(%i3) np_norm(v, 1);
+(%o3)                          6.0
+(%i4) np_norm(v, inf);
+(%o4)                          3.0
+(%i5) A : ndarray(matrix([1, -7], [2, -3]));
+(%o5)            ndarray([2, 2], DOUBLE-FLOAT)
+(%i6) np_norm(A, 1);
+(%o6)                         10.0
+(%i7) np_norm(A, inf);
+(%o7)                          8.0
+(%i8) np_norm(A, 2);
+(%o8)                    7.649700064568801
 
 See also: ‘np_det’, ‘np_rank’
 
 
-File: numerics.info,  Node: Function np_rank a,  Next: Function np_trace a,  Prev: Function np_norm a,  Up: Conversion
+File: numerics.info,  Node: Function np_rank a,  Next: Function np_trace a,  Prev: Function np_norm a / np_norm a ord,  Up: Conversion
 
  -- Function: np_rank (A)
      Numerical rank of a matrix.
@@ -1961,7 +2186,7 @@ File: numerics.info,  Node: Function np_rank a,  Next: Function np_trace a,  Pre
 
      * Examples::
 
-1.3.1.62 Examples
+1.3.1.65 Examples
 .................
 
 (%i1) np_rank(np_eye(3));
@@ -1986,7 +2211,7 @@ File: numerics.info,  Node: Function np_trace a,  Next: Function np_transpose a,
 
      * Examples::
 
-1.3.1.63 Examples
+1.3.1.66 Examples
 .................
 
 (%i1) A : ndarray(matrix([1, 2], [3, 4]));
@@ -2010,7 +2235,7 @@ File: numerics.info,  Node: Function np_transpose a,  Next: Function np_conj a, 
 
      * Examples::
 
-1.3.1.64 Examples
+1.3.1.67 Examples
 .................
 
 (%i1) A : ndarray(matrix([1, 2], [3, 4]));
@@ -2036,7 +2261,7 @@ File: numerics.info,  Node: Function np_conj a,  Next: Function np_expm a,  Prev
 
      * Examples::
 
-1.3.1.65 Examples
+1.3.1.68 Examples
 .................
 
 (%i1) A : ndarray(matrix([1, 2], [3, 4]));
@@ -2067,7 +2292,7 @@ File: numerics.info,  Node: Function np_expm a,  Next: Function np_lstsq a b,  P
 
      * Examples::
 
-1.3.1.66 Examples
+1.3.1.69 Examples
 .................
 
 (%i1) /* expm(0) = I */
@@ -2101,14 +2326,25 @@ File: numerics.info,  Node: Function np_lstsq a b,  Next: Function np_pinv a,  P
      under-determined systems.  For square full-rank matrices, gives the
      same result as ‘np_solve’.
 
-     For an m-by-n matrix A and an m-by-p right-hand side b, returns an
-     n-by-p solution x.
+     Returns a Maxima list ‘[x, residuals, rank, S]’ where:
+
+        • *x* -- n-by-p solution ndarray
+        • *residuals* -- 1D ndarray of squared residual norms ‘||Ax_j -
+          b_j||^2’ for each column j of b.  Only non-empty when ‘m > n’
+          (overdetermined) and A is full rank; otherwise an empty list
+          ‘[]’.
+        • *rank* -- effective rank of A (integer)
+        • *S* -- 1D ndarray of singular values of A
+
+     *Breaking change:* Previous versions returned only ‘x’.  Update
+     callers from ‘x : np_lstsq(A, b)’ to ‘[x, residuals, rank, S] :
+     np_lstsq(A, b)’.
 
 * Menu:
 
      * Examples::
 
-1.3.1.67 Examples
+1.3.1.70 Examples
 .................
 
 (%i1) /* Linear fit: y = a + b*x through (1,1), (2,2), (3,3) */
@@ -2116,13 +2352,14 @@ File: numerics.info,  Node: Function np_lstsq a b,  Next: Function np_pinv a,  P
 (%o1)            ndarray([3, 2], DOUBLE-FLOAT)
 (%i2) b : ndarray(matrix([1], [2], [3]));
 (%o2)            ndarray([3, 1], DOUBLE-FLOAT)
-(%i3) x : np_lstsq(A, b);
-(%o3)            ndarray([2, 1], DOUBLE-FLOAT)
+(%i3) [x, residuals, rank, S] : np_lstsq(A, b);
+(%o3)        [ndarray, ndarray, 2, ndarray]
 (%i4) np_to_list(x);
 (%o4)                  [0.0, 1.0]
-(%i5) /* Residual is zero (consistent system) */
-      np_norm(np_sub(np_matmul(A, x), b));
-(%o5)                          0.0
+(%i5) rank;
+(%o5)                           2
+(%i6) np_to_list(S);
+(%o6)             [3.86..., 0.64...]
 
 See also: ‘np_solve’, ‘np_pinv’, ‘np_svd’
 
@@ -2146,7 +2383,7 @@ File: numerics.info,  Node: Function np_pinv a,  Prev: Function np_lstsq a b,  U
 
      * Examples::
 
-1.3.1.68 Examples
+1.3.1.71 Examples
 .................
 
 (%i1) A : ndarray(matrix([1, 2], [3, 4], [5, 6]));
@@ -2177,9 +2414,14 @@ Appendix A Function and variable index
 * ndarray_p:                             Function ndarray_p x.  (line 3)
 * np_abs:                                Function np_abs a.     (line 3)
 * np_add:                                Function np_add a b.   (line 3)
-* np_arange:                             Function np_arange n.  (line 3)
-* np_argmax:                             Function np_argmax a.  (line 3)
-* np_argmin:                             Function np_argmin a.  (line 3)
+* np_arange:                             Function np_arange stop / np_arange start stop / np_arange start stop step.
+                                                                (line 3)
+* np_argmax:                             Function np_argmax a / np_argmax a axis.
+                                                                (line 3)
+* np_argmin:                             Function np_argmin a / np_argmin a axis.
+                                                                (line 3)
+* np_argsort:                            Function np_argsort a / np_argsort a axis.
+                                                                (line 3)
 * np_col:                                Function np_col a j.   (line 3)
 * np_conj:                               Function np_conj a.    (line 3)
 * np_copy:                               Function np_copy a.    (line 3)
@@ -2212,12 +2454,15 @@ Appendix A Function and variable index
                                                                 (line 3)
 * np_matmul:                             Function np_matmul a b.
                                                                 (line 3)
-* np_max:                                Function np_max a.     (line 3)
+* np_max:                                Function np_max a / np_max a axis.
+                                                                (line 3)
 * np_mean:                               Function np_mean a.    (line 3)
-* np_min:                                Function np_min a.     (line 3)
+* np_min:                                Function np_min a / np_min a axis.
+                                                                (line 3)
 * np_mul:                                Function np_mul a b.   (line 3)
 * np_neg:                                Function np_neg a.     (line 3)
-* np_norm:                               Function np_norm a.    (line 3)
+* np_norm:                               Function np_norm a / np_norm a ord.
+                                                                (line 3)
 * np_ones:                               Function np_ones shape.
                                                                 (line 3)
 * np_pinv:                               Function np_pinv a.    (line 3)
@@ -2242,8 +2487,11 @@ Appendix A Function and variable index
 * np_slice:                              Function np_slice a rows cols.
                                                                 (line 3)
 * np_solve:                              Function np_solve a b. (line 3)
+* np_sort:                               Function np_sort a / np_sort a axis.
+                                                                (line 3)
 * np_sqrt:                               Function np_sqrt a.    (line 3)
-* np_std:                                Function np_std a.     (line 3)
+* np_std:                                Function np_std a / np_std a axis.
+                                                                (line 3)
 * np_sub:                                Function np_sub a b.   (line 3)
 * np_sum:                                Function np_sum a.     (line 3)
 * np_svd:                                Function np_svd a.     (line 3)
@@ -2254,8 +2502,11 @@ Appendix A Function and variable index
 * np_trace:                              Function np_trace a.   (line 3)
 * np_transpose:                          Function np_transpose a.
                                                                 (line 3)
-* np_var:                                Function np_var a.     (line 3)
+* np_var:                                Function np_var a / np_var a axis.
+                                                                (line 3)
 * np_vstack:                             Function np_vstack a b.
+                                                                (line 3)
+* np_where:                              Function np_where condition / np_where condition x y.
                                                                 (line 3)
 * np_zeros:                              Function np_zeros shape.
                                                                 (line 3)
@@ -2286,215 +2537,224 @@ Node: Definitions for numerics4515
 Ref: #definitions-for-numerics4705
 Node: Conversion4705
 Ref: #conversion4834
-Node: Function ndarray a6554
-Ref: #function-ndarray-a6676
-Node: Examples7707
-Ref: #examples7795
-Node: Function ndarray_p x8268
-Ref: #function-ndarray_p-x8424
-Ref: #examples-18610
-Node: Function np_to_matrix a8830
-Ref: #function-np_to_matrix-a8992
-Ref: #examples-29247
-Node: Function np_to_list a9623
-Ref: #function-np_to_list-a9786
-Ref: #examples-310211
-Node: Function np_zeros shape10571
-Ref: #function-np_zeros-shape10735
-Ref: #examples-410951
-Node: Function np_ones shape11285
-Ref: #function-np_ones-shape11444
-Ref: #examples-511647
-Node: Function np_eye n11978
-Ref: #function-np_eye-n12131
-Ref: #examples-612560
-Node: Function np_rand shape12909
-Ref: #function-np_rand-shape13068
-Ref: #examples-713299
-Node: Function np_randn shape13572
-Ref: #function-np_randn-shape13735
-Ref: #examples-814009
-Node: Function np_arange n14181
-Ref: #function-np_arange-n14352
-Ref: #examples-914567
-Node: Function np_linspace start stop n14818
-Ref: #function-np_linspace-start-stop-n15007
-Ref: #examples-1015271
-Node: Function np_full shape val15535
-Ref: #function-np_full-shape-val15719
-Ref: #examples-1115913
-Node: Function np_empty shape16204
-Ref: #function-np_empty-shape16372
-Ref: #examples-1216663
-Node: Function np_diag list16835
-Ref: #function-np_diag-list16993
-Ref: #examples-1317263
-Node: Function np_copy a17555
-Ref: #function-np_copy-a17706
-Ref: #examples-1417930
-Node: Function np_ref a i18320
-Ref: #function-np_ref-a-i18477
-Ref: #examples-1518901
-Node: Function np_set a i j val19284
-Ref: #function-np_set-a-i-j-val19450
-Ref: #examples-1619948
-Node: Function np_row a i20379
-Ref: #function-np_row-a-i20537
-Ref: #examples-1720758
-Node: Function np_col a j21051
-Ref: #function-np_col-a-j21213
-Ref: #examples-1821443
-Node: Function np_slice a rows cols21732
-Ref: #function-np_slice-a-rows-cols21913
-Ref: #examples-1922259
-Node: Function np_reshape a shape22576
-Ref: #function-np_reshape-a-shape22756
-Ref: #examples-2023039
-Node: Function np_flatten a23367
-Ref: #function-np_flatten-a23533
-Ref: #examples-2123723
-Node: Function np_hstack a b24019
-Ref: #function-np_hstack-a-b24182
-Ref: #examples-2224417
-Node: Function np_vstack a b24768
-Ref: #function-np_vstack-a-b24929
-Ref: #examples-2325159
-Node: Function np_shape a25506
-Ref: #function-np_shape-a25659
-Ref: #examples-2425884
-Node: Function np_size a26143
-Ref: #function-np_size-a26292
-Ref: #examples-2526414
-Node: Function np_dtype a26648
-Ref: #function-np_dtype-a26798
-Ref: #examples-2627013
-Node: Function np_add a b27154
-Ref: #function-np_add-a-b27306
-Ref: #examples-2727516
-Node: Function np_sub a b27885
-Ref: #function-np_sub-a-b28037
-Ref: #examples-2828236
-Node: Function np_mul a b28618
-Ref: #function-np_mul-a-b28770
-Ref: #examples-2929128
-Node: Function np_div a b29433
-Ref: #function-np_div-a-b29585
-Ref: #examples-3029781
-Node: Function np_pow a p30149
-Ref: #function-np_pow-a-p30300
-Ref: #examples-3130558
-Node: Function np_sqrt a30863
-Ref: #function-np_sqrt-a31010
-Ref: #examples-3231219
-Node: Function np_exp a31426
-Ref: #function-np_exp-a31570
-Ref: #examples-3331797
-Node: Function np_log a32127
-Ref: #function-np_log-a32270
-Ref: #examples-3432513
-Node: Function np_sin a32711
-Ref: #function-np_sin-a32854
-Ref: #examples-3533059
-Node: Function np_cos a33332
-Ref: #function-np_cos-a33475
-Ref: #examples-3633684
-Node: Function np_tan a33889
-Ref: #function-np_tan-a34032
-Ref: #examples-3734243
-Node: Function np_abs a34434
-Ref: #function-np_abs-a34577
-Ref: #examples-3834792
-Node: Function np_neg a34985
-Ref: #function-np_neg-a35136
-Ref: #examples-3935313
-Node: Function np_scale alpha a35502
-Ref: #function-np_scale-alpha-a35664
-Ref: #examples-4035871
-Node: Function np_map f a36163
-Ref: #function-np_map-f-a36324
-Ref: #examples-4137029
-Node: Function np_map2 f a b37523
-Ref: #function-np_map2-f-a-b37680
-Ref: #examples-4238043
-Node: Function np_sum a38347
-Ref: #function-np_sum-a38496
-Ref: #examples-4339047
-Node: Function np_mean a39370
-Ref: #function-np_mean-a39515
-Ref: #examples-4439973
-Node: Function np_min a40308
-Ref: #function-np_min-a40452
-Ref: #examples-4540602
-Node: Function np_max a40850
-Ref: #function-np_max-a40996
-Ref: #examples-4641145
-Node: Function np_argmin a41393
-Ref: #function-np_argmin-a41545
-Ref: #examples-4741762
-Node: Function np_argmax a42013
-Ref: #function-np_argmax-a42165
-Ref: #examples-4842382
-Node: Function np_std a42633
-Ref: #function-np_std-a42779
-Ref: #examples-4942985
-Node: Function np_var a43176
-Ref: #function-np_var-a43322
-Ref: #examples-5043509
-Node: Function np_cumsum a43770
-Ref: #function-np_cumsum-a43921
-Ref: #examples-5144137
-Node: Function np_dot a b44386
-Ref: #function-np_dot-a-b44542
-Ref: #examples-5244729
-Node: Function np_matmul a b45033
-Ref: #function-np_matmul-a-b45189
-Ref: #examples-5345428
-Node: Function np_inv a45806
-Ref: #function-np_inv-a45954
-Ref: #examples-5446169
-Node: Function np_det a46562
-Ref: #function-np_det-a46709
-Ref: #examples-5546866
-Node: Function np_solve a b47108
-Ref: #function-np_solve-a-b47260
-Ref: #examples-5647543
-Node: Function np_svd a47906
-Ref: #function-np_svd-a48053
-Ref: #examples-5748611
-Node: Function np_eig a49073
-Ref: #function-np_eig-a49215
-Ref: #examples-5849773
-Node: Function np_qr a50252
-Ref: #function-np_qr-a50392
-Ref: #examples-5950629
-Node: Function np_lu a50938
-Ref: #function-np_lu-a51079
-Ref: #examples-6051486
-Node: Function np_norm a51873
-Ref: #function-np_norm-a52018
-Ref: #examples-6152319
-Node: Function np_rank a52709
-Ref: #function-np_rank-a52857
-Ref: #examples-6253142
-Node: Function np_trace a53390
-Ref: #function-np_trace-a53544
-Ref: #examples-6353739
-Node: Function np_transpose a53985
-Ref: #function-np_transpose-a54143
-Ref: #examples-6454291
-Node: Function np_conj a54601
-Ref: #function-np_conj-a54753
-Ref: #examples-6555028
-Node: Function np_expm a55226
-Ref: #function-np_expm-a55376
-Ref: #examples-6656010
-Node: Function np_lstsq a b56799
-Ref: #function-np_lstsq-a-b56953
-Ref: #examples-6757391
-Node: Function np_pinv a57953
-Ref: #function-np_pinv-a58076
-Ref: #examples-6858634
-Node: Function and variable index59221
+Node: Function ndarray a6869
+Ref: #function-ndarray-a6991
+Node: Examples8022
+Ref: #examples8110
+Node: Function ndarray_p x8583
+Ref: #function-ndarray_p-x8739
+Ref: #examples-18925
+Node: Function np_to_matrix a9145
+Ref: #function-np_to_matrix-a9307
+Ref: #examples-29562
+Node: Function np_to_list a9938
+Ref: #function-np_to_list-a10101
+Ref: #examples-310526
+Node: Function np_zeros shape10886
+Ref: #function-np_zeros-shape11050
+Ref: #examples-411266
+Node: Function np_ones shape11600
+Ref: #function-np_ones-shape11759
+Ref: #examples-511962
+Node: Function np_eye n12293
+Ref: #function-np_eye-n12446
+Ref: #examples-612875
+Node: Function np_rand shape13224
+Ref: #function-np_rand-shape13383
+Ref: #examples-713614
+Node: Function np_randn shape13887
+Ref: #function-np_randn-shape14104
+Ref: #examples-814378
+Node: Function np_arange stop / np_arange start stop / np_arange start stop step14550
+Ref: #function-np_arange-stop-np_arange-start-stop-np_arange-start-stop-step14846
+Ref: #examples-915369
+Node: Function np_linspace start stop n15724
+Ref: #function-np_linspace-start-stop-n15967
+Ref: #examples-1016231
+Node: Function np_full shape val16495
+Ref: #function-np_full-shape-val16679
+Ref: #examples-1116873
+Node: Function np_empty shape17164
+Ref: #function-np_empty-shape17332
+Ref: #examples-1217623
+Node: Function np_diag list17795
+Ref: #function-np_diag-list17953
+Ref: #examples-1318223
+Node: Function np_copy a18515
+Ref: #function-np_copy-a18666
+Ref: #examples-1418890
+Node: Function np_ref a i19280
+Ref: #function-np_ref-a-i19437
+Ref: #examples-1519861
+Node: Function np_set a i j val20244
+Ref: #function-np_set-a-i-j-val20410
+Ref: #examples-1620908
+Node: Function np_row a i21339
+Ref: #function-np_row-a-i21497
+Ref: #examples-1721718
+Node: Function np_col a j22011
+Ref: #function-np_col-a-j22173
+Ref: #examples-1822403
+Node: Function np_slice a rows cols22692
+Ref: #function-np_slice-a-rows-cols22873
+Ref: #examples-1923219
+Node: Function np_reshape a shape23536
+Ref: #function-np_reshape-a-shape23716
+Ref: #examples-2023999
+Node: Function np_flatten a24327
+Ref: #function-np_flatten-a24493
+Ref: #examples-2124683
+Node: Function np_hstack a b24979
+Ref: #function-np_hstack-a-b25142
+Ref: #examples-2225377
+Node: Function np_vstack a b25728
+Ref: #function-np_vstack-a-b25889
+Ref: #examples-2326119
+Node: Function np_shape a26466
+Ref: #function-np_shape-a26619
+Ref: #examples-2426844
+Node: Function np_size a27103
+Ref: #function-np_size-a27252
+Ref: #examples-2527374
+Node: Function np_dtype a27608
+Ref: #function-np_dtype-a27758
+Ref: #examples-2627973
+Node: Function np_add a b28114
+Ref: #function-np_add-a-b28266
+Ref: #examples-2728476
+Node: Function np_sub a b28845
+Ref: #function-np_sub-a-b28997
+Ref: #examples-2829196
+Node: Function np_mul a b29578
+Ref: #function-np_mul-a-b29730
+Ref: #examples-2930088
+Node: Function np_div a b30393
+Ref: #function-np_div-a-b30545
+Ref: #examples-3030741
+Node: Function np_pow a p31109
+Ref: #function-np_pow-a-p31260
+Ref: #examples-3131518
+Node: Function np_sqrt a31823
+Ref: #function-np_sqrt-a31970
+Ref: #examples-3232179
+Node: Function np_exp a32386
+Ref: #function-np_exp-a32530
+Ref: #examples-3332757
+Node: Function np_log a33087
+Ref: #function-np_log-a33230
+Ref: #examples-3433473
+Node: Function np_sin a33671
+Ref: #function-np_sin-a33814
+Ref: #examples-3534019
+Node: Function np_cos a34292
+Ref: #function-np_cos-a34435
+Ref: #examples-3634644
+Node: Function np_tan a34849
+Ref: #function-np_tan-a34992
+Ref: #examples-3735203
+Node: Function np_abs a35394
+Ref: #function-np_abs-a35537
+Ref: #examples-3835752
+Node: Function np_neg a35945
+Ref: #function-np_neg-a36096
+Ref: #examples-3936273
+Node: Function np_scale alpha a36462
+Ref: #function-np_scale-alpha-a36624
+Ref: #examples-4036831
+Node: Function np_map f a37123
+Ref: #function-np_map-f-a37284
+Ref: #examples-4137989
+Node: Function np_map2 f a b38483
+Ref: #function-np_map2-f-a-b38675
+Ref: #examples-4239038
+Node: Function np_where condition / np_where condition x y39327
+Ref: #function-np_where-condition-np_where-condition-x-y39549
+Ref: #examples-4340240
+Node: Function np_sum a41018
+Ref: #function-np_sum-a41197
+Ref: #examples-4441748
+Node: Function np_mean a42071
+Ref: #function-np_mean-a42232
+Ref: #examples-4542690
+Node: Function np_min a / np_min a axis43025
+Ref: #function-np_min-a-np_min-a-axis43220
+Ref: #examples-4643815
+Node: Function np_max a / np_max a axis44137
+Ref: #function-np_max-a-np_max-a-axis44353
+Ref: #examples-4744949
+Node: Function np_argmin a / np_argmin a axis45271
+Ref: #function-np_argmin-a-np_argmin-a-axis45499
+Ref: #examples-4846113
+Node: Function np_argmax a / np_argmax a axis46443
+Ref: #function-np_argmax-a-np_argmax-a-axis46671
+Ref: #examples-4947285
+Node: Function np_var a / np_var a axis47615
+Ref: #function-np_var-a-np_var-a-axis47831
+Ref: #examples-5048334
+Node: Function np_std a / np_std a axis48654
+Ref: #function-np_std-a-np_std-a-axis48851
+Ref: #examples-5149423
+Node: Function np_cumsum a49750
+Ref: #function-np_cumsum-a49917
+Ref: #examples-5250133
+Node: Function np_dot a b50382
+Ref: #function-np_dot-a-b50551
+Ref: #examples-5350738
+Node: Function np_sort a / np_sort a axis51024
+Ref: #function-np_sort-a-np_sort-a-axis51232
+Ref: #examples-5451889
+Node: Function np_argsort a / np_argsort a axis52353
+Ref: #function-np_argsort-a-np_argsort-a-axis52570
+Ref: #examples-5553217
+Node: Function np_matmul a b53702
+Ref: #function-np_matmul-a-b53880
+Ref: #examples-5654119
+Node: Function np_inv a54497
+Ref: #function-np_inv-a54645
+Ref: #examples-5754860
+Node: Function np_det a55253
+Ref: #function-np_det-a55400
+Ref: #examples-5855557
+Node: Function np_solve a b55799
+Ref: #function-np_solve-a-b55951
+Ref: #examples-5956234
+Node: Function np_svd a56597
+Ref: #function-np_svd-a56744
+Ref: #examples-6057302
+Node: Function np_eig a57764
+Ref: #function-np_eig-a57906
+Ref: #examples-6158464
+Node: Function np_qr a58943
+Ref: #function-np_qr-a59083
+Ref: #examples-6259320
+Node: Function np_lu a59629
+Ref: #function-np_lu-a59786
+Ref: #examples-6360193
+Node: Function np_norm a / np_norm a ord60580
+Ref: #function-np_norm-a-np_norm-a-ord60760
+Ref: #examples-6461552
+Node: Function np_rank a62118
+Ref: #function-np_rank-a62282
+Ref: #examples-6562567
+Node: Function np_trace a62815
+Ref: #function-np_trace-a62969
+Ref: #examples-6663164
+Node: Function np_transpose a63410
+Ref: #function-np_transpose-a63568
+Ref: #examples-6763716
+Node: Function np_conj a64026
+Ref: #function-np_conj-a64178
+Ref: #examples-6864453
+Node: Function np_expm a64651
+Ref: #function-np_expm-a64801
+Ref: #examples-6965435
+Node: Function np_lstsq a b66224
+Ref: #function-np_lstsq-a-b66378
+Ref: #examples-7067352
+Node: Function np_pinv a67910
+Ref: #function-np_pinv-a68033
+Ref: #examples-7168591
+Node: Function and variable index69178
 
 End Tag Table
 
