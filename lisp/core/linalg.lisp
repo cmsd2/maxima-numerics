@@ -222,7 +222,15 @@
     (magicl:transpose (numerics:ndarray-tensor (numerics-unwrap a))))))
 
 (defun $np_conj (a)
-  "Conjugate transpose: np_conj(A)"
+  "Element-wise complex conjugate: np_conj(A).
+   For real (double-float) arrays, returns a copy of A unchanged."
+  (let ((ta (numerics:ndarray-tensor (numerics-unwrap a))))
+    (numerics-wrap
+     (numerics:make-ndarray (magicl:deep-copy-tensor ta)))))
+
+(defun $np_ctranspose (a)
+  "Conjugate transpose (Hermitian transpose): np_ctranspose(A).
+   For real arrays, equivalent to np_transpose."
   (let ((ta (numerics:ndarray-tensor (numerics-unwrap a))))
     (numerics-wrap
      (numerics:make-ndarray (magicl:conjugate-transpose ta)))))

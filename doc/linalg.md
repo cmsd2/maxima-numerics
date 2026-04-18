@@ -270,9 +270,26 @@ Returns a new ndarray with rows and columns swapped.
 (%o3)                        [3, 1]
 ```
 
-See also: `np_conj`, `np_reshape`
+See also: `np_conj`, `np_ctranspose`, `np_reshape`
 
 ### Function: np_conj (a)
+
+Element-wise complex conjugate.
+
+Returns a new ndarray where each element is the complex conjugate of the corresponding element in `a`. For real (double-float) arrays, this returns a copy of `a` unchanged.
+
+#### Examples
+
+```maxima
+(%i1) A : ndarray(matrix([1, 2], [3, 4]));
+(%o1)            ndarray([2, 2], DOUBLE-FLOAT)
+(%i2) np_to_matrix(np_conj(A));
+(%o2)         matrix([1.0, 2.0], [3.0, 4.0])
+```
+
+See also: `np_ctranspose`, `np_transpose`
+
+### Function: np_ctranspose (a)
 
 Conjugate transpose (Hermitian transpose).
 
@@ -283,11 +300,11 @@ For real matrices, this is the same as `np_transpose`. For complex matrices, it 
 ```maxima
 (%i1) A : ndarray(matrix([1, 2], [3, 4]));
 (%o1)            ndarray([2, 2], DOUBLE-FLOAT)
-(%i2) np_to_matrix(np_conj(A));
+(%i2) np_to_matrix(np_ctranspose(A));
 (%o2)         matrix([1.0, 3.0], [2.0, 4.0])
 ```
 
-See also: `np_transpose`
+See also: `np_conj`, `np_transpose`
 
 ### Function: np_expm (a)
 

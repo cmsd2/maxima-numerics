@@ -120,6 +120,19 @@ true;
  is(M = matrix([1.0, 3.0], [2.0, 4.0])));
 true;
 
+/* np_conj: element-wise conjugate (identity for real arrays) */
+(A : ndarray(matrix([1,2],[3,4])),
+ C : np_conj(A),
+ is(np_to_matrix(C) = matrix([1.0, 2.0], [3.0, 4.0])
+    and np_shape(C) = [2, 2]));
+true;
+
+/* np_ctranspose: conjugate transpose (same as transpose for real) */
+(A : ndarray(matrix([1,2],[3,4])),
+ CT : np_ctranspose(A),
+ is(np_to_matrix(CT) = matrix([1.0, 3.0], [2.0, 4.0])));
+true;
+
 /* trace */
 (A : ndarray(matrix([1,2],[3,4])),
  closeto(np_trace(A), 5.0));

@@ -61,18 +61,6 @@ np_extract(np_logical_and(np_greater(A, 2), np_less(A, 8)), A);
 These are cases where a function's name or behaviour conflicts with what a NumPy
 user would expect. They are the most likely source of bugs.
 
-### `np_conj` performs conjugate transpose, not conjugate
-
-NumPy's `np.conj()` conjugates each element without transposing. Our `np_conj`
-performs a full Hermitian (conjugate) transpose, equivalent to NumPy's
-`A.conj().T`. For real matrices the distinction is invisible, but for complex
-matrices the results differ in shape and meaning.
-
-**Options:**
-- Rename to `np_ctranspose` or `np_hermitian`
-- Keep `np_conj` as element-wise conjugate and add `np_ctranspose` for the
-  Hermitian transpose
-
 ### `np_eig` silently discards imaginary parts
 
 NumPy's `np.linalg.eig()` returns complex eigenvalues and eigenvectors when the
