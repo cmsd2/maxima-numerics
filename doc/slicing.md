@@ -1,5 +1,7 @@
 ## Slicing
 
+All slicing and indexing operations preserve the dtype of the input array.
+
 ### Function: np_ref (a, i)
 
 Access a single element of an ndarray by index.
@@ -161,7 +163,7 @@ See also: `np_reshape`, `np_to_list`
 
 Concatenate two 2D ndarrays horizontally (along columns).
 
-Both arrays must have the same number of rows. The result has the combined number of columns.
+Both arrays must have the same number of rows. The result has the combined number of columns. Promotes to complex if either input is complex.
 
 #### Examples
 
@@ -182,7 +184,7 @@ See also: `np_vstack`
 
 Concatenate two 2D ndarrays vertically (along rows).
 
-Both arrays must have the same number of columns. The result has the combined number of rows.
+Both arrays must have the same number of columns. The result has the combined number of rows. Promotes to complex if either input is complex.
 
 #### Examples
 
@@ -239,7 +241,7 @@ See also: `np_shape`, `np_dtype`
 
 Return the element type of an ndarray as a string.
 
-Currently all ndarrays use `"DOUBLE-FLOAT"` (64-bit IEEE 754 floating point).
+Returns `"DOUBLE-FLOAT"` for real arrays or `"COMPLEX-DOUBLE-FLOAT"` for complex arrays.
 
 #### Examples
 

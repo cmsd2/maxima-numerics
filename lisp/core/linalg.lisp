@@ -461,8 +461,8 @@
                  (numerics:ndarray-dtype hb)))
          (et (numerics-element-type dtype)))
     (multiple-value-bind (u sigma vt) (magicl:svd ta)
-      (let* ((ut (magicl:transpose u))
-             (v (magicl:transpose vt))
+      (let* ((ut (magicl:conjugate-transpose u))
+             (v (magicl:conjugate-transpose vt))
              (utb (magicl:@ ut tb))
              (s-arr (numerics-svd-values sigma))
              (m (first (magicl:shape ta)))
@@ -511,14 +511,14 @@
 
 (defun $np_pinv (a)
   "Moore-Penrose pseudo-inverse: np_pinv(A)
-   Computed via SVD: A+ = V S+ Ut"
+   Computed via SVD: A+ = V S+ U*  (conjugate transpose for complex)"
   (let* ((ha (numerics-unwrap a))
          (ta (numerics:ndarray-tensor ha))
          (dtype (numerics:ndarray-dtype ha))
          (et (numerics-element-type dtype)))
     (multiple-value-bind (u sigma vt) (magicl:svd ta)
-      (let* ((v (magicl:transpose vt))
-             (ut (magicl:transpose u))
+      (let* ((v (magicl:conjugate-transpose vt))
+             (ut (magicl:conjugate-transpose u))
              (s-arr (numerics-svd-values sigma))
              (tol (* (reduce #'max s-arr) double-float-epsilon
                      (max (first (magicl:shape ta))

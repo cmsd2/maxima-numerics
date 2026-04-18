@@ -1,5 +1,7 @@
 ## Element-wise Operations
 
+All element-wise arithmetic and math operations support complex arrays unless noted otherwise. When one operand is complex and the other is real, the result is complex.
+
 ### Function: np_add (a, b)
 
 Element-wise addition.
@@ -215,7 +217,7 @@ See also: `np_sin`, `np_cos`
 
 Element-wise absolute value.
 
-Returns a new ndarray where each element is the absolute value of the corresponding element in `a`.
+Returns a new ndarray where each element is the absolute value of the corresponding element in `a`. For complex arrays, returns the magnitude (modulus) as `double-float`.
 
 #### Examples
 
@@ -365,7 +367,7 @@ See also: `np_greater`, `np_extract`, `np_map`
 
 Element-wise greater-than comparison.
 
-Returns a new ndarray with 1.0 where `a > b` and 0.0 elsewhere. Supports ndarray + ndarray, ndarray + scalar, and scalar + ndarray.
+Returns a new ndarray with 1.0 where `a > b` and 0.0 elsewhere. Supports ndarray + ndarray, ndarray + scalar, and scalar + ndarray. Signals an error for complex arrays (complex numbers are not ordered).
 
 #### Examples
 
@@ -384,31 +386,31 @@ See also: `np_less`, `np_greater_equal`, `np_equal`
 
 ### Function: np_greater_equal (a, b)
 
-Element-wise greater-than-or-equal comparison. Returns 1.0/0.0 ndarray.
+Element-wise greater-than-or-equal comparison. Returns 1.0/0.0 ndarray. Signals an error for complex arrays.
 
 See also: `np_greater`, `np_less_equal`
 
 ### Function: np_less (a, b)
 
-Element-wise less-than comparison. Returns 1.0/0.0 ndarray.
+Element-wise less-than comparison. Returns 1.0/0.0 ndarray. Signals an error for complex arrays.
 
 See also: `np_greater`, `np_less_equal`
 
 ### Function: np_less_equal (a, b)
 
-Element-wise less-than-or-equal comparison. Returns 1.0/0.0 ndarray.
+Element-wise less-than-or-equal comparison. Returns 1.0/0.0 ndarray. Signals an error for complex arrays.
 
 See also: `np_less`, `np_greater_equal`
 
 ### Function: np_equal (a, b)
 
-Element-wise equality comparison. Returns 1.0/0.0 ndarray.
+Element-wise equality comparison. Returns 1.0/0.0 ndarray. Supports complex arrays.
 
 See also: `np_not_equal`
 
 ### Function: np_not_equal (a, b)
 
-Element-wise not-equal comparison. Returns 1.0/0.0 ndarray.
+Element-wise not-equal comparison. Returns 1.0/0.0 ndarray. Supports complex arrays.
 
 See also: `np_equal`
 

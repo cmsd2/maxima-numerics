@@ -139,8 +139,27 @@
   (numerics-unary-op a #'cl:tan))
 
 (defun $np_abs (a)
-  "Element-wise absolute value: np_abs(A)"
-  (numerics-unary-op a #'cl:abs))
+  "Element-wise absolute value: np_abs(A)
+For complex input, returns the magnitude as a double-float ndarray."
+  (let* ((handle (numerics-unwrap a))
+         (tensor (numerics:ndarray-tensor handle))
+         (dtype (numerics:ndarray-dtype handle)))
+    (if (eq dtype :complex-double-float)
+        ;; Complex -> real: return magnitudes as double-float
+        (let* ((shape (magicl:shape tensor))
+               (result (magicl:empty shape :type 'double-float :layout :column-major)))
+          (if (= (length shape) 1)
+              (dotimes (i (first shape))
+                (setf (magicl:tref result i)
+                      (cl:abs (magicl:tref tensor i))))
+              (let ((nrow (first shape)) (ncol (second shape)))
+                (dotimes (i nrow)
+                  (dotimes (j ncol)
+                    (setf (magicl:tref result i j)
+                          (cl:abs (magicl:tref tensor i j)))))))
+          (numerics-wrap (numerics:make-ndarray result)))
+        ;; Real: use standard unary op
+        (numerics-unary-op a #'cl:abs))))
 
 (defun $np_neg (a)
   "Element-wise negation: np_neg(A)"

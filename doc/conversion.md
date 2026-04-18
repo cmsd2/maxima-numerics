@@ -1,18 +1,20 @@
 ## Conversion
 
-### Function: ndarray (a)
+### Function: ndarray (a) / ndarray (a, complex)
 
 Convert a Maxima matrix or list to an ndarray.
 
-If `a` is a Maxima matrix, it is converted element-by-element into a double-float ndarray with column-major layout. If `a` is a Maxima list, it creates a 1D ndarray unless a shape argument is provided.
+If `a` is a Maxima matrix, it is converted element-by-element into a `double-float` ndarray with column-major layout. If `a` is a Maxima list, it creates a 1D ndarray unless a shape argument is provided. Pass `complex` as the last argument to create a `complex-double-float` array.
 
 If `a` is already an ndarray, it is returned unchanged.
 
 Calling forms:
 
 - `ndarray(matrix)` -- convert a Maxima matrix to a 2D ndarray
+- `ndarray(matrix, complex)` -- convert to a complex 2D ndarray
 - `ndarray(list)` -- convert a flat Maxima list to a 1D ndarray
 - `ndarray(list, shape)` -- convert a list and reshape to the given dimensions
+- `ndarray(list, shape, complex)` -- convert a list to a complex ndarray with shape
 
 The shape argument is a Maxima list of dimensions, e.g. `[2, 3]`. The total number of elements in the list must match the product of the dimensions.
 
@@ -32,6 +34,8 @@ Elements are filled in row-major order from the list, matching the convention th
 (%o5)                        [2, 3]
 (%i6) C : ndarray([10, 20, 30]);
 (%o6)            ndarray([3], DOUBLE-FLOAT)
+(%i7) D : ndarray(matrix([1+%i, 2-3*%i], [4, 5+%i]), complex);
+(%o7)            ndarray([2, 2], COMPLEX-DOUBLE-FLOAT)
 ```
 
 See also: `np_to_matrix`, `np_to_list`, `ndarray_p`
@@ -59,7 +63,7 @@ See also: `ndarray`
 
 Convert a 2D ndarray back to a Maxima matrix.
 
-The ndarray must be 2-dimensional. For 1D ndarrays, use `np_to_list` instead, or reshape to 2D first with `np_reshape`.
+The ndarray must be 2-dimensional. For 1D ndarrays, use `np_to_list` instead, or reshape to 2D first with `np_reshape`. Complex elements are returned in Maxima form (`a + b*%i`).
 
 #### Examples
 
@@ -80,7 +84,7 @@ See also: `ndarray`, `np_to_list`, `np_reshape`
 
 Flatten an ndarray to a Maxima list.
 
-Returns all elements as a flat Maxima list in row-major order (rows first, matching NumPy convention). Works for ndarrays of any dimensionality.
+Returns all elements as a flat Maxima list in row-major order (rows first, matching NumPy convention). Works for ndarrays of any dimensionality. Complex elements are returned in Maxima form (`a + b*%i`).
 
 Round-tripping is consistent: `ndarray(list, shape)` fills in row-major order, and `np_to_list` returns elements in row-major order.
 

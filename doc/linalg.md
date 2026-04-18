@@ -2,7 +2,7 @@
 
 ### Function: np_matmul (a, b)
 
-Matrix multiplication.
+Matrix multiplication. Supports complex arrays.
 
 Computes the matrix product of two 2D ndarrays using BLAS. The number of columns of `a` must equal the number of rows of `b`.
 
@@ -23,7 +23,7 @@ See also: `np_dot`, `np_inv`, `np_solve`
 
 ### Function: np_inv (a)
 
-Matrix inverse.
+Matrix inverse. Supports complex arrays.
 
 Computes the inverse of a square matrix using LAPACK. Signals an error if the matrix is singular or nearly singular.
 
@@ -46,7 +46,7 @@ See also: `np_solve`, `np_det`, `np_pinv`
 
 Determinant of a square matrix.
 
-Returns a scalar. Uses LAPACK for computation.
+Returns a scalar (complex for complex input). Uses LAPACK for computation.
 
 #### Examples
 
@@ -63,7 +63,7 @@ See also: `np_inv`, `np_rank`
 
 ### Function: np_solve (a, b)
 
-Solve the linear system Ax = b.
+Solve the linear system Ax = b. Supports complex arrays.
 
 Computes the solution to a system of linear equations where `a` is a square coefficient matrix and `b` is a right-hand side vector or matrix. Uses LAPACK.
 
@@ -84,9 +84,9 @@ See also: `np_inv`, `np_lstsq`
 
 ### Function: np_svd (a)
 
-Singular Value Decomposition.
+Singular Value Decomposition. Supports complex arrays.
 
-Decomposes `a` into U, S, and Vt such that A = U * diag(S) * Vt, where U and Vt are orthogonal matrices. S is returned as a **1D ndarray** of singular values (not a diagonal matrix). Returns a Maxima list `[U, S, Vt]`.
+Decomposes `a` into U, S, and Vt such that A = U * diag(S) * Vt, where U and Vt are orthogonal (or unitary for complex) matrices. S is returned as a **1D ndarray** of singular values (not a diagonal matrix), always `double-float`. Returns a Maxima list `[U, S, Vt]`.
 
 For an m-by-n matrix, U is m-by-m, S has min(m,n) elements, and Vt is n-by-n.
 
@@ -137,9 +137,9 @@ See also: `np_svd`
 
 ### Function: np_qr (a)
 
-QR decomposition.
+QR decomposition. Supports complex arrays.
 
-Decomposes `a` into an orthogonal matrix Q and an upper triangular matrix R such that A = Q * R. Returns a Maxima list `[Q, R]`.
+Decomposes `a` into an orthogonal (or unitary for complex) matrix Q and an upper triangular matrix R such that A = Q * R. Returns a Maxima list `[Q, R]`.
 
 #### Examples
 
@@ -158,7 +158,7 @@ See also: `np_lu`, `np_svd`
 
 ### Function: np_lu (a)
 
-LU decomposition with partial pivoting.
+LU decomposition with partial pivoting. Supports complex arrays.
 
 Decomposes `a` into a lower triangular matrix L (unit diagonal), an upper triangular matrix U, and a permutation matrix P such that P * A = L * U. Returns a Maxima list `[L, U, P]`.
 
@@ -180,9 +180,9 @@ See also: `np_qr`, `np_svd`, `np_solve`
 
 ### Function: np_norm (a) / np_norm (a, ord)
 
-Matrix or vector norm.
+Matrix or vector norm. Supports complex arrays.
 
-By default, computes the 2-norm for vectors and the Frobenius norm for matrices. The optional `ord` parameter selects the norm type.
+By default, computes the 2-norm for vectors and the Frobenius norm for matrices. The optional `ord` parameter selects the norm type. The result is always real (`double-float`).
 
 Calling forms:
 
@@ -238,7 +238,7 @@ See also: `np_svd`, `np_det`
 
 Matrix trace (sum of diagonal elements).
 
-Returns a scalar equal to the sum of the elements on the main diagonal.
+Returns a scalar equal to the sum of the elements on the main diagonal (complex for complex input).
 
 #### Examples
 
@@ -255,7 +255,7 @@ See also: `np_det`, `np_diag`
 
 ### Function: np_transpose (a)
 
-Matrix transpose.
+Matrix transpose. Supports complex arrays (transpose only, no conjugation; see `np_ctranspose`).
 
 Returns a new ndarray with rows and columns swapped.
 
@@ -362,7 +362,7 @@ See also: `np_real`, `np_imag`, `np_abs`
 
 ### Function: np_expm (a)
 
-Matrix exponential.
+Matrix exponential. Supports complex arrays.
 
 Computes the matrix exponential e^A, which is defined as the infinite series I + A + A^2/2! + A^3/3! + .... This is different from element-wise `np_exp`, which applies the scalar exponential to each element independently.
 
@@ -394,16 +394,16 @@ See also: `np_exp`, `np_matmul`
 
 ### Function: np_lstsq (a, b)
 
-Least-squares solution to Ax = b.
+Least-squares solution to Ax = b. Supports complex arrays.
 
 Finds x that minimizes ||Ax - b||_2 using SVD. Works for over-determined systems (more equations than unknowns) and under-determined systems. For square full-rank matrices, gives the same result as `np_solve`.
 
 Returns a Maxima list `[x, residuals, rank, S]` where:
 
 - **x** — n-by-p solution ndarray
-- **residuals** — 1D ndarray of squared residual norms `||Ax_j - b_j||^2` for each column j of b. Only non-empty when `m > n` (overdetermined) and A is full rank; otherwise an empty list `[]`.
+- **residuals** — 1D ndarray of squared residual norms `||Ax_j - b_j||^2` for each column j of b (always `double-float`). Only non-empty when `m > n` (overdetermined) and A is full rank; otherwise an empty list `[]`.
 - **rank** — effective rank of A (integer)
-- **S** — 1D ndarray of singular values of A
+- **S** — 1D ndarray of singular values of A (always `double-float`)
 
 **Breaking change:** Previous versions returned only `x`. Update callers from `x : np_lstsq(A, b)` to `[x, residuals, rank, S] : np_lstsq(A, b)`.
 
@@ -429,7 +429,7 @@ See also: `np_solve`, `np_pinv`, `np_svd`
 
 ### Function: np_pinv (a)
 
-Moore-Penrose pseudo-inverse.
+Moore-Penrose pseudo-inverse. Supports complex arrays.
 
 Computed via SVD as A+ = V * S+ * Ut, where S+ inverts the non-zero singular values. For invertible square matrices, this is equivalent to `np_inv`. For non-square or rank-deficient matrices, it gives the best least-squares inverse.
 

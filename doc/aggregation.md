@@ -2,7 +2,7 @@
 
 ### Function: np_sum (a)
 
-Sum of array elements.
+Sum of array elements. Supports complex arrays.
 
 Without an axis argument, returns the scalar sum of all elements. With an axis argument, sums along that axis and returns an ndarray.
 
@@ -29,7 +29,7 @@ See also: `np_mean`, `np_cumsum`
 
 ### Function: np_mean (a)
 
-Mean (average) of array elements.
+Mean (average) of array elements. Supports complex arrays.
 
 Without an axis argument, returns the scalar mean of all elements. With an axis argument, computes the mean along that axis.
 
@@ -56,7 +56,7 @@ See also: `np_sum`, `np_std`, `np_var`
 
 ### Function: np_min (a) / np_min (a, axis)
 
-Minimum element of an ndarray.
+Minimum element of an ndarray. Signals an error for complex arrays.
 
 Without an axis argument, returns the smallest element as a scalar. With an axis argument, computes the minimum along that axis and returns an ndarray.
 
@@ -83,7 +83,7 @@ See also: `np_max`, `np_argmin`
 
 ### Function: np_max (a) / np_max (a, axis)
 
-Maximum element of an ndarray.
+Maximum element of an ndarray. Signals an error for complex arrays.
 
 Without an axis argument, returns the largest element as a scalar. With an axis argument, computes the maximum along that axis and returns an ndarray.
 
@@ -110,7 +110,7 @@ See also: `np_min`, `np_argmax`
 
 ### Function: np_argmin (a) / np_argmin (a, axis)
 
-Index of the minimum element.
+Index of the minimum element. Signals an error for complex arrays.
 
 Without an axis argument, returns a 0-based integer index into the flattened (column-major) storage. With an axis argument, returns a 1D ndarray of indices along the specified axis.
 
@@ -137,7 +137,7 @@ See also: `np_argmax`, `np_min`
 
 ### Function: np_argmax (a) / np_argmax (a, axis)
 
-Index of the maximum element.
+Index of the maximum element. Signals an error for complex arrays.
 
 Without an axis argument, returns a 0-based integer index into the flattened (column-major) storage. With an axis argument, returns a 1D ndarray of indices along the specified axis.
 
@@ -166,7 +166,7 @@ See also: `np_argmin`, `np_max`
 
 Variance of array elements.
 
-Computes the population variance (divides by N, not N-1). Without an axis argument, returns a scalar. With an axis argument, computes variance along that axis.
+Computes the population variance (divides by N, not N-1). Without an axis argument, returns a scalar. With an axis argument, computes variance along that axis. For complex arrays, computes |x - mean|^2; the result is always `double-float`.
 
 Calling forms:
 
@@ -193,7 +193,7 @@ See also: `np_std`, `np_mean`
 
 Standard deviation of array elements.
 
-Computes the population standard deviation (divides by N, not N-1). Without an axis argument, returns a scalar. With an axis argument, computes standard deviation along that axis.
+Computes the population standard deviation (divides by N, not N-1). Without an axis argument, returns a scalar. With an axis argument, computes standard deviation along that axis. The result is always `double-float`, even for complex input.
 
 Calling forms:
 
@@ -218,7 +218,7 @@ See also: `np_var`, `np_mean`
 
 ### Function: np_cumsum (a)
 
-Cumulative sum of a 1D ndarray.
+Cumulative sum of a 1D ndarray. Supports complex arrays.
 
 Returns a new 1D ndarray where element `i` is the sum of elements 0 through `i` of the input.
 
@@ -237,7 +237,7 @@ See also: `np_sum`
 
 ### Function: np_dot (a, b)
 
-Dot product of two 1D vectors.
+Dot product of two 1D vectors. Supports complex arrays.
 
 Both arguments must be 1D ndarrays of the same length. Returns a scalar.
 
@@ -258,7 +258,7 @@ See also: `np_matmul`, `np_sum`
 
 ### Function: np_sort (a) / np_sort (a, axis)
 
-Sort array elements in ascending order.
+Sort array elements in ascending order. Signals an error for complex arrays.
 
 Without an axis argument, flattens to 1D and sorts. With an axis argument, sorts along the specified axis (preserving shape). Uses a stable sort — equal elements maintain their relative order. Returns a new ndarray; the input is not modified.
 
@@ -287,7 +287,7 @@ See also: `np_argsort`, `np_min`, `np_max`
 
 ### Function: np_argsort (a) / np_argsort (a, axis)
 
-Indices that would sort array elements in ascending order.
+Indices that would sort array elements in ascending order. Signals an error for complex arrays.
 
 Without an axis argument, returns flat indices for the flattened array. With an axis argument, returns indices along the specified axis. Indices are stored as double-float values. Uses a stable sort.
 

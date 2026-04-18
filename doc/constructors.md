@@ -1,10 +1,10 @@
 ## Constructors
 
-### Function: np_zeros (shape)
+### Function: np_zeros (shape) / np_zeros (shape, dtype)
 
 Create a zero-filled ndarray.
 
-The `shape` argument is either an integer (for 1D) or a Maxima list of dimensions (for 2D or higher).
+The `shape` argument is either an integer (for 1D) or a Maxima list of dimensions (for 2D or higher). Pass `complex` as the optional second argument to create a complex array.
 
 #### Examples
 
@@ -17,15 +17,17 @@ The `shape` argument is either an integer (for 1D) or a Maxima list of dimension
 (%o3)            ndarray([2, 3], DOUBLE-FLOAT)
 (%i4) np_ref(np_zeros([2, 2]), 0, 0);
 (%o4)                          0.0
+(%i5) np_zeros([2, 2], complex);
+(%o5)            ndarray([2, 2], COMPLEX-DOUBLE-FLOAT)
 ```
 
 See also: `np_ones`, `np_full`, `np_empty`
 
-### Function: np_ones (shape)
+### Function: np_ones (shape) / np_ones (shape, dtype)
 
 Create an ndarray filled with ones.
 
-The `shape` argument is either an integer (for 1D) or a Maxima list of dimensions.
+The `shape` argument is either an integer (for 1D) or a Maxima list of dimensions. Pass `complex` as the optional second argument to create a complex array.
 
 #### Examples
 
@@ -38,20 +40,23 @@ The `shape` argument is either an integer (for 1D) or a Maxima list of dimension
 (%o3)            ndarray([2, 2], DOUBLE-FLOAT)
 (%i4) np_ref(np_ones([3, 3]), 1, 1);
 (%o4)                          1.0
+(%i5) np_ones([2, 2], complex);
+(%o5)            ndarray([2, 2], COMPLEX-DOUBLE-FLOAT)
 ```
 
 See also: `np_zeros`, `np_full`, `np_empty`
 
-### Function: np_eye (n)
+### Function: np_eye (n) / np_eye (n, m) / np_eye (n, m, dtype)
 
 Create an identity matrix.
 
-Returns an `n` x `n` identity matrix (ones on the diagonal, zeros elsewhere). An optional second argument `m` creates an `n` x `m` rectangular identity matrix.
+Returns an `n` x `n` identity matrix (ones on the diagonal, zeros elsewhere). An optional second argument `m` creates an `n` x `m` rectangular identity matrix. Pass `complex` as the last argument to create a complex array.
 
 Calling forms:
 
 - `np_eye(n)` -- square identity matrix
 - `np_eye(n, m)` -- rectangular identity matrix
+- `np_eye(n, m, complex)` -- complex identity matrix
 
 #### Examples
 
@@ -72,7 +77,7 @@ See also: `np_diag`, `np_zeros`, `np_ones`
 
 Create an ndarray filled with uniform random values in [0, 1).
 
-Each element is independently drawn from a uniform distribution on the interval [0, 1).
+Each element is independently drawn from a uniform distribution on the interval [0, 1). Always returns `double-float`.
 
 #### Examples
 
@@ -91,7 +96,7 @@ See also: `np_randn`, `np_zeros`, `np_ones`
 
 Create an ndarray filled with standard normal random values.
 
-Each element is independently drawn from a normal distribution with mean 0 and standard deviation 1, using the Box-Muller transform.
+Each element is independently drawn from a normal distribution with mean 0 and standard deviation 1, using the Box-Muller transform. Always returns `double-float`.
 
 #### Examples
 
@@ -108,7 +113,7 @@ See also: `np_rand`
 
 Create a 1D ndarray of evenly spaced values.
 
-Generates values from `start` (inclusive) to `stop` (exclusive) with the given `step`. Supports non-integer step values.
+Generates values from `start` (inclusive) to `stop` (exclusive) with the given `step`. Supports non-integer step values. Always returns `double-float`.
 
 Calling forms:
 
@@ -135,7 +140,7 @@ See also: `np_linspace`, `np_zeros`
 
 Create `n` evenly spaced points from `start` to `stop` (inclusive).
 
-Both endpoints are included. If `n` is 1, returns a single-element array containing `start`.
+Both endpoints are included. If `n` is 1, returns a single-element array containing `start`. Always returns `double-float`.
 
 #### Examples
 
@@ -150,11 +155,11 @@ Both endpoints are included. If `n` is 1, returns a single-element array contain
 
 See also: `np_arange`
 
-### Function: np_full (shape, val)
+### Function: np_full (shape, val) / np_full (shape, val, dtype)
 
 Create an ndarray filled with a constant value.
 
-Every element is set to `val`, which is coerced to double-float.
+Every element is set to `val`. Pass `complex` as the optional third argument to create a complex array; otherwise values are coerced to `double-float`.
 
 #### Examples
 
@@ -165,15 +170,17 @@ Every element is set to `val`, which is coerced to double-float.
 (%o2)                         42.0
 (%i3) np_to_list(np_full(3, %pi));
 (%o3)  [3.141592653589793, 3.141592653589793, 3.141592653589793]
+(%i4) np_full([2, 2], 1+2*%i, complex);
+(%o4)            ndarray([2, 2], COMPLEX-DOUBLE-FLOAT)
 ```
 
 See also: `np_zeros`, `np_ones`
 
-### Function: np_empty (shape)
+### Function: np_empty (shape) / np_empty (shape, dtype)
 
 Create an uninitialized ndarray.
 
-The contents are unspecified and may contain arbitrary values. Use this when you plan to fill every element before reading, as it avoids the cost of zero-initialization.
+The contents are unspecified and may contain arbitrary values. Use this when you plan to fill every element before reading, as it avoids the cost of zero-initialization. Pass `complex` as the optional second argument to create a complex array.
 
 #### Examples
 
@@ -182,15 +189,17 @@ The contents are unspecified and may contain arbitrary values. Use this when you
 (%o1)            ndarray([3, 3], DOUBLE-FLOAT)
 (%i2) np_shape(A);
 (%o2)                        [3, 3]
+(%i3) np_empty([2, 2], complex);
+(%o3)            ndarray([2, 2], COMPLEX-DOUBLE-FLOAT)
 ```
 
 See also: `np_zeros`, `np_full`
 
-### Function: np_diag (list)
+### Function: np_diag (list) / np_diag (list, dtype)
 
 Create a diagonal matrix from a Maxima list.
 
-The argument must be a Maxima list of numbers. Returns a square ndarray with the list elements on the main diagonal and zeros elsewhere.
+The argument must be a Maxima list of numbers. Returns a square ndarray with the list elements on the main diagonal and zeros elsewhere. Pass `complex` as the optional second argument to create a complex array.
 
 #### Examples
 
@@ -201,6 +210,8 @@ The argument must be a Maxima list of numbers. Returns a square ndarray with the
 (%o2)  matrix([1.0, 0.0, 0.0], [0.0, 2.0, 0.0], [0.0, 0.0, 3.0])
 (%i3) np_ref(np_diag([5, 10]), 0, 1);
 (%o3)                          0.0
+(%i4) np_diag([1+%i, 2-%i], complex);
+(%o4)            ndarray([2, 2], COMPLEX-DOUBLE-FLOAT)
 ```
 
 See also: `np_eye`, `np_zeros`
@@ -209,7 +220,7 @@ See also: `np_eye`, `np_zeros`
 
 Create a deep copy of an ndarray.
 
-Returns a new ndarray with the same shape and values. Modifications to the copy do not affect the original.
+Returns a new ndarray with the same shape, dtype, and values. Modifications to the copy do not affect the original.
 
 #### Examples
 

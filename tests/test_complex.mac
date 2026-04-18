@@ -243,3 +243,357 @@ true;
 /* np_argmax signals error for complex */
 (errcatch(np_argmax(np_ones(3, complex))));
 [];
+
+/* === Additional complex constructor tests === */
+
+/* np_empty with complex */
+(A : np_empty([2,2], complex),
+ is(np_dtype(A) = "COMPLEX-DOUBLE-FLOAT" and np_shape(A) = [2, 2]));
+true;
+
+/* np_copy preserves complex dtype */
+(A : ndarray(matrix([1+%i, 2-%i]), complex),
+ B : np_copy(A),
+ v : np_ref(B, 0, 0),
+ is(np_dtype(B) = "COMPLEX-DOUBLE-FLOAT")
+   and closeto(realpart(v), 1.0) and closeto(imagpart(v), 1.0));
+true;
+
+/* === Additional complex element-wise operations === */
+
+/* Subtraction */
+(A : ndarray(matrix([3+2*%i, 5+%i]), complex),
+ B : ndarray(matrix([1+%i, 2+%i]), complex),
+ C : np_sub(A, B),
+ v0 : np_ref(C, 0, 0),
+ closeto(realpart(v0), 2.0) and closeto(imagpart(v0), 1.0));
+true;
+
+/* Division */
+(A : ndarray(matrix([4+2*%i]), complex),
+ B : ndarray(matrix([2]), complex),
+ C : np_div(A, B),
+ v : np_ref(C, 0, 0),
+ closeto(realpart(v), 2.0) and closeto(imagpart(v), 1.0));
+true;
+
+/* Power */
+(A : ndarray(matrix([%i]), complex),
+ B : np_pow(A, 2),
+ v : np_ref(B, 0, 0),
+ /* i^2 = -1 */
+ closeto(realpart(v), -1.0) and closeto(imagpart(v), 0.0));
+true;
+
+/* Negation */
+(A : ndarray(matrix([1+%i, 2-3*%i]), complex),
+ B : np_neg(A),
+ v : np_ref(B, 0, 0),
+ closeto(realpart(v), -1.0) and closeto(imagpart(v), -1.0));
+true;
+
+/* Square root */
+(A : ndarray(matrix([-1]), complex),
+ B : np_sqrt(A),
+ v : np_ref(B, 0, 0),
+ /* sqrt(-1) = i */
+ closeto(realpart(v), 0.0) and closeto(imagpart(v), 1.0));
+true;
+
+/* Exponential: exp(i*pi) = -1 */
+(A : ndarray(matrix([%i * %pi]), complex),
+ B : np_exp(A),
+ v : np_ref(B, 0, 0),
+ closeto(realpart(v), -1.0) and closeto(imagpart(v), 0.0));
+true;
+
+/* Logarithm: log(exp(z)) = z */
+(z : 1+2*%i,
+ A : ndarray(matrix([z]), complex),
+ B : np_log(np_exp(A)),
+ v : np_ref(B, 0, 0),
+ closeto(realpart(v), 1.0) and closeto(imagpart(v), 2.0));
+true;
+
+/* Sin */
+(A : ndarray(matrix([%i]), complex),
+ B : np_sin(A),
+ is(np_dtype(B) = "COMPLEX-DOUBLE-FLOAT"));
+true;
+
+/* Cos */
+(A : ndarray(matrix([%i]), complex),
+ B : np_cos(A),
+ is(np_dtype(B) = "COMPLEX-DOUBLE-FLOAT"));
+true;
+
+/* Tan */
+(A : ndarray(matrix([%i]), complex),
+ B : np_tan(A),
+ is(np_dtype(B) = "COMPLEX-DOUBLE-FLOAT"));
+true;
+
+/* np_abs: complex -> real (magnitude) */
+(A : ndarray(matrix([3+4*%i]), complex),
+ B : np_abs(A),
+ is(np_dtype(B) = "DOUBLE-FLOAT") and closeto(np_ref(B, 0, 0), 5.0));
+true;
+
+/* np_angle: result is double-float */
+(A : ndarray(matrix([1+%i]), complex),
+ B : np_angle(A),
+ is(np_dtype(B) = "DOUBLE-FLOAT") and closeto(np_ref(B, 0, 0), %pi/4));
+true;
+
+/* === Complex comparisons and logical ops === */
+
+/* np_equal works with complex */
+(A : ndarray(matrix([1+%i, 2]), complex),
+ B : ndarray(matrix([1+%i, 3]), complex),
+ C : np_equal(A, B),
+ closeto(np_ref(C, 0, 0), 1.0) and closeto(np_ref(C, 0, 1), 0.0));
+true;
+
+/* np_not_equal works with complex */
+(A : ndarray(matrix([1+%i, 2]), complex),
+ B : ndarray(matrix([1+%i, 3]), complex),
+ C : np_not_equal(A, B),
+ closeto(np_ref(C, 0, 0), 0.0) and closeto(np_ref(C, 0, 1), 1.0));
+true;
+
+/* np_greater_equal signals error for complex */
+(errcatch(np_greater_equal(np_ones(3, complex), 0)));
+[];
+
+/* np_less_equal signals error for complex */
+(errcatch(np_less_equal(np_ones(3, complex), 0)));
+[];
+
+/* np_logical_and with complex */
+(A : ndarray(matrix([1+%i, 0]), complex),
+ B : ndarray(matrix([1, 1+%i]), complex),
+ C : np_logical_and(A, B),
+ closeto(np_ref(C, 0, 0), 1.0) and closeto(np_ref(C, 0, 1), 0.0));
+true;
+
+/* np_logical_or with complex */
+(A : ndarray(matrix([1+%i, 0]), complex),
+ B : ndarray(matrix([0, 0]), complex),
+ C : np_logical_or(A, B),
+ closeto(np_ref(C, 0, 0), 1.0) and closeto(np_ref(C, 0, 1), 0.0));
+true;
+
+/* np_logical_not with complex */
+(A : ndarray(matrix([1+%i, 0]), complex),
+ C : np_logical_not(A),
+ closeto(np_ref(C, 0, 0), 0.0) and closeto(np_ref(C, 0, 1), 1.0));
+true;
+
+/* === Complex selection === */
+
+/* np_where ternary form with complex */
+(cond : ndarray([1, 0, 1], [3]),
+ x : ndarray([1+%i, 2+%i, 3+%i], [3], complex),
+ y : ndarray([10, 20, 30], [3], complex),
+ C : np_where(cond, x, y),
+ v0 : np_ref(C, 0), v1 : np_ref(C, 1),
+ closeto(realpart(v0), 1.0) and closeto(imagpart(v0), 1.0)
+   and closeto(realpart(v1), 20.0) and closeto(imagpart(v1), 0.0));
+true;
+
+/* np_map with complex */
+(csquare(x) := x * x,
+ A : ndarray(matrix([1+%i, 2-%i]), complex),
+ B : np_map(csquare, A),
+ v : np_ref(B, 0, 0),
+ /* (1+i)^2 = 2i */
+ closeto(realpart(v), 0.0) and closeto(imagpart(v), 2.0));
+true;
+
+/* np_extract with complex */
+(A : ndarray(matrix([1+%i, 2, 3-%i]), complex),
+ mask : ndarray(matrix([1, 0, 1])),
+ E : np_extract(mask, A),
+ is(np_dtype(E) = "COMPLEX-DOUBLE-FLOAT") and is(np_size(E) = 2));
+true;
+
+/* === Complex aggregation === */
+
+/* np_mean */
+(A : ndarray(matrix([1+%i, 3-%i]), complex),
+ m : np_mean(A),
+ closeto(realpart(m), 2.0) and closeto(imagpart(m), 0.0));
+true;
+
+/* np_dot with complex */
+(A : ndarray([1+%i, 1-%i], [2], complex),
+ B : ndarray([1, 1], [2], complex),
+ d : np_dot(A, B),
+ closeto(realpart(d), 2.0) and closeto(imagpart(d), 0.0));
+true;
+
+/* np_var: result is always double-float */
+(A : ndarray(matrix([1+%i, 1-%i]), complex),
+ v : np_var(A),
+ is(numberp(v)) and closeto(v, 1.0));
+true;
+
+/* np_std: result is always double-float */
+(A : ndarray(matrix([1+%i, 1-%i]), complex),
+ s : np_std(A),
+ is(numberp(s)) and closeto(s, 1.0));
+true;
+
+/* np_cumsum with complex */
+(A : ndarray([1+%i, 2-%i, 3], [3], complex),
+ C : np_cumsum(A),
+ is(np_dtype(C) = "COMPLEX-DOUBLE-FLOAT")
+   and closeto(realpart(np_ref(C, 2)), 6.0)
+   and closeto(imagpart(np_ref(C, 2)), 0.0));
+true;
+
+/* === Complex linear algebra === */
+
+/* np_inv */
+(A : ndarray(matrix([1+%i, 0], [0, 2-%i]), complex),
+ Ainv : np_inv(A),
+ P : np_matmul(A, Ainv),
+ closeto(realpart(np_ref(P, 0, 0)), 1.0)
+   and closeto(imagpart(np_ref(P, 0, 0)), 0.0)
+   and closeto(realpart(np_ref(P, 0, 1)), 0.0));
+true;
+
+/* np_solve with complex */
+(A : ndarray(matrix([1+%i, 0], [0, 1-%i]), complex),
+ b : ndarray(matrix([2+2*%i], [3-3*%i]), complex),
+ x : np_solve(A, b),
+ /* x = A^-1 b = [2, 3] */
+ closeto(realpart(np_ref(x, 0, 0)), 2.0)
+   and closeto(imagpart(np_ref(x, 0, 0)), 0.0));
+true;
+
+/* np_svd: S is always double-float */
+(A : ndarray(matrix([1+%i, 0], [0, 2-%i]), complex),
+ [U, S, Vt] : np_svd(A),
+ is(np_dtype(S) = "DOUBLE-FLOAT")
+   and is(np_dtype(U) = "COMPLEX-DOUBLE-FLOAT")
+   and is(np_dtype(Vt) = "COMPLEX-DOUBLE-FLOAT"));
+true;
+
+/* np_qr with complex */
+(A : ndarray(matrix([1+%i, 2], [3, 4-%i]), complex),
+ [Q, R] : np_qr(A),
+ is(np_dtype(Q) = "COMPLEX-DOUBLE-FLOAT"));
+true;
+
+/* np_lu with complex */
+(A : ndarray(matrix([1+%i, 2], [3, 4-%i]), complex),
+ [L, U, P] : np_lu(A),
+ is(np_dtype(L) = "COMPLEX-DOUBLE-FLOAT"));
+true;
+
+/* np_norm: result is always real */
+(A : ndarray(matrix([3+4*%i]), complex),
+ n : np_norm(A),
+ is(numberp(n)) and closeto(n, 5.0));
+true;
+
+/* np_trace with complex */
+(A : ndarray(matrix([1+%i, 0], [0, 2-%i]), complex),
+ t : np_trace(A),
+ closeto(realpart(t), 3.0) and closeto(imagpart(t), 0.0));
+true;
+
+/* np_rank with complex */
+(A : ndarray(matrix([1+%i, 0], [0, 2-%i]), complex),
+ is(np_rank(A) = 2));
+true;
+
+/* np_expm with complex */
+(A : np_zeros([2,2], complex),
+ E : np_expm(A),
+ is(np_dtype(E) = "COMPLEX-DOUBLE-FLOAT")
+   and closeto(realpart(np_ref(E, 0, 0)), 1.0));
+true;
+
+/* np_lstsq with complex */
+(A : ndarray(matrix([1+%i, 0], [0, 1-%i]), complex),
+ b : ndarray(matrix([2+2*%i], [3-3*%i]), complex),
+ [x, residuals, rank, S] : np_lstsq(A, b),
+ is(np_dtype(S) = "DOUBLE-FLOAT") and is(rank = 2));
+true;
+
+/* np_pinv with complex: cross-check against np_inv for invertible matrix */
+(A : ndarray(matrix([1+%i, 0], [0, 2-%i]), complex),
+ Ap : np_pinv(A),
+ Ainv : np_inv(A),
+ diff : np_to_list(np_flatten(np_sub(Ap, Ainv))),
+ is(lmax(map(abs, diff)) < 1e-10));
+true;
+
+/* np_pinv with complex: Moore-Penrose condition A*A+*A = A */
+(A : ndarray(matrix([1+%i, 2], [3, 4-%i]), complex),
+ Ap : np_pinv(A),
+ cond1 : np_matmul(np_matmul(A, Ap), A),
+ diff : np_to_list(np_flatten(np_sub(cond1, A))),
+ is(lmax(map(abs, diff)) < 1e-10));
+true;
+
+/* np_lstsq with complex: cross-check against np_solve for square system */
+(A : ndarray(matrix([1+%i, 0], [0, 2-%i]), complex),
+ b : ndarray(matrix([2+2*%i], [3-3*%i]), complex),
+ [x_ls, residuals, rank, S] : np_lstsq(A, b),
+ x_solve : np_solve(A, b),
+ diff : np_to_list(np_flatten(np_sub(x_ls, x_solve))),
+ is(lmax(map(abs, diff)) < 1e-10));
+true;
+
+/* === Complex slicing === */
+
+/* np_row preserves complex dtype */
+(A : ndarray(matrix([1+%i, 2], [3, 4-%i]), complex),
+ R : np_row(A, 0),
+ is(np_dtype(R) = "COMPLEX-DOUBLE-FLOAT")
+   and closeto(realpart(np_ref(R, 0)), 1.0)
+   and closeto(imagpart(np_ref(R, 0)), 1.0));
+true;
+
+/* np_col preserves complex dtype */
+(A : ndarray(matrix([1+%i, 2], [3, 4-%i]), complex),
+ C : np_col(A, 1),
+ is(np_dtype(C) = "COMPLEX-DOUBLE-FLOAT")
+   and closeto(realpart(np_ref(C, 1)), 4.0)
+   and closeto(imagpart(np_ref(C, 1)), -1.0));
+true;
+
+/* np_slice preserves complex dtype */
+(A : ndarray(matrix([1+%i, 2, 3], [4, 5-%i, 6]), complex),
+ S : np_slice(A, [0, 1], [0, 2]),
+ is(np_dtype(S) = "COMPLEX-DOUBLE-FLOAT") and is(np_shape(S) = [1, 2]));
+true;
+
+/* np_reshape preserves complex dtype */
+(A : ndarray(matrix([1+%i, 2-%i]), complex),
+ B : np_reshape(A, [2, 1]),
+ is(np_dtype(B) = "COMPLEX-DOUBLE-FLOAT") and is(np_shape(B) = [2, 1]));
+true;
+
+/* np_flatten preserves complex dtype */
+(A : ndarray(matrix([1+%i, 2], [3, 4-%i]), complex),
+ B : np_flatten(A),
+ is(np_dtype(B) = "COMPLEX-DOUBLE-FLOAT") and is(np_size(B) = 4));
+true;
+
+/* np_hstack: real + complex promotes to complex */
+(A : ndarray(matrix([1, 2], [3, 4])),
+ B : ndarray(matrix([5+%i], [6-%i]), complex),
+ C : np_hstack(A, B),
+ is(np_dtype(C) = "COMPLEX-DOUBLE-FLOAT") and is(np_shape(C) = [2, 3]));
+true;
+
+/* np_vstack: real + complex promotes to complex */
+(A : ndarray(matrix([1, 2])),
+ B : ndarray(matrix([3+%i, 4-%i]), complex),
+ C : np_vstack(A, B),
+ is(np_dtype(C) = "COMPLEX-DOUBLE-FLOAT") and is(np_shape(C) = [2, 2]));
+true;
