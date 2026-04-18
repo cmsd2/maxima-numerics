@@ -4,15 +4,13 @@
 
 NumPy-like numerical computing for Maxima (SBCL only).
 
-Built on [magicl](https://github.com/quil-lang/magicl) for BLAS/LAPACK-backed tensors,
-with optional Apache Arrow and DuckDB integration for data loading and SQL.
+Built on [magicl](https://github.com/quil-lang/magicl) for BLAS/LAPACK-backed tensors.
 
 ## Requirements
 
 - SBCL (>= 2.0)
 - Quicklisp (for magicl and CL dependencies)
 - BLAS/LAPACK (macOS: bundled via Accelerate; Linux: `liblapack-dev libblas-dev`)
-- libduckdb (optional, for DuckDB layer)
 
 ## Install
 
