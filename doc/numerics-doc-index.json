@@ -114,6 +114,28 @@
       ],
       "section": "Element-wise Operations"
     },
+    "np_angle": {
+      "type": "Function",
+      "signature": "np_angle(a)",
+      "summary": "Element-wise phase angle.",
+      "body_md": "Element-wise phase angle.\n\nReturns a new double-float ndarray containing the phase angle (argument) of each element in radians. For real positive numbers, returns 0; for real negative numbers, returns pi.\n\n#### Examples\n\n```maxima\n(%i1) A : ndarray(matrix([1, -1, %i]), complex);\n(%o1)     ndarray([1, 3], COMPLEX-DOUBLE-FLOAT)\n(%i2) np_to_list(np_angle(A));\n(%o2)          [0.0, 3.141592653589793, 1.5707963267948966]\n```\n\nSee also: `np_real`, `np_imag`, `np_abs`",
+      "examples": [
+        {
+          "input": "A : ndarray(matrix([1, -1, %i]), complex);",
+          "output": "ndarray([1, 3], COMPLEX-DOUBLE-FLOAT)"
+        },
+        {
+          "input": "np_to_list(np_angle(A));",
+          "output": "[0.0, 3.141592653589793, 1.5707963267948966]"
+        }
+      ],
+      "see_also": [
+        "np_real",
+        "np_imag",
+        "np_abs"
+      ],
+      "section": "Linear Algebra"
+    },
     "np_arange": {
       "type": "Function",
       "signature": "np_arange(stop) / np_arange (start, stop) / np_arange (start, stop, step)",
@@ -265,20 +287,26 @@
       "type": "Function",
       "signature": "np_conj(a)",
       "summary": "Element-wise complex conjugate.",
-      "body_md": "Element-wise complex conjugate.\n\nReturns a new ndarray where each element is the complex conjugate of the corresponding element in `a`. For real (double-float) arrays, this returns a copy of `a` unchanged.\n\n#### Examples\n\n```maxima\n(%i1) A : ndarray(matrix([1, 2], [3, 4]));\n(%o1)            ndarray([2, 2], DOUBLE-FLOAT)\n(%i2) np_to_matrix(np_conj(A));\n(%o2)         matrix([1.0, 2.0], [3.0, 4.0])\n```\n\nSee also: `np_ctranspose`, `np_transpose`",
+      "body_md": "Element-wise complex conjugate.\n\nReturns a new ndarray where each element is the complex conjugate of the corresponding element in `a`. For real (double-float) arrays, this returns a copy of `a` unchanged. For complex arrays, conjugates each element (negates the imaginary part).\n\n#### Examples\n\n```maxima\n(%i1) A : ndarray(matrix([1+%i, 2-3*%i]), complex);\n(%o1)     ndarray([1, 2], COMPLEX-DOUBLE-FLOAT)\n(%i2) np_to_list(np_conj(A));\n(%o2)              [1.0 - 1.0*%i, 2.0 + 3.0*%i]\n(%i3) /* Real arrays are unchanged */\n      np_to_list(np_conj(ndarray([1, 2, 3], [3])));\n(%o3)                     [1.0, 2.0, 3.0]\n```\n\nSee also: `np_ctranspose`, `np_transpose`, `np_real`, `np_imag`",
       "examples": [
         {
-          "input": "A : ndarray(matrix([1, 2], [3, 4]));",
-          "output": "ndarray([2, 2], DOUBLE-FLOAT)"
+          "input": "A : ndarray(matrix([1+%i, 2-3*%i]), complex);",
+          "output": "ndarray([1, 2], COMPLEX-DOUBLE-FLOAT)"
         },
         {
-          "input": "np_to_matrix(np_conj(A));",
-          "output": "matrix([1.0, 2.0], [3.0, 4.0])"
+          "input": "np_to_list(np_conj(A));",
+          "output": "[1.0 - 1.0*%i, 2.0 + 3.0*%i]"
+        },
+        {
+          "input": "/* Real arrays are unchanged */\n      np_to_list(np_conj(ndarray([1, 2, 3], [3])));",
+          "output": "[1.0, 2.0, 3.0]"
         }
       ],
       "see_also": [
         "np_ctranspose",
-        "np_transpose"
+        "np_transpose",
+        "np_real",
+        "np_imag"
       ],
       "section": "Linear Algebra"
     },
@@ -509,7 +537,7 @@
       "type": "Function",
       "signature": "np_eig(a)",
       "summary": "Eigendecomposition.",
-      "body_md": "Eigendecomposition.\n\nComputes eigenvalues and eigenvectors of a square matrix. Returns a Maxima list `[eigenvalues, eigenvectors]` where `eigenvalues` is a 1D ndarray and `eigenvectors` is a 2D ndarray whose columns are the eigenvectors.\n\nOnly the real parts of eigenvalues and eigenvectors are returned (imaginary parts are discarded). For matrices with complex eigenvalues (e.g. rotation matrices), the results will be incomplete.\n\n#### Examples\n\n```maxima\n(%i1) A : ndarray(matrix([2, 1, 0], [1, 3, 1], [0, 1, 2]));\n(%o1)            ndarray([3, 3], DOUBLE-FLOAT)\n(%i2) [vals, vecs] : np_eig(A);\n(%o2)             [ndarray, ndarray]\n(%i3) np_to_list(vals);\n(%o3)                [1.0, 2.0, 4.0]\n(%i4) /* Verify A*v = lambda*v */\n      np_to_matrix(np_sub(np_matmul(A, vecs),\n                          np_matmul(vecs, np_diag(np_to_list(vals)))));\n(%o4)  matrix([0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0])\n```\n\nSee also: `np_svd`",
+      "body_md": "Eigendecomposition.\n\nComputes eigenvalues and eigenvectors of a square matrix. Returns a Maxima list `[eigenvalues, eigenvectors]` where `eigenvalues` is a 1D ndarray and `eigenvectors` is a 2D ndarray whose columns are the eigenvectors.\n\nWhen eigenvalues have non-negligible imaginary parts (e.g. rotation matrices, non-symmetric matrices), the returned ndarrays use `complex-double-float` dtype. When all eigenvalues are real, returns `double-float` ndarrays.\n\n#### Examples\n\n```maxima\n(%i1) A : ndarray(matrix([2, 1, 0], [1, 3, 1], [0, 1, 2]));\n(%o1)            ndarray([3, 3], DOUBLE-FLOAT)\n(%i2) [vals, vecs] : np_eig(A);\n(%o2)             [ndarray, ndarray]\n(%i3) np_to_list(vals);\n(%o3)                [1.0, 2.0, 4.0]\n(%i4) /* Verify A*v = lambda*v */\n      np_to_matrix(np_sub(np_matmul(A, vecs),\n                          np_matmul(vecs, np_diag(np_to_list(vals)))));\n(%o4)  matrix([0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0])\n```\n\nSee also: `np_svd`",
       "examples": [
         {
           "input": "A : ndarray(matrix([2, 1, 0], [1, 3, 1], [0, 1, 2]));",
@@ -814,6 +842,28 @@
         "np_vstack"
       ],
       "section": "Slicing"
+    },
+    "np_imag": {
+      "type": "Function",
+      "signature": "np_imag(a)",
+      "summary": "Extract imaginary parts element-wise.",
+      "body_md": "Extract imaginary parts element-wise.\n\nReturns a new double-float ndarray containing the imaginary part of each element. For real arrays, returns all zeros.\n\n#### Examples\n\n```maxima\n(%i1) A : ndarray(matrix([1+2*%i, 3-4*%i]), complex);\n(%o1)     ndarray([1, 2], COMPLEX-DOUBLE-FLOAT)\n(%i2) np_to_list(np_imag(A));\n(%o2)                    [2.0, -4.0]\n```\n\nSee also: `np_real`, `np_angle`, `np_conj`",
+      "examples": [
+        {
+          "input": "A : ndarray(matrix([1+2*%i, 3-4*%i]), complex);",
+          "output": "ndarray([1, 2], COMPLEX-DOUBLE-FLOAT)"
+        },
+        {
+          "input": "np_to_list(np_imag(A));",
+          "output": "[2.0, -4.0]"
+        }
+      ],
+      "see_also": [
+        "np_real",
+        "np_angle",
+        "np_conj"
+      ],
+      "section": "Linear Algebra"
     },
     "np_inv": {
       "type": "Function",
@@ -1514,6 +1564,28 @@
       "see_also": [
         "np_svd",
         "np_det"
+      ],
+      "section": "Linear Algebra"
+    },
+    "np_real": {
+      "type": "Function",
+      "signature": "np_real(a)",
+      "summary": "Extract real parts element-wise.",
+      "body_md": "Extract real parts element-wise.\n\nReturns a new double-float ndarray containing the real part of each element. For real arrays, this is equivalent to `np_copy`.\n\n#### Examples\n\n```maxima\n(%i1) A : ndarray(matrix([1+2*%i, 3-4*%i]), complex);\n(%o1)     ndarray([1, 2], COMPLEX-DOUBLE-FLOAT)\n(%i2) np_to_list(np_real(A));\n(%o2)                     [1.0, 3.0]\n```\n\nSee also: `np_imag`, `np_angle`, `np_conj`",
+      "examples": [
+        {
+          "input": "A : ndarray(matrix([1+2*%i, 3-4*%i]), complex);",
+          "output": "ndarray([1, 2], COMPLEX-DOUBLE-FLOAT)"
+        },
+        {
+          "input": "np_to_list(np_real(A));",
+          "output": "[1.0, 3.0]"
+        }
+      ],
+      "see_also": [
+        "np_imag",
+        "np_angle",
+        "np_conj"
       ],
       "section": "Linear Algebra"
     },
