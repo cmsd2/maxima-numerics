@@ -1,0 +1,168 @@
+{
+ "nbformat": 4,
+ "nbformat_minor": 5,
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Maxima",
+   "language": "maxima",
+   "name": "maxima"
+  }
+ },
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "source": [
+    "# Numerics Benchmarks\n",
+    "\n",
+    "Compares the `numerics` package (native BLAS/LAPACK via magicl) against\n",
+    "Maxima's `load(\"lapack\")` (f2cl-translated Fortran) and plain Maxima\n",
+    "(symbolic engine).\n",
+    "\n",
+    "Each test is repeated 5 times. Results show mean elapsed CPU time."
+   ],
+   "metadata": {}
+  },
+  {
+   "cell_type": "code",
+   "source": [
+    "load(\"ax-plots\")$"
+   ],
+   "metadata": {},
+   "execution_count": null,
+   "outputs": []
+  },
+  {
+   "cell_type": "code",
+   "source": [
+    "batch(\"bench_numerics.mac\")$"
+   ],
+   "metadata": {},
+   "execution_count": null,
+   "outputs": []
+  },
+  {
+   "cell_type": "code",
+   "source": [
+    "bench_print()$"
+   ],
+   "metadata": {},
+   "execution_count": null,
+   "outputs": []
+  },
+  {
+   "cell_type": "markdown",
+   "source": [
+    "## Linear Algebra at 100x100\n",
+    "\n",
+    "Comparing numerics vs lapack(f2cl) for core decompositions."
+   ],
+   "metadata": {}
+  },
+  {
+   "cell_type": "code",
+   "source": [
+    "ax_draw2d(\n",
+    "  name=\"numerics\",\n",
+    "  ax_bar([\"matmul\", \"solve\", \"svd\", \"qr\"],\n",
+    "         map(lambda([c], first(bench_means_us(c, \"100x100\"))),\n",
+    "             [\"matmul\", \"solve\", \"svd\", \"qr\"])),\n",
+    "  name=\"lapack\",\n",
+    "  ax_bar([\"matmul\", \"solve\", \"svd\", \"qr\"],\n",
+    "         map(lambda([c],\n",
+    "               block([v : bench_means_us(c, \"100x100\")],\n",
+    "                 if length(v) >= 2 then second(v) else 0)),\n",
+    "             [\"matmul\", \"solve\", \"svd\", \"qr\"])),\n",
+    "  bar_mode=\"group\",\n",
+    "  title=\"Linear Algebra — 100x100 (µs, lower is better)\",\n",
+    "  ylabel=\"Time (µs)\"\n",
+    ")$"
+   ],
+   "metadata": {},
+   "execution_count": null,
+   "outputs": []
+  },
+  {
+   "cell_type": "markdown",
+   "source": [
+    "## Element-wise Operations at 100x100\n",
+    "\n",
+    "Comparing numerics built-in ops vs plain Maxima matrix operations."
+   ],
+   "metadata": {}
+  },
+  {
+   "cell_type": "code",
+   "source": [
+    "ax_draw2d(\n",
+    "  name=\"numerics\",\n",
+    "  ax_bar([\"add\", \"sqrt\", \"exp\"],\n",
+    "         map(lambda([c], first(bench_means_us(c, \"100x100\"))),\n",
+    "             [\"add\", \"sqrt\", \"exp\"])),\n",
+    "  name=\"maxima\",\n",
+    "  ax_bar([\"add\", \"sqrt\", \"exp\"],\n",
+    "         map(lambda([c], second(bench_means_us(c, \"100x100\"))),\n",
+    "             [\"add\", \"sqrt\", \"exp\"])),\n",
+    "  bar_mode=\"group\",\n",
+    "  title=\"Element-wise Ops — 100x100 (µs, lower is better)\",\n",
+    "  ylabel=\"Time (µs)\"\n",
+    ")$"
+   ],
+   "metadata": {},
+   "execution_count": null,
+   "outputs": []
+  },
+  {
+   "cell_type": "markdown",
+   "source": [
+    "## User Function Mapping at n=1000\n",
+    "\n",
+    "Comparing interpreted np_map, translated np_map, built-in ops, and plain Maxima map."
+   ],
+   "metadata": {}
+  },
+  {
+   "cell_type": "code",
+   "source": [
+    "ax_draw2d(\n",
+    "  ax_bar(bench_names(\"map\", \"1000\"),\n",
+    "         bench_means_us(\"map\", \"1000\")),\n",
+    "  title=\"User Function Mapping — n=1000 (µs, lower is better)\",\n",
+    "  ylabel=\"Time (µs)\"\n",
+    ")$"
+   ],
+   "metadata": {},
+   "execution_count": null,
+   "outputs": []
+  },
+  {
+   "cell_type": "markdown",
+   "source": [
+    "## QR Decomposition Scaling\n",
+    "\n",
+    "Shows how numerics (native LAPACK) scales vs lapack (f2cl) across matrix sizes."
+   ],
+   "metadata": {}
+  },
+  {
+   "cell_type": "code",
+   "source": [
+    "ax_draw2d(\n",
+    "  name=\"numerics\",\n",
+    "  ax_bar([\"10x10\", \"50x50\", \"100x100\"],\n",
+    "         map(lambda([sz], first(bench_means_us(\"qr\", sz))),\n",
+    "             [\"10x10\", \"50x50\", \"100x100\"])),\n",
+    "  name=\"lapack (f2cl)\",\n",
+    "  ax_bar([\"10x10\", \"50x50\", \"100x100\"],\n",
+    "         map(lambda([sz], second(bench_means_us(\"qr\", sz))),\n",
+    "             [\"10x10\", \"50x50\", \"100x100\"])),\n",
+    "  bar_mode=\"group\",\n",
+    "  title=\"QR Decomposition Scaling (µs, lower is better)\",\n",
+    "  ylabel=\"Time (µs)\"\n",
+    ")$"
+   ],
+   "metadata": {},
+   "execution_count": null,
+   "outputs": []
+  }
+ ]
+}

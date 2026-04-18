@@ -1,6 +1,8 @@
 /* bench_numerics.mac — numerics (native BLAS/LAPACK) vs Maxima alternatives
  *
- * Usage:  batch("bench_numerics.mac");
+ * Usage:
+ *   batch("bench_numerics.mac");
+ *   /* results in bench_results — list of [category, name, size, mean, sd] */
  *
  * Compares three approaches:
  *   - numerics package  (native BLAS/LAPACK via magicl)
@@ -8,7 +10,6 @@
  *   - plain Maxima      (symbolic engine, where feasible)
  *
  * Each test is repeated bench_reps times (default 5).
- * Reports mean ± SD of elapsed CPU time.
  */
 
 load("numerics")$
@@ -16,9 +17,12 @@ load("lapack")$
 
 /* ── Configuration ─────────────────────────────────────────── */
 
-bench_reps : 5$
+/* Set bench_reps before batch() to override */
+if not numberp(bench_reps) then bench_reps : 5$
 
 /* ── Helpers ───────────────────────────────────────────────── */
+
+bench_results : []$
 
 /* Run expression bench_reps times, return [mean, sd] */
 bench_it(e) ::= buildq([e],
@@ -35,35 +39,24 @@ bench_it(e) ::= buildq([e],
           else 0.0,
     [float(_mu), float(_sd)]))$
 
-report(name, size, result) :=
-  printf(true, "  ~30a  ~10a  ~10,6f ± ~8,6f s~%",
-    name, size, first(result), second(result))$
-
-header(title) :=
-  (printf(true, "~%~a  (~a reps)~%", title, bench_reps),
-   printf(true, "  ~30a  ~10a  ~22a~%", "operation", "size", "mean ± sd"),
-   printf(true, "  ~30a  ~10a  ~22a~%",
-     "------------------------------", "----------",
-     "----------------------"))$
+bench_record(category, name, size, result) :=
+  bench_results : endcons([category, name, size, first(result), second(result)],
+                          bench_results)$
 
 /* ── 1. Matrix Multiply ──────────────────────────────────────── */
-
-header("MATRIX MULTIPLY")$
 
 for n in [10, 50, 100] do (
   An : np_rand([n, n]),
   Am : np_to_matrix(An),
   sz : sconcat(n, "x", n),
 
-  report("numerics  np_matmul", sz, bench_it(np_matmul(An, An))),
+  bench_record("matmul", "numerics", sz, bench_it(np_matmul(An, An))),
 
   if n <= 50 then
-    report("maxima    A . B", sz, bench_it(Am . Am))
+    bench_record("matmul", "maxima", sz, bench_it(Am . Am))
 )$
 
 /* ── 2. Linear Solve (Ax = b) ────────────────────────────────── */
-
-header("LINEAR SOLVE  (Ax = b)")$
 
 for n in [10, 50, 100] do (
   An : np_rand([n, n]),
@@ -72,52 +65,42 @@ for n in [10, 50, 100] do (
   bm : np_to_matrix(bn),
   sz : sconcat(n, "x", n),
 
-  report("numerics  np_solve", sz, bench_it(np_solve(An, bn))),
+  bench_record("solve", "numerics", sz, bench_it(np_solve(An, bn))),
 
-  report("lapack    dgesv", sz, bench_it(dgesv(Am, bm)))
+  bench_record("solve", "lapack", sz, bench_it(dgesv(Am, bm)))
 )$
 
 /* ── 3. Matrix Inverse ───────────────────────────────────────── */
 
-header("MATRIX INVERSE")$
-
 for n in [10, 50, 100] do (
   An : np_rand([n, n]),
-  Am : np_to_matrix(An),
   sz : sconcat(n, "x", n),
 
-  report("numerics  np_inv", sz, bench_it(np_inv(An)))
+  bench_record("inv", "numerics", sz, bench_it(np_inv(An)))
 )$
 
 /* ── 4. Determinant ──────────────────────────────────────────── */
 
-header("DETERMINANT")$
-
 for n in [10, 50, 100] do (
   An : np_rand([n, n]),
-  Am : np_to_matrix(An),
   sz : sconcat(n, "x", n),
 
-  report("numerics  np_det", sz, bench_it(np_det(An)))
+  bench_record("det", "numerics", sz, bench_it(np_det(An)))
 )$
 
 /* ── 5. SVD ──────────────────────────────────────────────────── */
 
-header("SVD")$
-
 for n in [10, 50, 100] do (
   An : np_rand([n, n]),
   Am : np_to_matrix(An),
   sz : sconcat(n, "x", n),
 
-  report("numerics  np_svd", sz, bench_it(np_svd(An))),
+  bench_record("svd", "numerics", sz, bench_it(np_svd(An))),
 
-  report("lapack    dgesvd", sz, bench_it(dgesvd(Am)))
+  bench_record("svd", "lapack", sz, bench_it(dgesvd(Am)))
 )$
 
 /* ── 6. Eigenvalues ──────────────────────────────────────────── */
-
-header("EIGENVALUES")$
 
 for n in [10, 50] do (
   /* Symmetric for stability */
@@ -126,28 +109,24 @@ for n in [10, 50] do (
   Am : np_to_matrix(An),
   sz : sconcat(n, "x", n),
 
-  report("numerics  np_eig", sz, bench_it(errcatch(np_eig(An)))),
+  bench_record("eig", "numerics", sz, bench_it(errcatch(np_eig(An)))),
 
-  report("lapack    dgeev", sz, bench_it(errcatch(dgeev(Am))))
+  bench_record("eig", "lapack", sz, bench_it(errcatch(dgeev(Am))))
 )$
 
 /* ── 7. QR Decomposition ─────────────────────────────────────── */
-
-header("QR DECOMPOSITION")$
 
 for n in [10, 50, 100] do (
   An : np_rand([n, n]),
   Am : np_to_matrix(An),
   sz : sconcat(n, "x", n),
 
-  report("numerics  np_qr", sz, bench_it(np_qr(An))),
+  bench_record("qr", "numerics", sz, bench_it(np_qr(An))),
 
-  report("lapack    dgeqrf", sz, bench_it(dgeqrf(Am)))
+  bench_record("qr", "lapack", sz, bench_it(dgeqrf(Am)))
 )$
 
 /* ── 8. Element-wise Operations ──────────────────────────────── */
-
-header("ELEMENT-WISE OPERATIONS")$
 
 for n in [10, 100] do (
   An : np_rand([n, n]),
@@ -156,19 +135,17 @@ for n in [10, 100] do (
   Bm : np_to_matrix(Bn),
   sz : sconcat(n, "x", n),
 
-  report("numerics  np_add", sz, bench_it(np_add(An, Bn))),
-  report("maxima    A + B", sz, bench_it(Am + Bm)),
+  bench_record("add", "numerics", sz, bench_it(np_add(An, Bn))),
+  bench_record("add", "maxima", sz, bench_it(Am + Bm)),
 
-  report("numerics  np_sqrt", sz, bench_it(np_sqrt(An))),
-  report("maxima    matrixmap(sqrt)", sz, bench_it(matrixmap(sqrt, Am))),
+  bench_record("sqrt", "numerics", sz, bench_it(np_sqrt(An))),
+  bench_record("sqrt", "maxima", sz, bench_it(matrixmap(sqrt, Am))),
 
-  report("numerics  np_exp", sz, bench_it(np_exp(An))),
-  report("maxima    matrixmap(exp)", sz, bench_it(matrixmap(exp, Am)))
+  bench_record("exp", "numerics", sz, bench_it(np_exp(An))),
+  bench_record("exp", "maxima", sz, bench_it(matrixmap(exp, Am)))
 )$
 
 /* ── 9. Mapping User Functions ───────────────────────────────── */
-
-header("MAPPING USER FUNCTIONS")$
 
 f_bench(x) := sin(x) + x^2$
 
@@ -180,10 +157,10 @@ for n in [100, 1000] do (
   Lm : np_to_list(An),
   sz : sconcat(n),
 
-  report("numerics  np_map (interp)", sz, bench_it(np_map(f_bench, An))),
-  report("numerics  np_map (transl)", sz, bench_it(np_map(f_bench_t, An))),
-  report("numerics  built-in ops", sz, bench_it(np_add(np_sin(An), np_pow(An, 2)))),
-  report("maxima    map(f, list)", sz, bench_it(map(f_bench, Lm)))
+  bench_record("map", "np_map interp", sz, bench_it(np_map(f_bench, An))),
+  bench_record("map", "np_map transl", sz, bench_it(np_map(f_bench_t, An))),
+  bench_record("map", "built-in ops", sz, bench_it(np_add(np_sin(An), np_pow(An, 2)))),
+  bench_record("map", "maxima map", sz, bench_it(map(f_bench, Lm)))
 )$
 
 for n in [10, 100] do (
@@ -191,13 +168,11 @@ for n in [10, 100] do (
   Am : np_to_matrix(An),
   sz : sconcat(n, "x", n),
 
-  report("numerics  np_map (transl)", sz, bench_it(np_map(f_bench_t, An))),
-  report("maxima    matrixmap(f)", sz, bench_it(matrixmap(f_bench, Am)))
+  bench_record("map2d", "np_map transl", sz, bench_it(np_map(f_bench_t, An))),
+  bench_record("map2d", "matrixmap", sz, bench_it(matrixmap(f_bench, Am)))
 )$
 
 /* ── 10. Aggregation ─────────────────────────────────────────── */
-
-header("AGGREGATION")$
 
 for n in [10, 100] do (
   An : np_rand([n, n]),
@@ -205,11 +180,11 @@ for n in [10, 100] do (
   Lm : flatten(args(Am)),
   sz : sconcat(n, "x", n),
 
-  report("numerics  np_sum", sz, bench_it(np_sum(An))),
-  report("maxima    apply(+, flat)", sz, bench_it(apply("+", Lm))),
+  bench_record("sum", "numerics", sz, bench_it(np_sum(An))),
+  bench_record("sum", "maxima", sz, bench_it(apply("+", Lm))),
 
-  report("numerics  np_min", sz, bench_it(np_min(An))),
-  report("maxima    lmin(flat)", sz, bench_it(lmin(Lm)))
+  bench_record("min", "numerics", sz, bench_it(np_min(An))),
+  bench_record("min", "maxima", sz, bench_it(lmin(Lm)))
 )$
 
 /* Dot product */
@@ -218,24 +193,49 @@ for n in [100, 1000] do (
   vm : makelist(random(1.0), i, 1, n),
   sz : sconcat(n),
 
-  report("numerics  np_dot", sz, bench_it(np_dot(vn, vn))),
-  report("maxima    v . v", sz, bench_it(vm . vm))
+  bench_record("dot", "numerics", sz, bench_it(np_dot(vn, vn))),
+  bench_record("dot", "maxima", sz, bench_it(vm . vm))
 )$
 
 /* ── 11. Conversion Overhead ─────────────────────────────────── */
-
-header("CONVERSION OVERHEAD  (ndarray <-> matrix)")$
 
 for n in [10, 50, 100] do (
   M : genmatrix(lambda([i, j], random(1.0)), n, n),
   sz : sconcat(n, "x", n),
 
-  report("ndarray(matrix)", sz, bench_it(ndarray(M))),
+  bench_record("convert", "ndarray()", sz, bench_it(ndarray(M))),
 
   A : ndarray(M),
-  report("np_to_matrix", sz, bench_it(np_to_matrix(A)))
+  bench_record("convert", "np_to_matrix", sz, bench_it(np_to_matrix(A)))
 )$
 
-/* ── Done ─────────────────────────────────────────────────────── */
+/* ── Result access helpers ───────────────────────────────────── */
 
-printf(true, "~%Done.~%")$
+/* Filter bench_results by category */
+bench_filter(cat) :=
+  sublist(bench_results, lambda([r], r[1] = cat))$
+
+/* Get names for a category at a given size */
+bench_names(cat, sz) :=
+  map(lambda([r], r[2]), sublist(bench_filter(cat), lambda([r], r[3] = sz)))$
+
+/* Get mean times for a category at a given size */
+bench_means(cat, sz) :=
+  map(lambda([r], r[4]), sublist(bench_filter(cat), lambda([r], r[3] = sz)))$
+
+/* Get mean times in microseconds */
+bench_means_us(cat, sz) :=
+  map(lambda([r], r[4] * 1e6), sublist(bench_filter(cat), lambda([r], r[3] = sz)))$
+
+/* Print a formatted table of all results */
+bench_print() := (
+  printf(true, "~%  ~12a  ~18a  ~10a  ~12a  ~12a~%",
+    "category", "name", "size", "mean (s)", "sd (s)"),
+  printf(true, "  ~12a  ~18a  ~10a  ~12a  ~12a~%",
+    "------------", "------------------", "----------",
+    "------------", "------------"),
+  for r in bench_results do
+    printf(true, "  ~12a  ~18a  ~10a  ~12,6f  ~12,6f~%",
+      r[1], r[2], r[3], r[4], r[5]),
+  'done
+)$
