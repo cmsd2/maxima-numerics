@@ -321,3 +321,39 @@ Like `np_map`, uses the fast compiled path if `f` has been translated.
 ```
 
 See also: `np_map`, `np_add`, `np_mul`
+
+### Function: np_where (condition) / np_where (condition, x, y)
+
+Conditional selection.
+
+**Form 1: `np_where(condition)`** — returns a Maxima list of index arrays indicating where the condition ndarray has nonzero elements.
+
+- For 1D input: returns `[indices]` (a list containing one 1D ndarray).
+- For 2D input: returns `[row_indices, col_indices]` (two 1D ndarrays).
+
+**Form 2: `np_where(condition, x, y)`** — element-wise selection. All three arguments must be ndarrays of the same shape. Returns a new ndarray: takes from `x` where condition is nonzero, from `y` where condition is zero.
+
+#### Examples
+
+```maxima
+(%i1) /* Form 1: find nonzero indices */
+      A : ndarray([0, 1, 0, 3, 0], [5]);
+(%o1)            ndarray([5], DOUBLE-FLOAT)
+(%i2) np_to_list(np_where(A)[1]);
+(%o2)                     [1.0, 3.0]
+(%i3) /* Form 1: 2D */
+      B : ndarray(matrix([1, 0], [0, 4]));
+(%o3)            ndarray([2, 2], DOUBLE-FLOAT)
+(%i4) [rows, cols] : np_where(B);
+(%o4)              [ndarray, ndarray]
+(%i5) np_to_list(rows);
+(%o5)                     [0.0, 1.0]
+(%i6) /* Form 2: select from x or y */
+      cond : ndarray([1, 0, 1], [3]);
+(%o6)            ndarray([3], DOUBLE-FLOAT)
+(%i7) np_to_list(np_where(cond, ndarray([10,20,30],[3]),
+                                ndarray([100,200,300],[3])));
+(%o7)               [10.0, 200.0, 30.0]
+```
+
+See also: `np_map`, `np_sort`

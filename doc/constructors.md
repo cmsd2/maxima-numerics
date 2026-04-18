@@ -104,21 +104,29 @@ Each element is independently drawn from a normal distribution with mean 0 and s
 
 See also: `np_rand`
 
-### Function: np_arange (n)
+### Function: np_arange (stop) / np_arange (start, stop) / np_arange (start, stop, step)
 
-Create a 1D ndarray with values 0, 1, 2, ..., n-1.
+Create a 1D ndarray of evenly spaced values.
 
-The argument `n` is truncated to an integer. Returned values are double-float.
+Generates values from `start` (inclusive) to `stop` (exclusive) with the given `step`. Supports non-integer step values.
+
+Calling forms:
+
+- `np_arange(stop)` -- values 0, 1, ..., stop-1
+- `np_arange(start, stop)` -- values start, start+1, ..., stop-1
+- `np_arange(start, stop, step)` -- values start, start+step, start+2*step, ...
 
 #### Examples
 
 ```maxima
-(%i1) np_arange(5);
-(%o1)            ndarray([5], DOUBLE-FLOAT)
-(%i2) np_to_list(np_arange(5));
-(%o2)           [0.0, 1.0, 2.0, 3.0, 4.0]
-(%i3) np_ref(np_arange(10), 7);
-(%o3)                          7.0
+(%i1) np_to_list(np_arange(5));
+(%o1)           [0.0, 1.0, 2.0, 3.0, 4.0]
+(%i2) np_to_list(np_arange(2, 6));
+(%o2)           [2.0, 3.0, 4.0, 5.0]
+(%i3) np_to_list(np_arange(0, 1, 0.25));
+(%o3)            [0.0, 0.25, 0.5, 0.75]
+(%i4) np_to_list(np_arange(10, 0, -2));
+(%o4)          [10.0, 8.0, 6.0, 4.0, 2.0]
 ```
 
 See also: `np_linspace`, `np_zeros`

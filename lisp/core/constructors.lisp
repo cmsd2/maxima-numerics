@@ -37,13 +37,34 @@
          (tensor (magicl:random-normal dims :type 'double-float)))
     (numerics-wrap (numerics:make-ndarray tensor))))
 
-(defun $np_arange (n)
-  "Create a 1D ndarray with values 0..n-1: np_arange(n)"
-  (let* ((n-int (truncate n))
-         (vals (loop for i below n-int collect (coerce i 'double-float))))
-    (numerics-wrap
-     (numerics:make-ndarray
-      (magicl:from-list vals (list n-int) :type 'double-float)))))
+(defun $np_arange (&rest args)
+  "Create a 1D ndarray of evenly spaced values.
+   np_arange(stop) — values 0, 1, ..., stop-1
+   np_arange(start, stop) — values start, start+1, ..., stop-1
+   np_arange(start, stop, step) — values start, start+step, ..."
+  (let (start stop step)
+    (ecase (length args)
+      (1 (setf start 0.0d0
+               stop  (coerce ($float (first args)) 'double-float)
+               step  1.0d0))
+      (2 (setf start (coerce ($float (first args)) 'double-float)
+               stop  (coerce ($float (second args)) 'double-float)
+               step  1.0d0))
+      (3 (setf start (coerce ($float (first args)) 'double-float)
+               stop  (coerce ($float (second args)) 'double-float)
+               step  (coerce ($float (third args)) 'double-float))))
+    (when (zerop step)
+      (merror "np_arange: step must be non-zero"))
+    (let* ((n (max 0 (ceiling (/ (- stop start) step))))
+           (vals (loop for i below n
+                       collect (+ start (* (coerce i 'double-float) step)))))
+      (if (zerop n)
+          (numerics-wrap
+           (numerics:make-ndarray
+            (magicl:empty (list 0) :type 'double-float :layout :column-major)))
+          (numerics-wrap
+           (numerics:make-ndarray
+            (magicl:from-list vals (list n) :type 'double-float)))))))
 
 (defun $np_linspace (start stop n)
   "Create n evenly spaced points [start, stop]: np_linspace(0, 1, 100)"

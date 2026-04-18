@@ -40,33 +40,16 @@ answers.
 These functions exist and work correctly, but accept fewer arguments than their
 NumPy counterparts.
 
-### `np_arange` — only `np_arange(n)`
-
-NumPy signature: `arange(start, stop, step)`. Ours only accepts a single
-argument n, producing `[0, 1, ..., n-1]`. There is no way to specify start or
-step.
-
-### `np_norm` — no `ord` parameter
-
-Always returns the 2-norm for vectors and the Frobenius norm for matrices. NumPy
-supports `ord=1`, `ord=np.inf`, `ord='nuc'`, `ord=-1`, etc.
-
-### `np_lstsq` — returns only the solution
-
-NumPy returns a 4-tuple `(x, residuals, rank, singular_values)`. Ours returns
-only `x`. The residuals, rank, and singular values are computed internally but
-discarded.
-
 ### `np_diag` — creation only
 
 NumPy's `np.diag()` serves two purposes: create a diagonal matrix from a 1D
 array, or extract the diagonal of a 2D array. Ours only creates.
 
-### Aggregations missing `axis`
+### Aggregations — 2D axis only
 
-`np_min`, `np_max`, `np_std`, `np_var`, `np_argmin`, `np_argmax` always reduce
-to a scalar. They have no `axis` parameter. `np_sum` and `np_mean` do support
-an optional axis (0 or 1, 2D only).
+`np_sum`, `np_mean`, `np_min`, `np_max`, `np_std`, `np_var`, `np_argmin`, and
+`np_argmax` support an optional `axis` parameter (0 or 1), but only for 2D
+arrays. NumPy supports arbitrary dimensions and axis values.
 
 ### `np_dot` — 1D vectors only
 
@@ -118,8 +101,8 @@ Features present in NumPy/SciPy that are absent here.
 | Fancy indexing | `A[[0,2], :]` | Not supported |
 | Boolean indexing | `A[A > 0]` | Not supported |
 | `np.concatenate` | General axis concatenation | Only `np_hstack`/`np_vstack` for 2D |
-| `np.sort` / `np.argsort` | Sorting | Not implemented |
-| `np.where` | Conditional selection | Not implemented |
+| `np.sort` / `np.argsort` | Sorting | Implemented; 2D axis only (no n-D) |
+| `np.where` | Conditional selection | Implemented; no broadcasting (all args must have same shape) |
 | `np.linalg.cholesky` | Cholesky decomposition | Not implemented |
 | `np.linalg.cond` | Condition number | Not implemented |
 | `np.linalg.slogdet` | Log-determinant | Not implemented |

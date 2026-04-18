@@ -221,3 +221,69 @@
          (tensor (numerics:ndarray-tensor (numerics-unwrap a))))
     (numerics-wrap
      (numerics:make-ndarray (magicl:scale tensor s)))))
+
+;;; Conditional selection
+
+(defun numerics-where-indices (tensor shape)
+  "Return index arrays for nonzero elements. For 1D returns a single index list;
+   for 2D returns (row-indices col-indices) as two lists. Iterates row-major."
+  (if (= (length shape) 1)
+      ;; 1D: collect flat indices
+      (let ((idxs '()))
+        (dotimes (i (first shape))
+          (when (/= 0.0d0 (magicl:tref tensor i))
+            (push (coerce i 'double-float) idxs)))
+        (list (nreverse idxs)))
+      ;; 2D: collect (row, col) pairs in row-major order
+      (let ((rows '()) (cols '())
+            (nrow (first shape))
+            (ncol (second shape)))
+        (dotimes (i nrow)
+          (dotimes (j ncol)
+            (when (/= 0.0d0 (magicl:tref tensor i j))
+              (push (coerce i 'double-float) rows)
+              (push (coerce j 'double-float) cols))))
+        (list (nreverse rows) (nreverse cols)))))
+
+(defun numerics-list-to-1d-ndarray (vals)
+  "Convert a list of double-floats to a 1D ndarray. Returns empty Maxima list for no values."
+  (let ((n (length vals)))
+    (if (zerop n)
+        '((mlist simp))
+        (numerics-wrap
+         (numerics:make-ndarray
+          (magicl:from-list vals (list n) :type 'double-float))))))
+
+(defun $np_where (&rest args)
+  "Conditional selection.
+   np_where(condition) => list of index arrays where condition is nonzero.
+   np_where(condition, x, y) => ndarray selecting from x where true, y where false."
+  (ecase (length args)
+    (1 ;; np_where(condition) => index arrays
+     (let* ((tensor (numerics:ndarray-tensor (numerics-unwrap (first args))))
+            (shape (magicl:shape tensor))
+            (idx-lists (numerics-where-indices tensor shape)))
+       ;; Return Maxima list of 1D ndarrays
+       `((mlist simp) ,@(mapcar #'numerics-list-to-1d-ndarray idx-lists))))
+    (3 ;; np_where(condition, x, y) => element-wise select
+     (let* ((tc (numerics:ndarray-tensor (numerics-unwrap (first args))))
+            (tx (numerics:ndarray-tensor (numerics-unwrap (second args))))
+            (ty (numerics:ndarray-tensor (numerics-unwrap (third args))))
+            (shape (magicl:shape tc))
+            (result (magicl:empty shape :type 'double-float
+                                        :layout :column-major)))
+       (if (= (length shape) 1)
+           (dotimes (i (first shape))
+             (setf (magicl:tref result i)
+                   (if (/= 0.0d0 (magicl:tref tc i))
+                       (magicl:tref tx i)
+                       (magicl:tref ty i))))
+           (let ((nrow (first shape))
+                 (ncol (second shape)))
+             (dotimes (i nrow)
+               (dotimes (j ncol)
+                 (setf (magicl:tref result i j)
+                       (if (/= 0.0d0 (magicl:tref tc i j))
+                           (magicl:tref tx i j)
+                           (magicl:tref ty i j)))))))
+       (numerics-wrap (numerics:make-ndarray result))))))

@@ -406,7 +406,7 @@ true;
 /* lstsq: exact fit y = x through (1,1), (2,2), (3,3) */
 (AA : ndarray(matrix([1,1],[1,2],[1,3])),
  bb : ndarray(matrix([1],[2],[3])),
- x : np_lstsq(AA, bb),
+ [x, res, rnk, S] : np_lstsq(AA, bb),
  is(np_shape(x) = [2, 1])
    and closeto(np_ref(x, 0, 0), 0.0)
    and closeto(np_ref(x, 1, 0), 1.0));
@@ -415,7 +415,7 @@ true;
 /* lstsq: residual Ax - b ~ 0 for consistent system */
 (AA : ndarray(matrix([1,1],[1,2],[1,3])),
  bb : ndarray(matrix([1],[2],[3])),
- x : np_lstsq(AA, bb),
+ [x, res, rnk, S] : np_lstsq(AA, bb),
  resid : np_sub(np_matmul(AA, x), bb),
  is(lmax(map(abs, np_to_list(resid))) < 1e-10));
 true;
@@ -439,7 +439,7 @@ true;
 (AA : ndarray(matrix([1,1],[1,2],[1,3])),
  bb : ndarray(matrix([1],[2],[3])),
  x_pinv : np_matmul(np_pinv(AA), bb),
- x_lstsq : np_lstsq(AA, bb),
+ [x_lstsq, res_, rnk_, S_] : np_lstsq(AA, bb),
  is(lmax(map(abs, np_to_list(np_sub(x_pinv, x_lstsq)))) < 1e-10));
 true;
 
@@ -483,9 +483,9 @@ true;
 (M : matrix([2,1,0],[1,3,1],[0,1,2]),
  b_mat : matrix([1],[2],[3]),
  An : ndarray(M), bn : ndarray(b_mat),
- x_lstsq : np_to_matrix(np_lstsq(An, bn)),
+ [x_lstsq, res_, rnk_, S_] : np_lstsq(An, bn),
  x_dgesv : dgesv(float(M), float(b_mat)),
- mat_closeto(x_lstsq, x_dgesv));
+ mat_closeto(np_to_matrix(x_lstsq), x_dgesv));
 true;
 
 /* === Cross-validation: pinv via dgesvd === */
@@ -513,7 +513,7 @@ true;
 (M : matrix([1,1],[1,2],[1,3],[1,4]),
  b_mat : matrix([2.1],[2.9],[4.1],[4.8]),
  An : ndarray(M), bn : ndarray(b_mat),
- x_opt : np_lstsq(An, bn),
+ [x_opt, res_, rnk_, S_] : np_lstsq(An, bn),
  resid_opt : np_norm(np_sub(np_matmul(An, x_opt), bn)),
  /* Try a non-optimal x */
  x_bad : ndarray(matrix([1],[1])),
@@ -571,6 +571,266 @@ true;
  negA : np_neg(A),
  prod : np_matmul(np_expm(A), np_expm(negA)),
  mat_closeto(np_to_matrix(prod), float(ident(2))));
+true;
+
+/* === Aggregation with axis === */
+
+/* np_min with axis */
+(A : ndarray(matrix([3, 1], [4, 2])),
+ is(np_to_list(np_min(A, 0)) = [3.0, 1.0]));
+true;
+
+(A : ndarray(matrix([3, 1], [4, 2])),
+ is(np_to_list(np_min(A, 1)) = [1.0, 2.0]));
+true;
+
+/* np_max with axis */
+(A : ndarray(matrix([3, 1], [4, 2])),
+ is(np_to_list(np_max(A, 0)) = [4.0, 2.0]));
+true;
+
+(A : ndarray(matrix([3, 1], [4, 2])),
+ is(np_to_list(np_max(A, 1)) = [3.0, 4.0]));
+true;
+
+/* np_argmin with axis */
+(A : ndarray(matrix([3, 1], [4, 2])),
+ is(np_to_list(np_argmin(A, 0)) = [0.0, 0.0]));
+true;
+
+(A : ndarray(matrix([3, 1], [4, 2])),
+ is(np_to_list(np_argmin(A, 1)) = [1.0, 1.0]));
+true;
+
+/* np_argmax with axis */
+(A : ndarray(matrix([3, 1], [4, 2])),
+ is(np_to_list(np_argmax(A, 0)) = [1.0, 1.0]));
+true;
+
+(A : ndarray(matrix([3, 1], [4, 2])),
+ is(np_to_list(np_argmax(A, 1)) = [0.0, 0.0]));
+true;
+
+/* np_var with axis */
+(A : ndarray(matrix([1, 5], [3, 7])),
+ v0 : np_to_list(np_var(A, 0)),
+ /* col 0: mean=2, var=((1-2)^2+(3-2)^2)/2 = 1 */
+ /* col 1: mean=6, var=((5-6)^2+(7-6)^2)/2 = 1 */
+ list_closeto(v0, [1.0, 1.0]));
+true;
+
+(A : ndarray(matrix([1, 5], [3, 7])),
+ v1 : np_to_list(np_var(A, 1)),
+ /* row 0: mean=3, var=((1-3)^2+(5-3)^2)/2 = 4 */
+ /* row 1: mean=5, var=((3-5)^2+(7-5)^2)/2 = 4 */
+ list_closeto(v1, [4.0, 4.0]));
+true;
+
+/* np_std with axis */
+(A : ndarray(matrix([1, 5], [3, 7])),
+ s0 : np_to_list(np_std(A, 0)),
+ list_closeto(s0, [1.0, 1.0]));
+true;
+
+(A : ndarray(matrix([1, 5], [3, 7])),
+ s1 : np_to_list(np_std(A, 1)),
+ list_closeto(s1, [2.0, 2.0]));
+true;
+
+/* === np_lstsq 4-tuple return === */
+
+/* lstsq returns [x, residuals, rank, S] */
+(AA : ndarray(matrix([1,1],[1,2],[1,3])),
+ bb : ndarray(matrix([1],[2],[3])),
+ result : np_lstsq(AA, bb),
+ is(length(result) = 4));
+true;
+
+/* lstsq rank for full-rank 3x2 matrix */
+(AA : ndarray(matrix([1,1],[1,2],[1,3])),
+ bb : ndarray(matrix([1],[2],[3])),
+ [x, res, rnk, S] : np_lstsq(AA, bb),
+ is(rnk = 2));
+true;
+
+/* lstsq singular values are positive and sorted descending */
+(AA : ndarray(matrix([1,1],[1,2],[1,3])),
+ bb : ndarray(matrix([1],[2],[3])),
+ [x, res, rnk, S] : np_lstsq(AA, bb),
+ sl : np_to_list(S),
+ is(length(sl) = 2 and first(sl) >= second(sl) and second(sl) > 0));
+true;
+
+/* lstsq residuals for overdetermined system */
+(AA : ndarray(matrix([1,1],[1,2],[1,3],[1,4])),
+ bb : ndarray(matrix([2.1],[2.9],[4.1],[4.8])),
+ [x, res, rnk, S] : np_lstsq(AA, bb),
+ is(rnk = 2 and np_size(res) = 1 and np_ref(res, 0) > 0));
+true;
+
+/* lstsq residuals empty for exact/underdetermined */
+(AA : ndarray(matrix([1,0],[0,1])),
+ bb : ndarray(matrix([3],[4])),
+ [x, res, rnk, S] : np_lstsq(AA, bb),
+ is(listp(res) and length(res) = 0));
+true;
+
+/* === np_norm with ord === */
+
+/* Vector 1-norm */
+(v : ndarray([1, -2, 3], [3]),
+ closeto(np_norm(v, 1), 6.0));
+true;
+
+/* Vector inf-norm */
+(v : ndarray([1, -2, 3], [3]),
+ closeto(np_norm(v, inf), 3.0));
+true;
+
+/* Vector 2-norm explicit */
+(v : np_arange(5),
+ closeto(np_norm(v, 2), np_norm(v)));
+true;
+
+/* Matrix 1-norm: max absolute column sum */
+(A : ndarray(matrix([1, -7], [2, -3])),
+ closeto(np_norm(A, 1), 10.0));
+true;
+
+/* Matrix inf-norm: max absolute row sum */
+(A : ndarray(matrix([1, -7], [2, -3])),
+ closeto(np_norm(A, inf), 8.0));
+true;
+
+/* Matrix 2-norm: largest singular value */
+(A : ndarray(matrix([1, 0], [0, 2])),
+ closeto(np_norm(A, 2), 2.0));
+true;
+
+/* Matrix fro-norm explicit */
+(A : ndarray(matrix([1, 2], [3, 4])),
+ closeto(np_norm(A, fro), np_norm(A)));
+true;
+
+/* === np_arange start/stop/step === */
+
+/* np_arange(5) — original behavior preserved */
+(is(np_to_list(np_arange(5)) = [0.0, 1.0, 2.0, 3.0, 4.0]));
+true;
+
+/* np_arange(2, 6) — start/stop */
+(is(np_to_list(np_arange(2, 6)) = [2.0, 3.0, 4.0, 5.0]));
+true;
+
+/* np_arange(0, 1, 0.25) — fractional step */
+(L : np_to_list(np_arange(0, 1, 0.25)),
+ is(length(L) = 4) and list_closeto(L, [0.0, 0.25, 0.5, 0.75]));
+true;
+
+/* np_arange(10, 0, -2) — negative step */
+(is(np_to_list(np_arange(10, 0, -2)) = [10.0, 8.0, 6.0, 4.0, 2.0]));
+true;
+
+/* === Sorting === */
+
+/* np_sort 1D */
+(is(np_to_list(np_sort(ndarray([3,1,4,1,5],[5]))) = [1.0, 1.0, 3.0, 4.0, 5.0]));
+true;
+
+/* np_sort 1D already sorted */
+(is(np_to_list(np_sort(np_arange(5))) = [0.0, 1.0, 2.0, 3.0, 4.0]));
+true;
+
+/* np_sort 2D axis=0 — sort each column */
+(A : ndarray(matrix([3, 1], [1, 4])),
+ is(np_to_matrix(np_sort(A, 0)) = matrix([1.0, 1.0], [3.0, 4.0])));
+true;
+
+/* np_sort 2D axis=1 — sort each row */
+(A : ndarray(matrix([3, 1], [1, 4])),
+ is(np_to_matrix(np_sort(A, 1)) = matrix([1.0, 3.0], [1.0, 4.0])));
+true;
+
+/* np_sort does not mutate input */
+(A : ndarray([3, 1, 2], [3]),
+ B : np_sort(A),
+ is(np_ref(A, 0) = 3.0 and np_ref(B, 0) = 1.0));
+true;
+
+/* np_argsort 1D */
+(is(np_to_list(np_argsort(ndarray([3, 1, 2], [3]))) = [1.0, 2.0, 0.0]));
+true;
+
+/* np_argsort 2D axis=0 — row indices that sort each column */
+(A : ndarray(matrix([3, 1], [1, 4])),
+ is(np_to_matrix(np_argsort(A, 0)) = matrix([1.0, 0.0], [0.0, 1.0])));
+true;
+
+/* np_argsort 2D axis=1 — col indices that sort each row */
+(A : ndarray(matrix([3, 1], [4, 2])),
+ is(np_to_matrix(np_argsort(A, 1)) = matrix([1.0, 0.0], [1.0, 0.0])));
+true;
+
+/* np_sort 2D no axis — flatten and sort */
+(A : ndarray(matrix([3, 1], [4, 2])),
+ S : np_sort(A),
+ is(length(np_shape(S)) = 1 and np_size(S) = 4));
+true;
+
+/* np_argsort round-trip: indexing by argsort gives sorted order */
+(A : ndarray([5, 2, 8, 1], [4]),
+ idx : np_argsort(A),
+ /* idx should be [3, 1, 0, 2] => values at those positions: 1, 2, 5, 8 */
+ is(np_to_list(idx) = [3.0, 1.0, 0.0, 2.0]));
+true;
+
+/* === np_where === */
+
+/* Form 1: np_where(condition) 1D — indices of nonzero elements */
+(A : ndarray([0, 1, 0, 3, 0], [5]),
+ result : np_where(A),
+ is(length(result) = 1 and np_to_list(result[1]) = [1.0, 3.0]));
+true;
+
+/* Form 1: np_where(condition) 2D — row and col index arrays */
+(A : ndarray(matrix([1, 0], [0, 4])),
+ [rows, cols] : np_where(A),
+ is(np_to_list(rows) = [0.0, 1.0] and np_to_list(cols) = [0.0, 1.0]));
+true;
+
+/* Form 1: all zeros — empty index list */
+(A : np_zeros(5),
+ result : np_where(A),
+ is(length(result) = 1 and result[1] = []));
+true;
+
+/* Form 2: np_where(cond, x, y) 1D */
+(cond_ : ndarray([1, 0, 1], [3]),
+ x : ndarray([10, 20, 30], [3]),
+ y : ndarray([100, 200, 300], [3]),
+ is(np_to_list(np_where(cond_, x, y)) = [10.0, 200.0, 30.0]));
+true;
+
+/* Form 2: np_where(cond, x, y) 2D */
+(cond_ : ndarray(matrix([1, 0], [0, 1])),
+ x : np_full([2, 2], 99),
+ y : np_zeros([2, 2]),
+ R : np_where(cond_, x, y),
+ is(np_to_matrix(R) = matrix([99.0, 0.0], [0.0, 99.0])));
+true;
+
+/* Form 2: all-true condition returns x */
+(x : np_arange(5),
+ y : np_zeros(5),
+ cond_ : np_ones(5),
+ is(np_to_list(np_where(cond_, x, y)) = np_to_list(x)));
+true;
+
+/* Form 2: all-false condition returns y */
+(x : np_arange(5),
+ y : np_full(5, 42),
+ cond_ : np_zeros(5),
+ is(np_to_list(np_where(cond_, x, y)) = np_to_list(y)));
 true;
 
 /* === Error handling === */

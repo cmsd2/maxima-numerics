@@ -135,28 +135,70 @@
           ,(numerics-wrap (numerics:make-ndarray u-mat))
           ,(numerics-wrap (numerics:make-ndarray p-mat)))))))
 
-(defun $np_norm (a)
-  "Matrix or vector norm: np_norm(A) => scalar.
-   For vectors returns the 2-norm; for matrices returns the Frobenius norm."
+(defun $np_norm (a &optional ord)
+  "Matrix or vector norm: np_norm(A) or np_norm(A, ord) => scalar.
+   Defaults: 2-norm for vectors, Frobenius for matrices.
+   ord values: 1, 2, $inf (or $INF), $fro (or $FRO).
+   Vector: 1 = sum(|x|), 2 = Euclidean, inf = max(|x|).
+   Matrix: 1 = max col sum, 2 = spectral (largest singular value),
+           inf = max row sum, fro = Frobenius."
   (let* ((tensor (numerics:ndarray-tensor (numerics-unwrap a)))
          (shape (magicl:shape tensor)))
     (if (= (length shape) 1)
-        ;; Vector: compute 2-norm manually
-        (let ((sum 0.0d0)
-              (n (first shape)))
-          (dotimes (i n)
-            (let ((x (magicl:tref tensor i)))
-              (incf sum (* x x))))
-          (sqrt sum))
-        ;; Matrix: Frobenius norm
-        (let ((sum 0.0d0)
-              (nrow (first shape))
+        ;; Vector norms
+        (let ((n (first shape)))
+          (cond
+            ((or (null ord) (eql ord 2))
+             ;; 2-norm (Euclidean)
+             (let ((sum 0.0d0))
+               (dotimes (i n) (let ((x (magicl:tref tensor i)))
+                                (incf sum (* x x))))
+               (sqrt sum)))
+            ((eql ord 1)
+             ;; 1-norm: sum of absolute values
+             (let ((sum 0.0d0))
+               (dotimes (i n) (incf sum (abs (magicl:tref tensor i))))
+               sum))
+            ((or (eql ord '$inf) (eql ord '$INF))
+             ;; inf-norm: max absolute value
+             (let ((mx 0.0d0))
+               (dotimes (i n) (setf mx (max mx (abs (magicl:tref tensor i)))))
+               mx))
+            (t (merror "np_norm: unsupported ord for vectors: ~M" ord))))
+        ;; Matrix norms
+        (let ((nrow (first shape))
               (ncol (second shape)))
-          (dotimes (i nrow)
-            (dotimes (j ncol)
-              (let ((x (magicl:tref tensor i j)))
-                (incf sum (* x x)))))
-          (sqrt sum)))))
+          (cond
+            ((or (null ord) (eql ord '$fro) (eql ord '$FRO))
+             ;; Frobenius norm
+             (let ((sum 0.0d0))
+               (dotimes (i nrow)
+                 (dotimes (j ncol)
+                   (let ((x (magicl:tref tensor i j)))
+                     (incf sum (* x x)))))
+               (sqrt sum)))
+            ((eql ord 1)
+             ;; 1-norm: max absolute column sum
+             (let ((mx 0.0d0))
+               (dotimes (j ncol)
+                 (let ((col-sum 0.0d0))
+                   (dotimes (i nrow) (incf col-sum (abs (magicl:tref tensor i j))))
+                   (setf mx (max mx col-sum))))
+               mx))
+            ((eql ord 2)
+             ;; 2-norm (spectral): largest singular value
+             (let* ((sigma (nth-value 1 (magicl:svd tensor)))
+                    (s-arr (numerics-svd-values sigma)))
+               (reduce #'max s-arr)))
+            ((or (eql ord '$inf) (eql ord '$INF))
+             ;; inf-norm: max absolute row sum
+             (let ((mx 0.0d0))
+               (dotimes (i nrow)
+                 (let ((row-sum 0.0d0))
+                   (dotimes (j ncol) (incf row-sum (abs (magicl:tref tensor i j))))
+                   (setf mx (max mx row-sum))))
+               mx))
+            (t (merror "np_norm: unsupported ord for matrices: ~M" ord)))))))
 
 (defun $np_rank (a)
   "Numerical rank via SVD: np_rank(A)"
@@ -328,8 +370,13 @@
         (merror "np_expm: ~A" e)))))
 
 (defun $np_lstsq (a b)
-  "Least-squares solution: np_lstsq(A, b)
-   Solves min ||Ax - b||_2 via SVD."
+  "Least-squares solution: np_lstsq(A, b) => [x, residuals, rank, S]
+   Solves min ||Ax - b||_2 via SVD.
+   Returns a Maxima list [x, residuals, rank, S] where:
+   - x is the n-by-p solution ndarray
+   - residuals is a 1D ndarray of ||Ax_j - b_j||^2 (empty list if m <= n or rank < n)
+   - rank is the effective rank (integer)
+   - S is a 1D ndarray of singular values"
   (let* ((ta (numerics:ndarray-tensor (numerics-unwrap a)))
          (tb (numerics:ndarray-tensor (numerics-unwrap b))))
     (multiple-value-bind (u sigma vt) (magicl:svd ta)
@@ -337,13 +384,14 @@
              (v (magicl:transpose vt))
              (utb (magicl:@ ut tb))
              (s-arr (numerics-svd-values sigma))
+             (m (first (magicl:shape ta)))
+             (n (second (magicl:shape ta)))
              (tol (* (reduce #'max s-arr) double-float-epsilon
-                     (max (first (magicl:shape ta))
-                          (second (magicl:shape ta)))))
+                     (max m n)))
+             (rank (count-if (lambda (x) (> x tol)) s-arr))
              (k (length s-arr))
-             (n (second (magicl:shape ta)))   ;; columns of A
-             (p (second (magicl:shape utb)))) ;; columns of b
-        ;; Build n×p result: first k rows scaled by S^{-1}, rest zero
+             (p (second (magicl:shape utb))))
+        ;; Build n×p solution: first k rows scaled by S^{-1}, rest zero
         (let ((sinv-utb (magicl:zeros (list n p) :type 'double-float
                                                   :layout :column-major)))
           (dotimes (i (min k n))
@@ -353,8 +401,32 @@
                       (if (> si tol)
                           (* (/ 1.0d0 si) (magicl:tref utb i j))
                           0.0d0)))))
-          (numerics-wrap
-           (numerics:make-ndarray (magicl:@ v sinv-utb))))))))
+          (let* ((x-tensor (magicl:@ v sinv-utb))
+                 (x-nd (numerics-wrap (numerics:make-ndarray x-tensor)))
+                 ;; Singular values as 1D ndarray
+                 (s-vec (magicl:empty (list k) :type 'double-float
+                                               :layout :column-major)))
+            (dotimes (i k)
+              (setf (magicl:tref s-vec i) (aref s-arr i)))
+            (let ((s-nd (numerics-wrap (numerics:make-ndarray s-vec)))
+                  ;; Residuals: only for overdetermined full-rank case
+                  (residuals
+                    (if (and (> m n) (= rank n))
+                        ;; Compute ||Ax_j - b_j||^2 for each column j
+                        (let ((res-vec (magicl:empty (list p) :type 'double-float
+                                                              :layout :column-major))
+                              (ax (magicl:@ ta x-tensor)))
+                          (dotimes (j p)
+                            (let ((sum-sq 0.0d0))
+                              (dotimes (i m)
+                                (let ((d (- (magicl:tref ax i j)
+                                            (magicl:tref tb i j))))
+                                  (incf sum-sq (* d d))))
+                              (setf (magicl:tref res-vec j) sum-sq)))
+                          (numerics-wrap (numerics:make-ndarray res-vec)))
+                        ;; Empty list for under/exactly-determined or rank-deficient
+                        '((mlist simp)))))
+              `((mlist simp) ,x-nd ,residuals ,rank ,s-nd))))))))
 
 (defun $np_pinv (a)
   "Moore-Penrose pseudo-inverse: np_pinv(A)

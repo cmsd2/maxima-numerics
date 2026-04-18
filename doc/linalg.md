@@ -178,25 +178,39 @@ For an m-by-n matrix, L is m-by-min(m,n), U is min(m,n)-by-n, and P is m-by-m.
 
 See also: `np_qr`, `np_svd`, `np_solve`
 
-### Function: np_norm (a)
+### Function: np_norm (a) / np_norm (a, ord)
 
 Matrix or vector norm.
 
-For 1D arrays (vectors), computes the Euclidean (L2) norm: sqrt(sum of squares). For 2D arrays (matrices), computes the Frobenius norm: sqrt(sum of all squared elements). Returns a scalar.
+By default, computes the 2-norm for vectors and the Frobenius norm for matrices. The optional `ord` parameter selects the norm type.
+
+Calling forms:
+
+- `np_norm(a)` -- default norm (2-norm for vectors, Frobenius for matrices)
+- `np_norm(a, 1)` -- 1-norm (sum of abs for vectors, max column sum for matrices)
+- `np_norm(a, 2)` -- 2-norm (Euclidean for vectors, spectral/largest singular value for matrices)
+- `np_norm(a, inf)` -- infinity norm (max abs for vectors, max row sum for matrices)
+- `np_norm(a, fro)` -- Frobenius norm (matrices only, same as default)
 
 #### Examples
 
 ```maxima
-(%i1) v : np_arange(5);
-(%o1)            ndarray([5], DOUBLE-FLOAT)
+(%i1) v : ndarray([1, -2, 3], [3]);
+(%o1)            ndarray([3], DOUBLE-FLOAT)
 (%i2) np_norm(v);
-(%o2)                    5.477225575051661
-(%i3) A : ndarray(matrix([1, 2], [3, 4]));
-(%o3)            ndarray([2, 2], DOUBLE-FLOAT)
-(%i4) np_norm(A);
-(%o4)                    5.477225575051661
-(%i5) np_norm(np_eye(3));
-(%o5)                    1.7320508075688772
+(%o2)                    3.7416573867739413
+(%i3) np_norm(v, 1);
+(%o3)                          6.0
+(%i4) np_norm(v, inf);
+(%o4)                          3.0
+(%i5) A : ndarray(matrix([1, -7], [2, -3]));
+(%o5)            ndarray([2, 2], DOUBLE-FLOAT)
+(%i6) np_norm(A, 1);
+(%o6)                         10.0
+(%i7) np_norm(A, inf);
+(%o7)                          8.0
+(%i8) np_norm(A, 2);
+(%o8)                    7.649700064568801
 ```
 
 See also: `np_det`, `np_rank`
@@ -313,7 +327,14 @@ Least-squares solution to Ax = b.
 
 Finds x that minimizes ||Ax - b||_2 using SVD. Works for over-determined systems (more equations than unknowns) and under-determined systems. For square full-rank matrices, gives the same result as `np_solve`.
 
-For an m-by-n matrix A and an m-by-p right-hand side b, returns an n-by-p solution x.
+Returns a Maxima list `[x, residuals, rank, S]` where:
+
+- **x** — n-by-p solution ndarray
+- **residuals** — 1D ndarray of squared residual norms `||Ax_j - b_j||^2` for each column j of b. Only non-empty when `m > n` (overdetermined) and A is full rank; otherwise an empty list `[]`.
+- **rank** — effective rank of A (integer)
+- **S** — 1D ndarray of singular values of A
+
+**Breaking change:** Previous versions returned only `x`. Update callers from `x : np_lstsq(A, b)` to `[x, residuals, rank, S] : np_lstsq(A, b)`.
 
 #### Examples
 
@@ -323,13 +344,14 @@ For an m-by-n matrix A and an m-by-p right-hand side b, returns an n-by-p soluti
 (%o1)            ndarray([3, 2], DOUBLE-FLOAT)
 (%i2) b : ndarray(matrix([1], [2], [3]));
 (%o2)            ndarray([3, 1], DOUBLE-FLOAT)
-(%i3) x : np_lstsq(A, b);
-(%o3)            ndarray([2, 1], DOUBLE-FLOAT)
+(%i3) [x, residuals, rank, S] : np_lstsq(A, b);
+(%o3)        [ndarray, ndarray, 2, ndarray]
 (%i4) np_to_list(x);
 (%o4)                  [0.0, 1.0]
-(%i5) /* Residual is zero (consistent system) */
-      np_norm(np_sub(np_matmul(A, x), b));
-(%o5)                          0.0
+(%i5) rank;
+(%o5)                           2
+(%i6) np_to_list(S);
+(%o6)             [3.86..., 0.64...]
 ```
 
 See also: `np_solve`, `np_pinv`, `np_svd`
