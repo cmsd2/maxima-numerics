@@ -5,61 +5,85 @@
 ;;; Helpers
 
 (defun numerics-binary-op (a b op)
-  "Apply a magicl element-wise binary op.
+  "Apply a CL binary op element-wise via magicl:map!.
    Supports ndarray+ndarray, ndarray+scalar, and scalar+ndarray."
   (cond
     ;; Both ndarrays
     ((and ($ndarray_p a) ($ndarray_p b))
-     (let ((ta (numerics:ndarray-tensor (numerics-unwrap a)))
-           (tb (numerics:ndarray-tensor (numerics-unwrap b))))
-       (numerics-wrap (numerics:make-ndarray (funcall op ta tb)))))
+     (let* ((ha (numerics-unwrap a))
+            (hb (numerics-unwrap b))
+            (ta (numerics:ndarray-tensor ha))
+            (tb (numerics:ndarray-tensor hb))
+            (dtype (numerics-result-dtype
+                    (numerics:ndarray-dtype ha)
+                    (numerics:ndarray-dtype hb))))
+       (numerics-wrap (numerics:make-ndarray (funcall op ta tb) :dtype dtype))))
     ;; ndarray + scalar
     (($ndarray_p a)
-     (let ((ta (numerics:ndarray-tensor (numerics-unwrap a)))
-           (s  (coerce ($float b) 'double-float)))
+     (let* ((ha (numerics-unwrap a))
+            (dtype (numerics:ndarray-dtype ha))
+            (ta (numerics:ndarray-tensor ha))
+            (s (maxima-to-lisp-number b dtype)))
        (numerics-wrap
         (numerics:make-ndarray
          (magicl:map! (lambda (x) (funcall op x s))
-                      (magicl:deep-copy-tensor ta))))))
+                      (magicl:deep-copy-tensor ta))
+         :dtype dtype))))
     ;; scalar + ndarray
     (($ndarray_p b)
-     (let ((tb (numerics:ndarray-tensor (numerics-unwrap b)))
-           (s  (coerce ($float a) 'double-float)))
+     (let* ((hb (numerics-unwrap b))
+            (dtype (numerics:ndarray-dtype hb))
+            (tb (numerics:ndarray-tensor hb))
+            (s (maxima-to-lisp-number a dtype)))
        (numerics-wrap
         (numerics:make-ndarray
          (magicl:map! (lambda (x) (funcall op s x))
-                      (magicl:deep-copy-tensor tb))))))
+                      (magicl:deep-copy-tensor tb))
+         :dtype dtype))))
     (t (merror "Expected at least one ndarray argument"))))
 
 (defun numerics-binary-op-magicl (a b magicl-op scalar-op)
   "Binary op using magicl operations for ndarray+ndarray and scalar fallback."
   (cond
     ((and ($ndarray_p a) ($ndarray_p b))
-     (let ((ta (numerics:ndarray-tensor (numerics-unwrap a)))
-           (tb (numerics:ndarray-tensor (numerics-unwrap b))))
-       (numerics-wrap (numerics:make-ndarray (funcall magicl-op ta tb)))))
+     (let* ((ha (numerics-unwrap a))
+            (hb (numerics-unwrap b))
+            (ta (numerics:ndarray-tensor ha))
+            (tb (numerics:ndarray-tensor hb))
+            (dtype (numerics-result-dtype
+                    (numerics:ndarray-dtype ha)
+                    (numerics:ndarray-dtype hb))))
+       (numerics-wrap (numerics:make-ndarray (funcall magicl-op ta tb) :dtype dtype))))
     (($ndarray_p a)
-     (let ((ta (numerics:ndarray-tensor (numerics-unwrap a)))
-           (s  (coerce ($float b) 'double-float)))
+     (let* ((ha (numerics-unwrap a))
+            (dtype (numerics:ndarray-dtype ha))
+            (ta (numerics:ndarray-tensor ha))
+            (s (maxima-to-lisp-number b dtype)))
        (numerics-wrap
         (numerics:make-ndarray
          (magicl:map! (lambda (x) (funcall scalar-op x s))
-                      (magicl:deep-copy-tensor ta))))))
+                      (magicl:deep-copy-tensor ta))
+         :dtype dtype))))
     (($ndarray_p b)
-     (let ((tb (numerics:ndarray-tensor (numerics-unwrap b)))
-           (s  (coerce ($float a) 'double-float)))
+     (let* ((hb (numerics-unwrap b))
+            (dtype (numerics:ndarray-dtype hb))
+            (tb (numerics:ndarray-tensor hb))
+            (s (maxima-to-lisp-number a dtype)))
        (numerics-wrap
         (numerics:make-ndarray
          (magicl:map! (lambda (x) (funcall scalar-op s x))
-                      (magicl:deep-copy-tensor tb))))))
+                      (magicl:deep-copy-tensor tb))
+         :dtype dtype))))
     (t (merror "Expected at least one ndarray argument"))))
 
 (defun numerics-unary-op (a fn)
   "Apply a unary function element-wise, returning a new ndarray."
-  (let* ((tensor (numerics:ndarray-tensor (numerics-unwrap a)))
+  (let* ((handle (numerics-unwrap a))
+         (tensor (numerics:ndarray-tensor handle))
+         (dtype (numerics:ndarray-dtype handle))
          (result (magicl:deep-copy-tensor tensor)))
     (magicl:map! fn result)
-    (numerics-wrap (numerics:make-ndarray result))))
+    (numerics-wrap (numerics:make-ndarray result :dtype dtype))))
 
 ;;; Binary operations
 
@@ -83,7 +107,9 @@
   "Element-wise power: np_pow(A, p)"
   (if ($ndarray_p p)
       (numerics-binary-op a p #'expt)
-      (let ((pf (coerce ($float p) 'double-float)))
+      (let* ((ha (numerics-unwrap a))
+             (dtype (numerics:ndarray-dtype ha))
+             (pf (maxima-to-lisp-number p dtype)))
         (numerics-unary-op a (lambda (x) (expt x pf))))))
 
 ;;; Unary operations
@@ -128,6 +154,8 @@
    Otherwise falls back to the Maxima evaluator (slow)."
   (let* ((handle (numerics-unwrap a))
          (tensor (numerics:ndarray-tensor handle))
+         (dtype (numerics:ndarray-dtype handle))
+         (et (numerics-element-type dtype))
          (shape (magicl:shape tensor))
          (n (magicl:size tensor))
          (fname (if (symbolp f) f
@@ -138,27 +166,28 @@
         ;; Fast path: call the CL function directly via magicl:map!
         (let* ((cl-fn (symbol-function fname))
                (result (magicl:deep-copy-tensor tensor)))
-          (magicl:map! (lambda (x) (coerce ($float (funcall cl-fn x)) 'double-float))
+          (magicl:map! (lambda (x)
+                         (maxima-to-lisp-number ($float (funcall cl-fn x)) dtype))
                        result)
-          (numerics-wrap (numerics:make-ndarray result)))
+          (numerics-wrap (numerics:make-ndarray result :dtype dtype)))
         ;; Slow path: call through Maxima evaluator
-        (let ((result (magicl:empty shape :type 'double-float
+        (let ((result (magicl:empty shape :type et
                                           :layout :column-major)))
           (if (= (length shape) 1)
               (dotimes (i n)
                 (let* ((x (magicl:tref tensor i))
-                       (y (mfuncall fname x)))
+                       (y (mfuncall fname (lisp-to-maxima-number x))))
                   (setf (magicl:tref result i)
-                        (coerce ($float y) 'double-float))))
+                        (maxima-to-lisp-number y dtype))))
               (let ((nrow (first shape))
                     (ncol (second shape)))
                 (dotimes (i nrow)
                   (dotimes (j ncol)
                     (let* ((x (magicl:tref tensor i j))
-                           (y (mfuncall fname x)))
+                           (y (mfuncall fname (lisp-to-maxima-number x))))
                       (setf (magicl:tref result i j)
-                            (coerce ($float y) 'double-float)))))))
-          (numerics-wrap (numerics:make-ndarray result))))))
+                            (maxima-to-lisp-number y dtype)))))))
+          (numerics-wrap (numerics:make-ndarray result :dtype dtype))))))
 
 (defun $np_map2 (f a b)
   "Apply a binary function element-wise: np_map2(f, A, B).
@@ -168,12 +197,16 @@
          (hb (numerics-unwrap b))
          (ta (numerics:ndarray-tensor ha))
          (tb (numerics:ndarray-tensor hb))
+         (dtype (numerics-result-dtype
+                 (numerics:ndarray-dtype ha)
+                 (numerics:ndarray-dtype hb)))
+         (et (numerics-element-type dtype))
          (shape (magicl:shape ta))
          (fname (if (symbolp f) f
                     (merror "np_map2: expected a function name, got: ~M" f))))
     (unless (equal shape (magicl:shape tb))
       (merror "np_map2: shape mismatch: ~A vs ~A" shape (magicl:shape tb)))
-    (let ((result (magicl:empty shape :type 'double-float
+    (let ((result (magicl:empty shape :type et
                                       :layout :column-major)))
       (if (and (get fname 'translated) (fboundp fname))
           ;; Fast path
@@ -181,46 +214,52 @@
             (if (= (length shape) 1)
                 (dotimes (i (magicl:size ta))
                   (setf (magicl:tref result i)
-                        (coerce ($float (funcall cl-fn
-                                                 (magicl:tref ta i)
-                                                 (magicl:tref tb i)))
-                                'double-float)))
+                        (maxima-to-lisp-number
+                         ($float (funcall cl-fn
+                                          (magicl:tref ta i)
+                                          (magicl:tref tb i)))
+                         dtype)))
                 (let ((nrow (first shape))
                       (ncol (second shape)))
                   (dotimes (i nrow)
                     (dotimes (j ncol)
                       (setf (magicl:tref result i j)
-                            (coerce ($float (funcall cl-fn
-                                                     (magicl:tref ta i j)
-                                                     (magicl:tref tb i j)))
-                                    'double-float)))))))
+                            (maxima-to-lisp-number
+                             ($float (funcall cl-fn
+                                              (magicl:tref ta i j)
+                                              (magicl:tref tb i j)))
+                             dtype)))))))
           ;; Slow path
           (if (= (length shape) 1)
               (dotimes (i (magicl:size ta))
                 (setf (magicl:tref result i)
-                      (coerce ($float (mfuncall fname
-                                                (magicl:tref ta i)
-                                                (magicl:tref tb i)))
-                              'double-float)))
+                      (maxima-to-lisp-number
+                       (mfuncall fname
+                                 (lisp-to-maxima-number (magicl:tref ta i))
+                                 (lisp-to-maxima-number (magicl:tref tb i)))
+                       dtype)))
               (let ((nrow (first shape))
                     (ncol (second shape)))
                 (dotimes (i nrow)
                   (dotimes (j ncol)
                     (setf (magicl:tref result i j)
-                          (coerce ($float (mfuncall fname
-                                                    (magicl:tref ta i j)
-                                                    (magicl:tref tb i j)))
-                                  'double-float)))))))
-      (numerics-wrap (numerics:make-ndarray result)))))
+                          (maxima-to-lisp-number
+                           (mfuncall fname
+                                     (lisp-to-maxima-number (magicl:tref ta i j))
+                                     (lisp-to-maxima-number (magicl:tref tb i j)))
+                           dtype)))))))
+      (numerics-wrap (numerics:make-ndarray result :dtype dtype)))))
 
 ;;; Scalar multiplication
 
 (defun $np_scale (alpha a)
   "Scalar multiplication: np_scale(alpha, A)"
-  (let* ((s (coerce ($float alpha) 'double-float))
-         (tensor (numerics:ndarray-tensor (numerics-unwrap a))))
+  (let* ((handle (numerics-unwrap a))
+         (dtype (numerics:ndarray-dtype handle))
+         (tensor (numerics:ndarray-tensor handle))
+         (s (maxima-to-lisp-number alpha dtype)))
     (numerics-wrap
-     (numerics:make-ndarray (magicl:scale tensor s)))))
+     (numerics:make-ndarray (magicl:scale tensor s) :dtype dtype))))
 
 ;;; Conditional selection
 
@@ -231,7 +270,7 @@
       ;; 1D: collect flat indices
       (let ((idxs '()))
         (dotimes (i (first shape))
-          (when (/= 0.0d0 (magicl:tref tensor i))
+          (when (not (zerop (magicl:tref tensor i)))
             (push (coerce i 'double-float) idxs)))
         (list (nreverse idxs)))
       ;; 2D: collect (row, col) pairs in row-major order
@@ -240,7 +279,7 @@
             (ncol (second shape)))
         (dotimes (i nrow)
           (dotimes (j ncol)
-            (when (/= 0.0d0 (magicl:tref tensor i j))
+            (when (not (zerop (magicl:tref tensor i j)))
               (push (coerce i 'double-float) rows)
               (push (coerce j 'double-float) cols))))
         (list (nreverse rows) (nreverse cols)))))
@@ -271,18 +310,27 @@
             (shape (magicl:shape tc))
             (x-nd-p ($ndarray_p (second args)))
             (y-nd-p ($ndarray_p (third args)))
+            ;; Determine result dtype from x and y
+            (x-dtype (if x-nd-p
+                         (numerics:ndarray-dtype (numerics-unwrap (second args)))
+                         :double-float))
+            (y-dtype (if y-nd-p
+                         (numerics:ndarray-dtype (numerics-unwrap (third args)))
+                         :double-float))
+            (dtype (numerics-result-dtype x-dtype y-dtype))
+            (et (numerics-element-type dtype))
             (tx (when x-nd-p (numerics:ndarray-tensor (numerics-unwrap (second args)))))
             (ty (when y-nd-p (numerics:ndarray-tensor (numerics-unwrap (third args)))))
-            (sx (unless x-nd-p (coerce ($float (second args)) 'double-float)))
-            (sy (unless y-nd-p (coerce ($float (third args)) 'double-float)))
-            (result (magicl:empty shape :type 'double-float
+            (sx (unless x-nd-p (maxima-to-lisp-number (second args) dtype)))
+            (sy (unless y-nd-p (maxima-to-lisp-number (third args) dtype)))
+            (result (magicl:empty shape :type et
                                         :layout :column-major)))
        (flet ((get-x (&rest idx) (if x-nd-p (apply #'magicl:tref tx idx) sx))
               (get-y (&rest idx) (if y-nd-p (apply #'magicl:tref ty idx) sy)))
          (if (= (length shape) 1)
              (dotimes (i (first shape))
                (setf (magicl:tref result i)
-                     (if (/= 0.0d0 (magicl:tref tc i))
+                     (if (not (zerop (magicl:tref tc i)))
                          (get-x i)
                          (get-y i))))
              (let ((nrow (first shape))
@@ -290,17 +338,18 @@
                (dotimes (i nrow)
                  (dotimes (j ncol)
                    (setf (magicl:tref result i j)
-                         (if (/= 0.0d0 (magicl:tref tc i j))
+                         (if (not (zerop (magicl:tref tc i j)))
                              (get-x i j)
                              (get-y i j))))))))
-       (numerics-wrap (numerics:make-ndarray result))))))
+       (numerics-wrap (numerics:make-ndarray result :dtype dtype))))))
 
 ;;; Comparison operations — return 1.0/0.0 ndarrays
 
 (defun numerics-comparison-op (a b cmp-fn)
   "Element-wise comparison returning 1.0d0/0.0d0 ndarray.
-   CMP-FN takes two double-floats and returns a generalized boolean.
-   Supports ndarray+ndarray, ndarray+scalar, scalar+ndarray."
+   CMP-FN takes two numbers and returns a generalized boolean.
+   Supports ndarray+ndarray, ndarray+scalar, scalar+ndarray.
+   Result is always double-float."
   (flet ((bool-val (x y) (if (funcall cmp-fn x y) 1.0d0 0.0d0)))
     (cond
       ((and ($ndarray_p a) ($ndarray_p b))
@@ -320,33 +369,65 @@
                          (bool-val (magicl:tref ta i j) (magicl:tref tb i j)))))))
          (numerics-wrap (numerics:make-ndarray result))))
       (($ndarray_p a)
-       (let* ((ta (numerics:ndarray-tensor (numerics-unwrap a)))
-              (s (coerce ($float b) 'double-float))
-              (result (magicl:deep-copy-tensor ta)))
-         (magicl:map! (lambda (x) (bool-val x s)) result)
+       (let* ((ha (numerics-unwrap a))
+              (dtype (numerics:ndarray-dtype ha))
+              (ta (numerics:ndarray-tensor ha))
+              (s (maxima-to-lisp-number b dtype))
+              (shape (magicl:shape ta))
+              (result (magicl:empty shape :type 'double-float
+                                          :layout :column-major)))
+         (if (= (length shape) 1)
+             (dotimes (i (first shape))
+               (setf (magicl:tref result i)
+                     (bool-val (magicl:tref ta i) s)))
+             (let ((nrow (first shape)) (ncol (second shape)))
+               (dotimes (i nrow)
+                 (dotimes (j ncol)
+                   (setf (magicl:tref result i j)
+                         (bool-val (magicl:tref ta i j) s))))))
          (numerics-wrap (numerics:make-ndarray result))))
       (($ndarray_p b)
-       (let* ((tb (numerics:ndarray-tensor (numerics-unwrap b)))
-              (s (coerce ($float a) 'double-float))
-              (result (magicl:deep-copy-tensor tb)))
-         (magicl:map! (lambda (x) (bool-val s x)) result)
+       (let* ((hb (numerics-unwrap b))
+              (dtype (numerics:ndarray-dtype hb))
+              (tb (numerics:ndarray-tensor hb))
+              (s (maxima-to-lisp-number a dtype))
+              (shape (magicl:shape tb))
+              (result (magicl:empty shape :type 'double-float
+                                          :layout :column-major)))
+         (if (= (length shape) 1)
+             (dotimes (i (first shape))
+               (setf (magicl:tref result i)
+                     (bool-val s (magicl:tref tb i))))
+             (let ((nrow (first shape)) (ncol (second shape)))
+               (dotimes (i nrow)
+                 (dotimes (j ncol)
+                   (setf (magicl:tref result i j)
+                         (bool-val s (magicl:tref tb i j)))))))
          (numerics-wrap (numerics:make-ndarray result))))
       (t (merror "Expected at least one ndarray argument")))))
 
 (defun $np_greater (a b)
   "Element-wise greater-than: np_greater(A, B) => 1.0 where A > B, else 0.0"
+  (numerics-require-real a "np_greater")
+  (numerics-require-real b "np_greater")
   (numerics-comparison-op a b #'>))
 
 (defun $np_greater_equal (a b)
   "Element-wise greater-or-equal: np_greater_equal(A, B)"
+  (numerics-require-real a "np_greater_equal")
+  (numerics-require-real b "np_greater_equal")
   (numerics-comparison-op a b #'>=))
 
 (defun $np_less (a b)
   "Element-wise less-than: np_less(A, B)"
+  (numerics-require-real a "np_less")
+  (numerics-require-real b "np_less")
   (numerics-comparison-op a b #'<))
 
 (defun $np_less_equal (a b)
   "Element-wise less-or-equal: np_less_equal(A, B)"
+  (numerics-require-real a "np_less_equal")
+  (numerics-require-real b "np_less_equal")
   (numerics-comparison-op a b #'<=))
 
 (defun $np_equal (a b)
@@ -362,16 +443,29 @@
 (defun $np_logical_and (a b)
   "Element-wise logical AND: nonzero is true. Returns 1.0/0.0 ndarray."
   (numerics-comparison-op a b
-    (lambda (x y) (and (/= 0.0d0 x) (/= 0.0d0 y)))))
+    (lambda (x y) (and (not (zerop x)) (not (zerop y))))))
 
 (defun $np_logical_or (a b)
   "Element-wise logical OR: nonzero is true. Returns 1.0/0.0 ndarray."
   (numerics-comparison-op a b
-    (lambda (x y) (or (/= 0.0d0 x) (/= 0.0d0 y)))))
+    (lambda (x y) (or (not (zerop x)) (not (zerop y))))))
 
 (defun $np_logical_not (a)
   "Element-wise logical NOT: nonzero => 0.0, zero => 1.0."
-  (numerics-unary-op a (lambda (x) (if (= 0.0d0 x) 1.0d0 0.0d0))))
+  (let* ((handle (numerics-unwrap a))
+         (tensor (numerics:ndarray-tensor handle))
+         (shape (magicl:shape tensor))
+         (result (magicl:empty shape :type 'double-float :layout :column-major)))
+    (if (= (length shape) 1)
+        (dotimes (i (first shape))
+          (setf (magicl:tref result i)
+                (if (zerop (magicl:tref tensor i)) 1.0d0 0.0d0)))
+        (let ((nrow (first shape)) (ncol (second shape)))
+          (dotimes (i nrow)
+            (dotimes (j ncol)
+              (setf (magicl:tref result i j)
+                    (if (zerop (magicl:tref tensor i j)) 1.0d0 0.0d0))))))
+    (numerics-wrap (numerics:make-ndarray result))))
 
 ;;; Predicate testing
 
@@ -423,13 +517,15 @@
            (if (= (length shape) 1)
                (dotimes (i (first shape))
                  (setf (magicl:tref result i)
-                       (numerics-to-mask (mfuncall f (magicl:tref tensor i)))))
+                       (numerics-to-mask
+                        (mfuncall f (lisp-to-maxima-number (magicl:tref tensor i))))))
                (let ((nrow (first shape)) (ncol (second shape)))
                  (dotimes (i nrow)
                    (dotimes (j ncol)
                      (setf (magicl:tref result i j)
                            (numerics-to-mask
-                            (mfuncall f (magicl:tref tensor i j))))))))))
+                            (mfuncall f (lisp-to-maxima-number
+                                         (magicl:tref tensor i j)))))))))))
       ;; Lambda expression (LAMBDA without $ prefix in Maxima internals)
       ((and (consp f) (consp (car f))
             (member (caar f) '($lambda lambda) :test #'eq))
@@ -437,13 +533,16 @@
            (dotimes (i (first shape))
              (setf (magicl:tref result i)
                    (numerics-to-mask
-                    (mlambda f (list (magicl:tref tensor i)) nil nil nil))))
+                    (mlambda f (list (lisp-to-maxima-number
+                                      (magicl:tref tensor i)))
+                             nil nil nil))))
            (let ((nrow (first shape)) (ncol (second shape)))
              (dotimes (i nrow)
                (dotimes (j ncol)
                  (setf (magicl:tref result i j)
                        (numerics-to-mask
-                        (mlambda f (list (magicl:tref tensor i j))
+                        (mlambda f (list (lisp-to-maxima-number
+                                          (magicl:tref tensor i j)))
                                  nil nil nil))))))))
       (t (merror "np_test: expected a function name or lambda, got: ~M" f)))
     (numerics-wrap (numerics:make-ndarray result))))
@@ -454,17 +553,20 @@
   "Extract elements from A where MASK is nonzero. Returns a 1D ndarray.
    Both arrays must have the same shape. Elements are taken in row-major order."
   (let* ((tm (numerics:ndarray-tensor (numerics-unwrap mask)))
-         (ta (numerics:ndarray-tensor (numerics-unwrap a)))
+         (ha (numerics-unwrap a))
+         (ta (numerics:ndarray-tensor ha))
+         (dtype (numerics:ndarray-dtype ha))
+         (et (numerics-element-type dtype))
          (shape (magicl:shape tm))
          (vals '()))
     (if (= (length shape) 1)
         (dotimes (i (first shape))
-          (when (/= 0.0d0 (magicl:tref tm i))
+          (when (not (zerop (magicl:tref tm i)))
             (push (magicl:tref ta i) vals)))
         (let ((nrow (first shape)) (ncol (second shape)))
           (dotimes (i nrow)
             (dotimes (j ncol)
-              (when (/= 0.0d0 (magicl:tref tm i j))
+              (when (not (zerop (magicl:tref tm i j)))
                 (push (magicl:tref ta i j) vals))))))
     (let ((result-list (nreverse vals)))
       (if (null result-list)
@@ -472,4 +574,58 @@
           (numerics-wrap
            (numerics:make-ndarray
             (magicl:from-list result-list (list (length result-list))
-                             :type 'double-float)))))))
+                             :type et)
+            :dtype dtype))))))
+
+;;; Complex-specific operations
+
+(defun $np_real (a)
+  "Extract real parts element-wise: np_real(A) => real ndarray"
+  (let* ((handle (numerics-unwrap a))
+         (tensor (numerics:ndarray-tensor handle))
+         (shape (magicl:shape tensor))
+         (result (magicl:empty shape :type 'double-float :layout :column-major)))
+    (if (= (length shape) 1)
+        (dotimes (i (first shape))
+          (setf (magicl:tref result i)
+                (realpart (magicl:tref tensor i))))
+        (let ((nrow (first shape)) (ncol (second shape)))
+          (dotimes (i nrow)
+            (dotimes (j ncol)
+              (setf (magicl:tref result i j)
+                    (realpart (magicl:tref tensor i j)))))))
+    (numerics-wrap (numerics:make-ndarray result))))
+
+(defun $np_imag (a)
+  "Extract imaginary parts element-wise: np_imag(A) => real ndarray"
+  (let* ((handle (numerics-unwrap a))
+         (tensor (numerics:ndarray-tensor handle))
+         (shape (magicl:shape tensor))
+         (result (magicl:empty shape :type 'double-float :layout :column-major)))
+    (if (= (length shape) 1)
+        (dotimes (i (first shape))
+          (setf (magicl:tref result i)
+                (imagpart (magicl:tref tensor i))))
+        (let ((nrow (first shape)) (ncol (second shape)))
+          (dotimes (i nrow)
+            (dotimes (j ncol)
+              (setf (magicl:tref result i j)
+                    (imagpart (magicl:tref tensor i j)))))))
+    (numerics-wrap (numerics:make-ndarray result))))
+
+(defun $np_angle (a)
+  "Element-wise phase angle: np_angle(A) => real ndarray"
+  (let* ((handle (numerics-unwrap a))
+         (tensor (numerics:ndarray-tensor handle))
+         (shape (magicl:shape tensor))
+         (result (magicl:empty shape :type 'double-float :layout :column-major)))
+    (if (= (length shape) 1)
+        (dotimes (i (first shape))
+          (setf (magicl:tref result i)
+                (phase (magicl:tref tensor i))))
+        (let ((nrow (first shape)) (ncol (second shape)))
+          (dotimes (i nrow)
+            (dotimes (j ncol)
+              (setf (magicl:tref result i j)
+                    (phase (magicl:tref tensor i j)))))))
+    (numerics-wrap (numerics:make-ndarray result))))

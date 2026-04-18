@@ -4,48 +4,65 @@
 
 (defun $np_matmul (a b)
   "Matrix multiply: np_matmul(A, B)"
-  (let* ((ta (numerics:ndarray-tensor (numerics-unwrap a)))
-         (tb (numerics:ndarray-tensor (numerics-unwrap b))))
-    (numerics-wrap (numerics:make-ndarray (magicl:@ ta tb)))))
+  (let* ((ha (numerics-unwrap a))
+         (hb (numerics-unwrap b))
+         (ta (numerics:ndarray-tensor ha))
+         (tb (numerics:ndarray-tensor hb))
+         (dtype (numerics-result-dtype
+                 (numerics:ndarray-dtype ha)
+                 (numerics:ndarray-dtype hb))))
+    (numerics-wrap (numerics:make-ndarray (magicl:@ ta tb) :dtype dtype))))
 
 (defun $np_inv (a)
   "Matrix inverse: np_inv(A)"
-  (let ((ta (numerics:ndarray-tensor (numerics-unwrap a))))
+  (let* ((ha (numerics-unwrap a))
+         (ta (numerics:ndarray-tensor ha))
+         (dtype (numerics:ndarray-dtype ha)))
     (handler-case
-        (numerics-wrap (numerics:make-ndarray (magicl:inv ta)))
+        (numerics-wrap (numerics:make-ndarray (magicl:inv ta) :dtype dtype))
       (error (e)
         (merror "np_inv: singular matrix or error: ~A" e)))))
 
 (defun $np_det (a)
   "Determinant: np_det(A) => scalar"
-  (magicl:det (numerics:ndarray-tensor (numerics-unwrap a))))
+  (lisp-to-maxima-number
+   (magicl:det (numerics:ndarray-tensor (numerics-unwrap a)))))
 
 (defun $np_solve (a b)
   "Solve Ax = b: np_solve(A, b)"
-  (let ((ta (numerics:ndarray-tensor (numerics-unwrap a)))
-        (tb (numerics:ndarray-tensor (numerics-unwrap b))))
+  (let* ((ha (numerics-unwrap a))
+         (hb (numerics-unwrap b))
+         (ta (numerics:ndarray-tensor ha))
+         (tb (numerics:ndarray-tensor hb))
+         (dtype (numerics-result-dtype
+                 (numerics:ndarray-dtype ha)
+                 (numerics:ndarray-dtype hb))))
     (handler-case
-        (numerics-wrap (numerics:make-ndarray (magicl:linear-solve ta tb)))
+        (numerics-wrap (numerics:make-ndarray (magicl:linear-solve ta tb) :dtype dtype))
       (error (e)
         (merror "np_solve: ~A" e)))))
 
 (defun $np_svd (a)
   "SVD: np_svd(A) => [U, S, Vt]
-   S is returned as a 1D ndarray of singular values (not a diagonal matrix)."
-  (let ((ta (numerics:ndarray-tensor (numerics-unwrap a))))
+   S is returned as a 1D ndarray of singular values (not a diagonal matrix).
+   S is always real (double-float) even for complex inputs."
+  (let* ((ha (numerics-unwrap a))
+         (ta (numerics:ndarray-tensor ha))
+         (dtype (numerics:ndarray-dtype ha)))
     (multiple-value-bind (u sigma vt) (magicl:svd ta)
       ;; magicl returns sigma as a diagonal matrix; extract the diagonal
-      ;; as a 1D vector of singular values
+      ;; as a 1D vector of singular values (always real)
       (let* ((shape (magicl:shape sigma))
              (k (apply #'min shape))
              (s-vec (magicl:empty (list k) :type 'double-float
                                             :layout :column-major)))
         (dotimes (i k)
-          (setf (magicl:tref s-vec i) (magicl:tref sigma i i)))
+          (setf (magicl:tref s-vec i)
+                (coerce (realpart (magicl:tref sigma i i)) 'double-float)))
         `((mlist simp)
-          ,(numerics-wrap (numerics:make-ndarray u))
-          ,(numerics-wrap (numerics:make-ndarray s-vec))
-          ,(numerics-wrap (numerics:make-ndarray vt)))))))
+          ,(numerics-wrap (numerics:make-ndarray u :dtype dtype))
+          ,(numerics-wrap (numerics:make-ndarray s-vec :dtype :double-float))
+          ,(numerics-wrap (numerics:make-ndarray vt :dtype dtype)))))))
 
 ;;; Internal helper: extract singular values as a CL array from magicl SVD sigma
 (defun numerics-svd-values (sigma)
@@ -54,65 +71,97 @@
          (k (apply #'min shape))
          (arr (make-array k :element-type 'double-float)))
     (dotimes (i k)
-      (setf (aref arr i) (magicl:tref sigma i i)))
+      (setf (aref arr i) (coerce (realpart (magicl:tref sigma i i)) 'double-float)))
     arr))
 
 (defun $np_eig (a)
   "Eigendecomposition: np_eig(A) => [eigenvalues, eigenvectors]
    Eigenvalues are returned as a 1D ndarray.
    Eigenvectors are returned as a 2D ndarray (columns are eigenvectors).
-   For real-valued results the complex parts are dropped."
-  (let ((ta (numerics:ndarray-tensor (numerics-unwrap a))))
+   Returns complex ndarrays when eigenvalues have non-negligible imaginary parts."
+  (let* ((ha (numerics-unwrap a))
+         (ta (numerics:ndarray-tensor ha))
+         (input-complex (eq (numerics:ndarray-dtype ha) :complex-double-float)))
     (multiple-value-bind (vals vecs) (magicl:eig ta)
-      ;; magicl returns vals as a plain CL list of (possibly complex) numbers
+      ;; Use complex output if input was complex or eigenvalues have
+      ;; non-negligible imaginary parts
       (let* ((n (length vals))
-             (v-vec (magicl:empty (list n) :type 'double-float
-                                           :layout :column-major)))
-        (loop for i from 0 below n
-              for v in vals
-              do (setf (magicl:tref v-vec i) (coerce (realpart v) 'double-float)))
-        ;; magicl returns eigenvectors as complex-double-float matrix;
-        ;; extract real parts into a double-float matrix for compatibility
-        (let* ((shape (magicl:shape vecs))
-               (real-vecs (magicl:empty shape :type 'double-float
-                                              :layout :column-major)))
-          (dotimes (i (first shape))
-            (dotimes (j (second shape))
-              (setf (magicl:tref real-vecs i j)
-                    (coerce (realpart (magicl:tref vecs i j)) 'double-float))))
-          `((mlist simp)
-            ,(numerics-wrap (numerics:make-ndarray v-vec))
-            ,(numerics-wrap (numerics:make-ndarray real-vecs))))))))
+             (has-complex (or input-complex
+                              (some (lambda (v)
+                                      (and (complexp v)
+                                           (> (abs (imagpart v))
+                                              (* 1000 double-float-epsilon
+                                                 (max 1.0d0 (abs v))))))
+                                    vals)))
+             (out-dtype (if has-complex :complex-double-float :double-float))
+             (out-et (numerics-element-type out-dtype)))
+        ;; Build eigenvalue vector
+        (let ((v-vec (magicl:empty (list n) :type out-et :layout :column-major)))
+          (loop for i from 0 below n
+                for v in vals
+                do (setf (magicl:tref v-vec i) (coerce v out-et)))
+          ;; Build eigenvector matrix
+          (let ((out-vecs
+                  (if has-complex
+                      ;; Keep complex eigenvectors as-is (coerce element type if needed)
+                      (if (eq out-et (magicl:element-type vecs))
+                          vecs
+                          (let ((rv (magicl:empty (magicl:shape vecs)
+                                                  :type out-et
+                                                  :layout :column-major)))
+                            (dotimes (i (first (magicl:shape vecs)))
+                              (dotimes (j (second (magicl:shape vecs)))
+                                (setf (magicl:tref rv i j)
+                                      (coerce (magicl:tref vecs i j) out-et))))
+                            rv))
+                      ;; Extract real parts into a double-float matrix
+                      (let ((rv (magicl:empty (magicl:shape vecs)
+                                             :type 'double-float
+                                             :layout :column-major)))
+                        (dotimes (i (first (magicl:shape vecs)))
+                          (dotimes (j (second (magicl:shape vecs)))
+                            (setf (magicl:tref rv i j)
+                                  (coerce (realpart (magicl:tref vecs i j))
+                                          'double-float))))
+                        rv))))
+            `((mlist simp)
+              ,(numerics-wrap (numerics:make-ndarray v-vec :dtype out-dtype))
+              ,(numerics-wrap (numerics:make-ndarray out-vecs :dtype out-dtype)))))))))
 
 (defun $np_qr (a)
   "QR decomposition: np_qr(A) => [Q, R]"
-  (let ((ta (numerics:ndarray-tensor (numerics-unwrap a))))
+  (let* ((ha (numerics-unwrap a))
+         (ta (numerics:ndarray-tensor ha))
+         (dtype (numerics:ndarray-dtype ha)))
     (multiple-value-bind (q r) (magicl:qr ta)
       `((mlist simp)
-        ,(numerics-wrap (numerics:make-ndarray q))
-        ,(numerics-wrap (numerics:make-ndarray r))))))
+        ,(numerics-wrap (numerics:make-ndarray q :dtype dtype))
+        ,(numerics-wrap (numerics:make-ndarray r :dtype dtype))))))
 
 (defun $np_lu (a)
   "LU decomposition: np_lu(A) => [L, U, P]
    L is lower-triangular with unit diagonal.
    U is upper-triangular.
    P is a permutation matrix such that P * A = L * U."
-  (let* ((ta (numerics:ndarray-tensor (numerics-unwrap a)))
+  (let* ((ha (numerics-unwrap a))
+         (ta (numerics:ndarray-tensor ha))
+         (dtype (numerics:ndarray-dtype ha))
+         (et (numerics-element-type dtype))
          (m (first (magicl:shape ta)))
          (n (second (magicl:shape ta)))
          (k (min m n)))
     (multiple-value-bind (lu-packed ipiv) (magicl:lu ta)
       ;; Extract L: lower triangle of lu-packed with 1s on diagonal
-      (let ((l-mat (magicl:zeros (list m k) :type 'double-float
+      (let ((l-mat (magicl:zeros (list m k) :type et
                                              :layout :column-major))
-            (u-mat (magicl:zeros (list k n) :type 'double-float
+            (u-mat (magicl:zeros (list k n) :type et
                                              :layout :column-major))
-            (p-mat (magicl:eye m :type 'double-float :layout :column-major)))
+            (p-mat (magicl:eye m :type et :layout :column-major)))
         ;; Fill L
         (dotimes (i m)
           (dotimes (j (min (1+ i) k))
             (if (= i j)
-                (setf (magicl:tref l-mat i j) 1.0d0)
+                (setf (magicl:tref l-mat i j) (coerce 1 et))
                 (setf (magicl:tref l-mat i j) (magicl:tref lu-packed i j)))))
         ;; Fill U
         (dotimes (i k)
@@ -131,9 +180,9 @@
                     (setf (magicl:tref p-mat i c) (magicl:tref p-mat swap-row c))
                     (setf (magicl:tref p-mat swap-row c) tmp)))))))
         `((mlist simp)
-          ,(numerics-wrap (numerics:make-ndarray l-mat))
-          ,(numerics-wrap (numerics:make-ndarray u-mat))
-          ,(numerics-wrap (numerics:make-ndarray p-mat)))))))
+          ,(numerics-wrap (numerics:make-ndarray l-mat :dtype dtype))
+          ,(numerics-wrap (numerics:make-ndarray u-mat :dtype dtype))
+          ,(numerics-wrap (numerics:make-ndarray p-mat :dtype dtype)))))))
 
 (defun $np_norm (a &optional ord)
   "Matrix or vector norm: np_norm(A) or np_norm(A, ord) => scalar.
@@ -152,7 +201,7 @@
              ;; 2-norm (Euclidean)
              (let ((sum 0.0d0))
                (dotimes (i n) (let ((x (magicl:tref tensor i)))
-                                (incf sum (* x x))))
+                                (incf sum (expt (abs x) 2))))
                (sqrt sum)))
             ((eql ord 1)
              ;; 1-norm: sum of absolute values
@@ -175,7 +224,7 @@
                (dotimes (i nrow)
                  (dotimes (j ncol)
                    (let ((x (magicl:tref tensor i j)))
-                     (incf sum (* x x)))))
+                     (incf sum (expt (abs x) 2)))))
                (sqrt sum)))
             ((eql ord 1)
              ;; 1-norm: max absolute column sum
@@ -213,27 +262,42 @@
 
 (defun $np_trace (a)
   "Matrix trace: np_trace(A) => scalar"
-  (magicl:trace (numerics:ndarray-tensor (numerics-unwrap a))))
+  (lisp-to-maxima-number
+   (magicl:trace (numerics:ndarray-tensor (numerics-unwrap a)))))
 
 (defun $np_transpose (a)
   "Transpose: np_transpose(A)"
-  (numerics-wrap
-   (numerics:make-ndarray
-    (magicl:transpose (numerics:ndarray-tensor (numerics-unwrap a))))))
+  (let* ((ha (numerics-unwrap a))
+         (dtype (numerics:ndarray-dtype ha)))
+    (numerics-wrap
+     (numerics:make-ndarray
+      (magicl:transpose (numerics:ndarray-tensor ha))
+      :dtype dtype))))
 
 (defun $np_conj (a)
   "Element-wise complex conjugate: np_conj(A).
-   For real (double-float) arrays, returns a copy of A unchanged."
-  (let ((ta (numerics:ndarray-tensor (numerics-unwrap a))))
-    (numerics-wrap
-     (numerics:make-ndarray (magicl:deep-copy-tensor ta)))))
+   For real (double-float) arrays, returns a copy of A unchanged.
+   For complex arrays, conjugates each element."
+  (let* ((ha (numerics-unwrap a))
+         (ta (numerics:ndarray-tensor ha))
+         (dtype (numerics:ndarray-dtype ha)))
+    (if (eq dtype :complex-double-float)
+        ;; Actually conjugate each element
+        (let ((result (magicl:deep-copy-tensor ta)))
+          (magicl:map! #'conjugate result)
+          (numerics-wrap (numerics:make-ndarray result :dtype dtype)))
+        ;; Real: identity (just copy)
+        (numerics-wrap
+         (numerics:make-ndarray (magicl:deep-copy-tensor ta) :dtype dtype)))))
 
 (defun $np_ctranspose (a)
   "Conjugate transpose (Hermitian transpose): np_ctranspose(A).
    For real arrays, equivalent to np_transpose."
-  (let ((ta (numerics:ndarray-tensor (numerics-unwrap a))))
+  (let* ((ha (numerics-unwrap a))
+         (ta (numerics:ndarray-tensor ha))
+         (dtype (numerics:ndarray-dtype ha)))
     (numerics-wrap
-     (numerics:make-ndarray (magicl:conjugate-transpose ta)))))
+     (numerics:make-ndarray (magicl:conjugate-transpose ta) :dtype dtype))))
 
 ;;; Matrix exponential via scaling-and-squaring with Pade approximation.
 ;;; Algorithm follows Higham (2005), "The Scaling and Squaring Method for
@@ -241,7 +305,7 @@
 ;;; Implementation matches Julia's LinearAlgebra.exp! (stdlib/LinearAlgebra/src/dense.jl).
 
 (defun expm-norm1 (m n)
-  "Compute the 1-norm of an n×n matrix M (max absolute column sum)."
+  "Compute the 1-norm of an n*n matrix M (max absolute column sum)."
   (let ((mx 0.0d0))
     (dotimes (j n mx)
       (let ((col-sum 0.0d0))
@@ -332,7 +396,8 @@
    Higham (2005) and Julia's implementation."
   (let* ((n (first (magicl:shape m)))
          (na (expm-norm1 m n))
-         (eye (magicl:eye n :type 'double-float :layout :column-major))
+         (et (magicl:element-type m))
+         (eye (magicl:eye n :type et :layout :column-major))
          (a2 (magicl:@ m m))
          (si 0)    ;; number of squarings
          u v)
@@ -371,9 +436,11 @@
   "Matrix exponential: np_expm(A)
    Computed via adaptive Pade approximation with scaling and squaring.
    Uses Pade orders {3,5,7,9,13} selected by matrix 1-norm (Higham 2005)."
-  (let ((ta (numerics:ndarray-tensor (numerics-unwrap a))))
+  (let* ((ha (numerics-unwrap a))
+         (ta (numerics:ndarray-tensor ha))
+         (dtype (numerics:ndarray-dtype ha)))
     (handler-case
-        (numerics-wrap (numerics:make-ndarray (expm-pade ta)))
+        (numerics-wrap (numerics:make-ndarray (expm-pade ta) :dtype dtype))
       (error (e)
         (merror "np_expm: ~A" e)))))
 
@@ -385,8 +452,14 @@
    - residuals is a 1D ndarray of ||Ax_j - b_j||^2 (empty list if m <= n or rank < n)
    - rank is the effective rank (integer)
    - S is a 1D ndarray of singular values"
-  (let* ((ta (numerics:ndarray-tensor (numerics-unwrap a)))
-         (tb (numerics:ndarray-tensor (numerics-unwrap b))))
+  (let* ((ha (numerics-unwrap a))
+         (hb (numerics-unwrap b))
+         (ta (numerics:ndarray-tensor ha))
+         (tb (numerics:ndarray-tensor hb))
+         (dtype (numerics-result-dtype
+                 (numerics:ndarray-dtype ha)
+                 (numerics:ndarray-dtype hb)))
+         (et (numerics-element-type dtype)))
     (multiple-value-bind (u sigma vt) (magicl:svd ta)
       (let* ((ut (magicl:transpose u))
              (v (magicl:transpose vt))
@@ -399,19 +472,19 @@
              (rank (count-if (lambda (x) (> x tol)) s-arr))
              (k (length s-arr))
              (p (second (magicl:shape utb))))
-        ;; Build n×p solution: first k rows scaled by S^{-1}, rest zero
-        (let ((sinv-utb (magicl:zeros (list n p) :type 'double-float
+        ;; Build n*p solution: first k rows scaled by S^{-1}, rest zero
+        (let ((sinv-utb (magicl:zeros (list n p) :type et
                                                   :layout :column-major)))
           (dotimes (i (min k n))
             (let ((si (aref s-arr i)))
               (dotimes (j p)
                 (setf (magicl:tref sinv-utb i j)
                       (if (> si tol)
-                          (* (/ 1.0d0 si) (magicl:tref utb i j))
-                          0.0d0)))))
+                          (* (/ (coerce 1 et) si) (magicl:tref utb i j))
+                          (coerce 0 et))))))
           (let* ((x-tensor (magicl:@ v sinv-utb))
-                 (x-nd (numerics-wrap (numerics:make-ndarray x-tensor)))
-                 ;; Singular values as 1D ndarray
+                 (x-nd (numerics-wrap (numerics:make-ndarray x-tensor :dtype dtype)))
+                 ;; Singular values as 1D ndarray (always real)
                  (s-vec (magicl:empty (list k) :type 'double-float
                                                :layout :column-major)))
             (dotimes (i k)
@@ -429,7 +502,7 @@
                               (dotimes (i m)
                                 (let ((d (- (magicl:tref ax i j)
                                             (magicl:tref tb i j))))
-                                  (incf sum-sq (* d d))))
+                                  (incf sum-sq (expt (abs d) 2))))
                               (setf (magicl:tref res-vec j) sum-sq)))
                           (numerics-wrap (numerics:make-ndarray res-vec)))
                         ;; Empty list for under/exactly-determined or rank-deficient
@@ -439,7 +512,10 @@
 (defun $np_pinv (a)
   "Moore-Penrose pseudo-inverse: np_pinv(A)
    Computed via SVD: A+ = V S+ Ut"
-  (let* ((ta (numerics:ndarray-tensor (numerics-unwrap a))))
+  (let* ((ha (numerics-unwrap a))
+         (ta (numerics:ndarray-tensor ha))
+         (dtype (numerics:ndarray-dtype ha))
+         (et (numerics-element-type dtype)))
     (multiple-value-bind (u sigma vt) (magicl:svd ta)
       (let* ((v (magicl:transpose vt))
              (ut (magicl:transpose u))
@@ -450,11 +526,11 @@
              (k (length s-arr))
              (m (first (magicl:shape ut))))
         ;; Build diagonal S+ matrix
-        (let ((s-plus (magicl:zeros (list k m) :type 'double-float
+        (let ((s-plus (magicl:zeros (list k m) :type et
                                                :layout :column-major)))
           (dotimes (i k)
             (let ((si (aref s-arr i)))
               (when (> si tol)
-                (setf (magicl:tref s-plus i i) (/ 1.0d0 si)))))
+                (setf (magicl:tref s-plus i i) (/ (coerce 1 et) si)))))
           (numerics-wrap
-           (numerics:make-ndarray (magicl:@ v s-plus ut))))))))
+           (numerics:make-ndarray (magicl:@ v s-plus ut) :dtype dtype)))))))

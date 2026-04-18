@@ -1,0 +1,144 @@
+/* Tests for constructors, conversion, and shape operations */
+
+(load("tests/test_helpers"), true);
+true;
+
+/* === Constructors === */
+
+/* np_zeros */
+(A : np_zeros([2,3]), np_shape(A));
+[2, 3];
+
+(np_ref(np_zeros([2,2]), 0, 0));
+0.0;
+
+/* np_ones */
+(np_ref(np_ones([3,3]), 1, 1));
+1.0;
+
+/* np_eye */
+(np_ref(np_eye(3), 0, 0));
+1.0;
+
+(np_ref(np_eye(3), 0, 1));
+0.0;
+
+/* np_arange */
+(np_ref(np_arange(5), 3));
+3.0;
+
+(np_size(np_arange(10)));
+10;
+
+/* np_linspace */
+(np_ref(np_linspace(0, 1, 5), 0));
+0.0;
+
+(np_ref(np_linspace(0, 1, 5), 4));
+1.0;
+
+/* np_full */
+(np_ref(np_full([2,2], 7), 0, 0));
+7.0;
+
+/* np_diag */
+(A : np_diag([1,2,3]),
+ is(np_ref(A, 0, 0) = 1.0 and np_ref(A, 1, 1) = 2.0 and np_ref(A, 2, 2) = 3.0));
+true;
+
+(np_ref(np_diag([1,2,3]), 0, 1));
+0.0;
+
+/* np_copy */
+(A : np_ones([2,2]),
+ B : np_copy(A),
+ np_set(B, 0, 0, 99.0),
+ is(np_ref(A, 0, 0) = 1.0));
+true;
+
+/* === Conversion round-trip === */
+
+(M : matrix([1,2],[3,4]),
+ A : ndarray(M),
+ R : np_to_matrix(A),
+ is(R = matrix([1.0, 2.0], [3.0, 4.0])));
+true;
+
+/* ndarray from list with reshape */
+(A : ndarray([1,2,3,4,5,6], [2,3]),
+ is(np_shape(A) = [2, 3]));
+true;
+
+/* np_to_list */
+(A : np_arange(4),
+ L : np_to_list(A),
+ is(length(L) = 4));
+true;
+
+/* === Shape operations === */
+
+/* reshape */
+(A : np_arange(6),
+ B : np_reshape(A, [2,3]),
+ is(np_shape(B) = [2, 3]));
+true;
+
+/* flatten */
+(A : np_ones([2,3]),
+ B : np_flatten(A),
+ is(np_size(B) = 6 and length(np_shape(B)) = 1));
+true;
+
+/* size */
+(np_size(np_zeros([3,4])));
+12;
+
+/* dtype */
+(is(np_dtype(np_zeros([2,2])) = "DOUBLE-FLOAT"));
+true;
+
+/* === np_arange start/stop/step === */
+
+/* np_arange(5) — original behavior preserved */
+(is(np_to_list(np_arange(5)) = [0.0, 1.0, 2.0, 3.0, 4.0]));
+true;
+
+/* np_arange(2, 6) — start/stop */
+(is(np_to_list(np_arange(2, 6)) = [2.0, 3.0, 4.0, 5.0]));
+true;
+
+/* np_arange(0, 1, 0.25) — fractional step */
+(L : np_to_list(np_arange(0, 1, 0.25)),
+ is(length(L) = 4) and list_closeto(L, [0.0, 0.25, 0.5, 0.75]));
+true;
+
+/* np_arange(10, 0, -2) — negative step */
+(is(np_to_list(np_arange(10, 0, -2)) = [10.0, 8.0, 6.0, 4.0, 2.0]));
+true;
+
+/* === np_empty, np_randn === */
+
+/* np_empty: shape and dtype */
+(A : np_empty([3, 4]),
+ is(np_shape(A) = [3, 4] and np_dtype(A) = "DOUBLE-FLOAT"));
+true;
+
+/* np_empty: complex dtype */
+(A : np_empty([2, 2], complex),
+ is(np_shape(A) = [2, 2] and np_dtype(A) = "COMPLEX-DOUBLE-FLOAT"));
+true;
+
+/* np_randn: shape */
+(A : np_randn([5, 3]),
+ is(np_shape(A) = [5, 3] and np_dtype(A) = "DOUBLE-FLOAT"));
+true;
+
+/* np_randn: large sample mean near 0, std near 1 */
+(A : np_randn([10000]),
+ is(abs(np_mean(A)) < 0.1 and abs(np_std(A) - 1.0) < 0.1));
+true;
+
+/* === ndarray_p predicate === */
+
+(is(ndarray_p(np_zeros([2,2])) = true and ndarray_p(42) = false));
+true;

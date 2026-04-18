@@ -1,0 +1,428 @@
+/* Tests for element-wise operations, comparisons, logical ops, and mapping */
+
+(load("tests/test_helpers"), true);
+true;
+
+/* === Basic element-wise operations === */
+
+/* sqrt */
+(np_ref(np_sqrt(ndarray(matrix([1,4],[9,16]))), 1, 1));
+4.0;
+
+/* exp and log round-trip */
+(A : ndarray(matrix([1,2],[3,4])),
+ B : np_log(np_exp(A)),
+ closeto(np_ref(B, 0, 0), 1.0));
+true;
+
+/* add */
+(A : np_ones([2,2]),
+ B : np_add(A, A),
+ is(np_ref(B, 0, 0) = 2.0));
+true;
+
+/* add scalar */
+(A : np_ones([2,2]),
+ B : np_add(A, 5.0),
+ is(np_ref(B, 0, 0) = 6.0));
+true;
+
+/* scale */
+(A : np_ones([2,2]),
+ B : np_scale(3.0, A),
+ is(np_ref(B, 0, 0) = 3.0));
+true;
+
+/* neg */
+(A : np_ones([2,2]),
+ B : np_neg(A),
+ is(np_ref(B, 0, 0) = -1.0));
+true;
+
+/* === Subtraction === */
+
+/* np_sub: basic */
+(A : ndarray(matrix([5, 8], [3, 1])),
+ B : ndarray(matrix([1, 2], [3, 4])),
+ is(np_to_matrix(np_sub(A, B)) = matrix([4.0, 6.0], [0.0, -3.0])));
+true;
+
+/* np_sub: A - A = zeros */
+(A : ndarray(matrix([1, 2], [3, 4])),
+ Z : np_sub(A, A),
+ is(np_to_matrix(Z) = matrix([0.0, 0.0], [0.0, 0.0])));
+true;
+
+/* np_sub: scalar */
+(A : np_full([2, 2], 10),
+ is(np_to_matrix(np_sub(A, 3)) = matrix([7.0, 7.0], [7.0, 7.0])));
+true;
+
+/* === Multiplication === */
+
+/* np_mul: basic real */
+(A : ndarray(matrix([2, 3], [4, 5])),
+ B : ndarray(matrix([10, 20], [30, 40])),
+ is(np_to_matrix(np_mul(A, B)) = matrix([20.0, 60.0], [120.0, 200.0])));
+true;
+
+/* np_mul: scalar broadcast */
+(A : ndarray([2, 3, 4], [3]),
+ is(np_to_list(np_mul(A, 10)) = [20.0, 30.0, 40.0]));
+true;
+
+/* === Division === */
+
+/* np_div: basic */
+(A : ndarray(matrix([10, 20], [30, 40])),
+ B : ndarray(matrix([2, 4], [5, 8])),
+ is(np_to_matrix(np_div(A, B)) = matrix([5.0, 5.0], [6.0, 5.0])));
+true;
+
+/* np_div: A / A = ones */
+(A : ndarray(matrix([3, 7], [2, 5])),
+ R : np_div(A, A),
+ mat_closeto(np_to_matrix(R), matrix([1.0, 1.0], [1.0, 1.0])));
+true;
+
+/* np_div: scalar divisor */
+(A : ndarray([10, 20, 30], [3]),
+ is(np_to_list(np_div(A, 5)) = [2.0, 4.0, 6.0]));
+true;
+
+/* === Power === */
+
+/* np_pow: square */
+(A : ndarray([1, 2, 3, 4], [4]),
+ is(np_to_list(np_pow(A, 2)) = [1.0, 4.0, 9.0, 16.0]));
+true;
+
+/* np_pow: sqrt via power 0.5 matches np_sqrt */
+(A : ndarray([1, 4, 9, 16], [4]),
+ list_closeto(np_to_list(np_pow(A, 0.5)), np_to_list(np_sqrt(A))));
+true;
+
+/* np_pow: cube */
+(A : ndarray([2, 3], [2]),
+ is(np_to_list(np_pow(A, 3)) = [8.0, 27.0]));
+true;
+
+/* === Absolute value === */
+
+/* np_abs: negative values */
+(A : ndarray([-5, -2, 0, 3, -1], [5]),
+ is(np_to_list(np_abs(A)) = [5.0, 2.0, 0.0, 3.0, 1.0]));
+true;
+
+/* np_abs: 2D */
+(A : ndarray(matrix([-1, 2], [-3, 4])),
+ is(np_to_matrix(np_abs(A)) = matrix([1.0, 2.0], [3.0, 4.0])));
+true;
+
+/* === Trigonometric functions === */
+
+/* np_sin: known values */
+(A : ndarray([0, float(%pi/6), float(%pi/2)], [3]),
+ L : np_to_list(np_sin(A)),
+ closeto(L[1], 0.0) and closeto(L[2], 0.5) and closeto(L[3], 1.0));
+true;
+
+/* np_cos: known values */
+(A : ndarray([0, float(%pi/3), float(%pi)], [3]),
+ L : np_to_list(np_cos(A)),
+ closeto(L[1], 1.0) and closeto(L[2], 0.5) and closeto(L[3], -1.0));
+true;
+
+/* np_tan: known values */
+(A : ndarray([0, float(%pi/4)], [2]),
+ L : np_to_list(np_tan(A)),
+ closeto(L[1], 0.0) and closeto(L[2], 1.0));
+true;
+
+/* Cross-validation: sin^2 + cos^2 = 1 */
+(A : np_linspace(0, float(2 * %pi), 50),
+ sin_sq : np_mul(np_sin(A), np_sin(A)),
+ cos_sq : np_mul(np_cos(A), np_cos(A)),
+ S : np_add(sin_sq, cos_sq),
+ /* All elements should be 1.0 within tolerance */
+ is(lmax(map(lambda([x], abs(x - 1.0)), np_to_list(S))) < 1e-10));
+true;
+
+/* Cross-validation: tan = sin/cos */
+(A : ndarray([0.5, 1.0, 1.5], [3]),
+ T1 : np_to_list(np_tan(A)),
+ T2 : np_to_list(np_div(np_sin(A), np_cos(A))),
+ list_closeto(T1, T2));
+true;
+
+/* Cross-validation: np_sin vs Maxima sin */
+(vals : [0.3, 0.7, 1.2, 2.0, 2.8],
+ A : ndarray(vals, [5]),
+ L : np_to_list(np_sin(A)),
+ expected : map(lambda([x], float(sin(x))), vals),
+ list_closeto(L, expected));
+true;
+
+/* Cross-validation: np_cos vs Maxima cos */
+(vals : [0.3, 0.7, 1.2, 2.0, 2.8],
+ A : ndarray(vals, [5]),
+ L : np_to_list(np_cos(A)),
+ expected : map(lambda([x], float(cos(x))), vals),
+ list_closeto(L, expected));
+true;
+
+/* === Phase angle === */
+
+/* np_angle: real positive => 0, real negative => pi */
+(A : ndarray([1, -1], [2]),
+ L : np_to_list(np_angle(A)),
+ closeto(L[1], 0.0) and closeto(L[2], float(%pi)));
+true;
+
+/* np_angle: complex known values */
+(A : ndarray([1, %i, -1, -%i], [4], complex),
+ L : np_to_list(np_angle(A)),
+ closeto(L[1], 0.0) and closeto(L[2], float(%pi/2))
+   and closeto(L[3], float(%pi)) and closeto(L[4], float(-%pi/2)));
+true;
+
+/* === Mapping === */
+
+/* np_map with interpreted function */
+(f(x) := x^2,
+ A : np_arange(4),
+ B : np_map(f, A),
+ closeto(np_ref(B, 3), 9.0));
+true;
+
+/* np_map with translated function */
+(g(x) := x + 1.0,
+ translate(g),
+ A : np_arange(3),
+ B : np_map(g, A),
+ closeto(np_ref(B, 0), 1.0) and closeto(np_ref(B, 2), 3.0));
+true;
+
+/* np_map2 binary */
+(h(x, y) := x + y,
+ A : np_ones([2, 2]),
+ B : np_full([2, 2], 3),
+ C : np_map2(h, A, B),
+ is(np_ref(C, 0, 0) = 4.0));
+true;
+
+/* === Comparison operations === */
+
+/* np_greater: ndarray vs scalar */
+(A : ndarray([1, 5, 3, 7, 2], [5]),
+ is(np_to_list(np_greater(A, 3)) = [0.0, 1.0, 0.0, 1.0, 0.0]));
+true;
+
+/* np_greater: ndarray vs ndarray */
+(A : ndarray([1, 5, 3], [3]),
+ B : ndarray([2, 4, 3], [3]),
+ is(np_to_list(np_greater(A, B)) = [0.0, 1.0, 0.0]));
+true;
+
+/* np_greater: scalar vs ndarray */
+(A : ndarray([1, 5, 3], [3]),
+ is(np_to_list(np_greater(3, A)) = [1.0, 0.0, 0.0]));
+true;
+
+/* np_less */
+(A : ndarray([1, 5, 3], [3]),
+ is(np_to_list(np_less(A, 3)) = [1.0, 0.0, 0.0]));
+true;
+
+/* np_greater_equal */
+(A : ndarray([1, 5, 3], [3]),
+ is(np_to_list(np_greater_equal(A, 3)) = [0.0, 1.0, 1.0]));
+true;
+
+/* np_less_equal */
+(A : ndarray([1, 5, 3], [3]),
+ is(np_to_list(np_less_equal(A, 3)) = [1.0, 0.0, 1.0]));
+true;
+
+/* np_equal */
+(A : ndarray([1, 5, 3], [3]),
+ is(np_to_list(np_equal(A, 3)) = [0.0, 0.0, 1.0]));
+true;
+
+/* np_not_equal */
+(A : ndarray([1, 5, 3], [3]),
+ is(np_to_list(np_not_equal(A, 3)) = [1.0, 1.0, 0.0]));
+true;
+
+/* np_greater 2D */
+(A : ndarray(matrix([1, 4], [3, 2])),
+ R : np_greater(A, 2),
+ is(np_to_matrix(R) = matrix([0.0, 1.0], [1.0, 0.0])));
+true;
+
+/* === Logical operations === */
+
+/* np_logical_and */
+(A : ndarray([1, 0, 1, 0], [4]),
+ B : ndarray([1, 1, 0, 0], [4]),
+ is(np_to_list(np_logical_and(A, B)) = [1.0, 0.0, 0.0, 0.0]));
+true;
+
+/* np_logical_or */
+(A : ndarray([1, 0, 1, 0], [4]),
+ B : ndarray([1, 1, 0, 0], [4]),
+ is(np_to_list(np_logical_or(A, B)) = [1.0, 1.0, 1.0, 0.0]));
+true;
+
+/* np_logical_not */
+(A : ndarray([1, 0, 3.5, 0], [4]),
+ is(np_to_list(np_logical_not(A)) = [0.0, 1.0, 0.0, 1.0]));
+true;
+
+/* Combined: (A > 2) AND (A < 5) */
+(A : ndarray([1, 3, 5, 4, 2], [5]),
+ mask : np_logical_and(np_greater(A, 2), np_less(A, 5)),
+ is(np_to_list(mask) = [0.0, 1.0, 0.0, 1.0, 0.0]));
+true;
+
+/* === np_test === */
+
+/* np_test with named function */
+(gt3(x) := if x > 3 then 1 else 0,
+ A : ndarray([1, 5, 3, 7, 2], [5]),
+ is(np_to_list(np_test(gt3, A)) = [0.0, 1.0, 0.0, 1.0, 0.0]));
+true;
+
+/* np_test with named function returning is() */
+(positive(x) := is(x > 0),
+ A : ndarray([-1, 0, 1, 2, -3], [5]),
+ is(np_to_list(np_test(positive, A)) = [0.0, 0.0, 1.0, 1.0, 0.0]));
+true;
+
+/* np_test with lambda */
+(A : ndarray([1, 5, 3, 7, 2], [5]),
+ mask : np_test(lambda([x], is(x > 3)), A),
+ is(np_to_list(mask) = [0.0, 1.0, 0.0, 1.0, 0.0]));
+true;
+
+/* np_test 2D */
+(A : ndarray(matrix([1, 4], [3, 2])),
+ mask : np_test(lambda([x], is(x > 2)), A),
+ is(np_to_matrix(mask) = matrix([0.0, 1.0], [1.0, 0.0])));
+true;
+
+/* === np_extract === */
+
+/* np_extract 1D: select elements where mask is nonzero */
+(A : ndarray([10, 20, 30, 40, 50], [5]),
+ mask : ndarray([1, 0, 1, 0, 1], [5]),
+ is(np_to_list(np_extract(mask, A)) = [10.0, 30.0, 50.0]));
+true;
+
+/* np_extract with comparison-generated mask */
+(A : ndarray([1, 5, 3, 7, 2], [5]),
+ mask : np_greater(A, 3),
+ is(np_to_list(np_extract(mask, A)) = [5.0, 7.0]));
+true;
+
+/* np_extract 2D: row-major order */
+(A : ndarray(matrix([10, 20], [30, 40])),
+ mask : ndarray(matrix([1, 0], [0, 1])),
+ is(np_to_list(np_extract(mask, A)) = [10.0, 40.0]));
+true;
+
+/* np_extract with all-zero mask: empty list */
+(A : ndarray([1, 2, 3], [3]),
+ mask : np_zeros(3),
+ is(np_extract(mask, A) = []));
+true;
+
+/* === np_where === */
+
+/* Form 1: np_where(condition) 1D — indices of nonzero elements */
+(A : ndarray([0, 1, 0, 3, 0], [5]),
+ result : np_where(A),
+ is(length(result) = 1 and np_to_list(result[1]) = [1.0, 3.0]));
+true;
+
+/* Form 1: np_where(condition) 2D — row and col index arrays */
+(A : ndarray(matrix([1, 0], [0, 4])),
+ [rows, cols] : np_where(A),
+ is(np_to_list(rows) = [0.0, 1.0] and np_to_list(cols) = [0.0, 1.0]));
+true;
+
+/* Form 1: all zeros — empty index list */
+(A : np_zeros(5),
+ result : np_where(A),
+ is(length(result) = 1 and result[1] = []));
+true;
+
+/* Form 2: np_where(cond, x, y) 1D */
+(cond_ : ndarray([1, 0, 1], [3]),
+ x : ndarray([10, 20, 30], [3]),
+ y : ndarray([100, 200, 300], [3]),
+ is(np_to_list(np_where(cond_, x, y)) = [10.0, 200.0, 30.0]));
+true;
+
+/* Form 2: np_where(cond, x, y) 2D */
+(cond_ : ndarray(matrix([1, 0], [0, 1])),
+ x : np_full([2, 2], 99),
+ y : np_zeros([2, 2]),
+ R : np_where(cond_, x, y),
+ is(np_to_matrix(R) = matrix([99.0, 0.0], [0.0, 99.0])));
+true;
+
+/* Form 2: all-true condition returns x */
+(x : np_arange(5),
+ y : np_zeros(5),
+ cond_ : np_ones(5),
+ is(np_to_list(np_where(cond_, x, y)) = np_to_list(x)));
+true;
+
+/* Form 2: all-false condition returns y */
+(x : np_arange(5),
+ y : np_full(5, 42),
+ cond_ : np_zeros(5),
+ is(np_to_list(np_where(cond_, x, y)) = np_to_list(y)));
+true;
+
+/* np_where with scalar broadcasting */
+
+/* np_where(cond, scalar, ndarray) */
+(cond_ : ndarray([1, 0, 1], [3]),
+ y : ndarray([100, 200, 300], [3]),
+ is(np_to_list(np_where(cond_, 99, y)) = [99.0, 200.0, 99.0]));
+true;
+
+/* np_where(cond, ndarray, scalar) */
+(cond_ : ndarray([1, 0, 1], [3]),
+ x : ndarray([10, 20, 30], [3]),
+ is(np_to_list(np_where(cond_, x, 0)) = [10.0, 0.0, 30.0]));
+true;
+
+/* np_where(cond, scalar, scalar) */
+(cond_ : ndarray([1, 0, 0, 1], [4]),
+ is(np_to_list(np_where(cond_, 1, 0)) = [1.0, 0.0, 0.0, 1.0]));
+true;
+
+/* === End-to-end: filter and transform workflow === */
+
+/* NumPy equivalent: A[A > 3] */
+(A : ndarray([1, 5, 3, 7, 2], [5]),
+ result : np_extract(np_greater(A, 3), A),
+ is(np_to_list(result) = [5.0, 7.0]));
+true;
+
+/* NumPy equivalent: np.where(A > 3, A, 0) */
+(A : ndarray([1, 5, 3, 7, 2], [5]),
+ result : np_where(np_greater(A, 3), A, 0),
+ is(np_to_list(result) = [0.0, 5.0, 0.0, 7.0, 0.0]));
+true;
+
+/* NumPy equivalent: np.where(A > mean, A, mean) */
+(A : ndarray([1, 5, 3, 7, 2], [5]),
+ m : np_mean(A),
+ result : np_where(np_greater(A, m), A, m),
+ /* mean = 3.6, so 5 and 7 stay, others become 3.6 */
+ is(np_to_list(result) = [3.6, 5.0, 3.6, 7.0, 3.6]));
+true;

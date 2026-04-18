@@ -1,0 +1,245 @@
+/* Tests for complex number support */
+
+(load("tests/test_helpers"), true);
+true;
+
+/* === Complex array creation === */
+
+/* Complex array creation via ndarray with matrix */
+(A : ndarray(matrix([1+%i, 2-3*%i], [4, 5+%i]), complex),
+ is(np_dtype(A) = "COMPLEX-DOUBLE-FLOAT" and np_shape(A) = [2, 2]));
+true;
+
+/* Complex round-trip: Maxima -> ndarray -> Maxima */
+(M : matrix([1+%i, 2], [3, 4-%i]),
+ A : ndarray(M, complex),
+ R : np_to_matrix(A),
+ closeto(realpart(R[1,1]), 1.0) and closeto(imagpart(R[1,1]), 1.0)
+   and closeto(realpart(R[2,2]), 4.0) and closeto(imagpart(R[2,2]), -1.0)
+   and closeto(realpart(R[1,2]), 2.0) and closeto(imagpart(R[1,2]), 0.0));
+true;
+
+/* Complex list round-trip via np_to_list */
+(A : ndarray([1+%i, 2-%i], [2], complex),
+ L : np_to_list(A),
+ closeto(realpart(L[1]), 1.0) and closeto(imagpart(L[1]), 1.0)
+   and closeto(realpart(L[2]), 2.0) and closeto(imagpart(L[2]), -1.0));
+true;
+
+/* === Complex constructors === */
+
+/* np_zeros */
+(A : np_zeros([2,2], complex),
+ is(np_dtype(A) = "COMPLEX-DOUBLE-FLOAT" and np_ref(A, 0, 0) = 0.0));
+true;
+
+/* np_ones */
+(A : np_ones([2,2], complex),
+ is(np_dtype(A) = "COMPLEX-DOUBLE-FLOAT" and np_ref(A, 0, 0) = 1.0));
+true;
+
+/* np_full */
+(A : np_full([2,2], 1+2*%i, complex),
+ v : np_ref(A, 0, 0),
+ closeto(realpart(v), 1.0) and closeto(imagpart(v), 2.0));
+true;
+
+/* np_eye */
+(A : np_eye(2, 2, complex),
+ is(np_dtype(A) = "COMPLEX-DOUBLE-FLOAT" and np_ref(A, 0, 0) = 1.0
+    and np_ref(A, 0, 1) = 0.0));
+true;
+
+/* np_diag */
+(A : np_diag([1+%i, 2-%i], complex),
+ is(np_dtype(A) = "COMPLEX-DOUBLE-FLOAT"
+    and np_shape(A) = [2, 2]));
+true;
+
+/* === Complex element-wise operations === */
+
+/* Addition */
+(A : ndarray(matrix([1+%i, 2+%i]), complex),
+ B : ndarray(matrix([1-%i, 1+%i]), complex),
+ C : np_add(A, B),
+ v0 : np_ref(C, 0, 0),
+ v1 : np_ref(C, 0, 1),
+ closeto(realpart(v0), 2.0) and closeto(imagpart(v0), 0.0)
+   and closeto(realpart(v1), 3.0) and closeto(imagpart(v1), 2.0));
+true;
+
+/* Scalar multiplication */
+(A : ndarray(matrix([1+%i, 2+%i]), complex),
+ B : np_scale(2, A),
+ v : np_ref(B, 0, 0),
+ closeto(realpart(v), 2.0) and closeto(imagpart(v), 2.0));
+true;
+
+/* Element-wise multiply */
+(A : ndarray(matrix([1+%i, 2]), complex),
+ B : ndarray(matrix([1-%i, 3]), complex),
+ C : np_mul(A, B),
+ /* (1+i)(1-i) = 1 - i^2 = 2 */
+ v : np_ref(C, 0, 0),
+ closeto(realpart(v), 2.0) and closeto(imagpart(v), 0.0));
+true;
+
+/* === Complex conjugate and transpose === */
+
+/* np_conj actually conjugates complex arrays */
+(A : ndarray(matrix([1+%i, 2-3*%i]), complex),
+ C : np_conj(A),
+ v0 : np_ref(C, 0, 0),
+ v1 : np_ref(C, 0, 1),
+ closeto(realpart(v0), 1.0) and closeto(imagpart(v0), -1.0)
+   and closeto(realpart(v1), 2.0) and closeto(imagpart(v1), 3.0));
+true;
+
+/* np_conj on real array is unchanged */
+(A : ndarray(matrix([1,2],[3,4])),
+ C : np_conj(A),
+ is(np_to_matrix(C) = matrix([1.0, 2.0], [3.0, 4.0])));
+true;
+
+/* np_real extracts real parts */
+(A : ndarray(matrix([1+2*%i, 3-4*%i]), complex),
+ R : np_real(A),
+ is(np_dtype(R) = "DOUBLE-FLOAT")
+   and closeto(np_ref(R, 0, 0), 1.0) and closeto(np_ref(R, 0, 1), 3.0));
+true;
+
+/* np_imag extracts imaginary parts */
+(A : ndarray(matrix([1+2*%i, 3-4*%i]), complex),
+ I : np_imag(A),
+ is(np_dtype(I) = "DOUBLE-FLOAT")
+   and closeto(np_ref(I, 0, 0), 2.0) and closeto(np_ref(I, 0, 1), -4.0));
+true;
+
+/* Complex np_transpose */
+(A : ndarray(matrix([1+%i, 2], [3, 4-%i]), complex),
+ T : np_transpose(A),
+ is(np_dtype(T) = "COMPLEX-DOUBLE-FLOAT"
+    and np_shape(T) = [2, 2]));
+true;
+
+/* Complex np_ctranspose */
+(A : ndarray(matrix([1+%i, 2], [3, 4-%i]), complex),
+ CT : np_ctranspose(A),
+ v : np_ref(CT, 0, 0),
+ closeto(realpart(v), 1.0) and closeto(imagpart(v), -1.0));
+true;
+
+/* === Complex linear algebra === */
+
+/* Complex matrix multiply */
+(A : ndarray(matrix([1+%i, 0], [0, 1-%i]), complex),
+ B : ndarray(matrix([1, 1], [1, 1]), complex),
+ C : np_matmul(A, B),
+ is(np_dtype(C) = "COMPLEX-DOUBLE-FLOAT"));
+true;
+
+/* Complex determinant */
+(A : ndarray(matrix([1+%i, 0], [0, 1-%i]), complex),
+ d : np_det(A),
+ /* (1+i)(1-i) = 2 */
+ closeto(realpart(d), 2.0) and closeto(imagpart(d), 0.0));
+true;
+
+/* === Complex eigendecomposition === */
+
+/* np_eig returns complex eigenvalues for rotation matrix */
+(A : ndarray(matrix([0, -1], [1, 0])),
+ [vals, vecs] : np_eig(A),
+ is(np_dtype(vals) = "COMPLEX-DOUBLE-FLOAT"));
+true;
+
+/* np_eig: eigenvalues of rotation matrix are +/-i */
+(A : ndarray(matrix([0, -1], [1, 0])),
+ [vals, vecs] : np_eig(A),
+ v0 : np_ref(vals, 0),
+ v1 : np_ref(vals, 1),
+ /* eigenvalues should be +i and -i (or -i and +i) */
+ closeto(realpart(v0), 0.0) and closeto(abs(imagpart(v0)), 1.0)
+   and closeto(realpart(v1), 0.0) and closeto(abs(imagpart(v1)), 1.0));
+true;
+
+/* np_eig: complex input — diagonal matrix */
+(A : ndarray(matrix([1+%i, 0], [0, 2-%i]), complex),
+ [vals, vecs] : np_eig(A),
+ L : np_to_list(vals),
+ is(np_dtype(vals) = "COMPLEX-DOUBLE-FLOAT")
+   and closeto(realpart(L[1]), 1.0) and closeto(imagpart(L[1]), 1.0)
+   and closeto(realpart(L[2]), 2.0) and closeto(imagpart(L[2]), -1.0));
+true;
+
+/* np_eig: Hermitian complex input — eigenvalues real, A*v = lambda*v */
+(A : ndarray(matrix([2, 1+%i], [1-%i, 3]), complex),
+ [vals, vecs] : np_eig(A),
+ Av : np_matmul(A, vecs),
+ lv : np_matmul(vecs, np_diag(np_to_list(vals), complex)),
+ is(np_dtype(vals) = "COMPLEX-DOUBLE-FLOAT"
+    and lmax(map(abs, np_to_list(np_flatten(np_sub(Av, lv))))) < 1e-10));
+true;
+
+/* np_eig: non-Hermitian complex input — A*v = lambda*v */
+(A : ndarray(matrix([1+%i, 2], [0, 3-%i]), complex),
+ [vals, vecs] : np_eig(A),
+ Av : np_matmul(A, vecs),
+ lv : np_matmul(vecs, np_diag(np_to_list(vals), complex)),
+ is(lmax(map(abs, np_to_list(np_flatten(np_sub(Av, lv))))) < 1e-10));
+true;
+
+/* === Complex misc === */
+
+/* Complex sum */
+(A : ndarray(matrix([1+%i, 2-%i]), complex),
+ s : np_sum(A),
+ closeto(realpart(s), 3.0) and closeto(imagpart(s), 0.0));
+true;
+
+/* Complex np_ref returns Maxima complex form */
+(A : ndarray(matrix([1+2*%i]), complex),
+ v : np_ref(A, 0, 0),
+ closeto(realpart(v), 1.0) and closeto(imagpart(v), 2.0));
+true;
+
+/* Complex np_set */
+(A : np_zeros([1, 2], complex),
+ np_set(A, 0, 0, 3+4*%i),
+ v : np_ref(A, 0, 0),
+ closeto(realpart(v), 3.0) and closeto(imagpart(v), 4.0));
+true;
+
+/* === Complex error handling === */
+
+/* Ordered comparisons signal error for complex */
+(errcatch(np_greater(np_zeros([2,2], complex), 0)));
+[];
+
+/* np_min signals error for complex */
+(errcatch(np_min(np_ones([2,2], complex))));
+[];
+
+/* np_max signals error for complex */
+(errcatch(np_max(np_ones([2,2], complex))));
+[];
+
+/* np_sort signals error for complex */
+(errcatch(np_sort(np_ones(3, complex))));
+[];
+
+/* np_argsort signals error for complex */
+(errcatch(np_argsort(np_ones(3, complex))));
+[];
+
+/* np_less signals error for complex */
+(errcatch(np_less(np_ones(3, complex), 0)));
+[];
+
+/* np_argmin signals error for complex */
+(errcatch(np_argmin(np_ones(3, complex))));
+[];
+
+/* np_argmax signals error for complex */
+(errcatch(np_argmax(np_ones(3, complex))));
+[];

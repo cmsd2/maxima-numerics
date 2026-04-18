@@ -1,0 +1,5 @@
+/* Shared test helpers for numerics test suite */
+
+closeto(a, b) := is(abs(a - b) < 1e-10) $
+list_closeto(L1, L2) := is(lmax(map(lambda([a,b], abs(a-b)), L1, L2)) < 1e-10) $
+mat_closeto(A, B) := is(lmax(map(abs, flatten(args(A - B)))) < 1e-10) $

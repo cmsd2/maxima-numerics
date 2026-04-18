@@ -61,19 +61,13 @@ np_extract(np_logical_and(np_greater(A, 2), np_less(A, 8)), A);
 These are cases where a function's name or behaviour conflicts with what a NumPy
 user would expect. They are the most likely source of bugs.
 
-### `np_eig` silently discards imaginary parts
+### `np_eig` — no remaining semantic issues
 
-NumPy's `np.linalg.eig()` returns complex eigenvalues and eigenvectors when the
-matrix is non-symmetric. Our implementation coerces everything to
-`double-float`, dropping imaginary parts without warning. This means rotation
-matrices, defective matrices, and other non-symmetric inputs give quietly wrong
-answers.
-
-**Options:**
-- Support complex ndarrays (significant effort — requires `complex-double-float`
-  tensors throughout)
-- Signal an error when eigenvalues have non-negligible imaginary parts
-- Return a second value or flag indicating whether complex values were truncated
+`np_eig` delegates to `magicl:eig` which calls `dgeev` for real matrices and
+`zgeev` for complex matrices. For real input with complex eigenvalues (e.g.
+rotation matrices), it detects non-negligible imaginary parts and returns
+complex-typed ndarrays. Complex input always produces complex output. This
+matches NumPy's `np.linalg.eig()` behaviour.
 
 ## Missing parameters
 
@@ -137,14 +131,39 @@ matching NumPy but differing from Maxima's native 1-based indexing for matrices
 and lists. This is documented but will surprise Maxima users who are not familiar
 with NumPy.
 
+## Complex number support
+
+Complex ndarrays are supported with dtype `:complex-double-float`. Create them
+via `ndarray(matrix(...), complex)` or constructors with the `complex` flag:
+
+```maxima
+A : ndarray(matrix([1+%i, 2-3*%i]), complex);
+B : np_zeros([3,3], complex);
+C : np_full([2,2], 1+2*%i, complex);
+```
+
+Most operations propagate dtype correctly: element-wise arithmetic, matrix
+multiply, transpose, SVD, QR, LU, etc. Complex-specific functions:
+
+- `np_conj(A)` — element-wise conjugate
+- `np_ctranspose(A)` — conjugate transpose
+- `np_real(A)`, `np_imag(A)` — extract real/imaginary parts (always real result)
+- `np_angle(A)` — element-wise phase angle (always real result)
+- `np_eig(A)` — returns complex eigenvalues when they have non-negligible
+  imaginary parts
+
+**Not supported for complex arrays** (signals error):
+`np_greater`, `np_less`, `np_greater_equal`, `np_less_equal`, `np_min`, `np_max`,
+`np_argmin`, `np_argmax`, `np_sort`, `np_argsort`. Use `np_equal`/`np_not_equal`
+for equality testing on complex arrays.
+
 ## Not implemented
 
 Features present in NumPy/SciPy that are absent here.
 
 | Feature | NumPy/SciPy | Notes |
 |---------|-------------|-------|
-| Complex dtype | `np.complex128` | Only `double-float` supported |
-| Integer dtype | `np.int64` | Only `double-float` supported |
+| Integer dtype | `np.int64` | Only `double-float` and `complex-double-float` supported |
 | Broadcasting | Implicit shape matching | Only scalar-array broadcasting via `np_add(A, 5)` etc. |
 | Fancy indexing | `A[[0,2], :]` | Not supported; use `np_row`/`np_col` per element |
 | `np.concatenate` | General axis concatenation | Only `np_hstack`/`np_vstack` for 2D |

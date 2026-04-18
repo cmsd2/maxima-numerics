@@ -1,0 +1,335 @@
+/* Cross-validation tests: numerics vs LAPACK and Maxima builtins */
+
+(load("tests/test_helpers"), true);
+true;
+
+/* lapack is needed for cross-validation */
+(load("lapack"), true);
+true;
+
+/* === Solve: np_solve vs dgesv === */
+
+(M : matrix([2,1,0],[1,3,1],[0,1,2]),
+ b_mat : matrix([1],[2],[3]),
+ An : ndarray(M), bn : ndarray(b_mat),
+ x_num : np_to_matrix(np_solve(An, bn)),
+ x_lap : dgesv(float(M), float(b_mat)),
+ mat_closeto(x_num, x_lap));
+true;
+
+/* === SVD: np_svd vs dgesvd === */
+
+/* Singular values agree */
+(M : matrix([1,2,3],[4,5,6],[7,8,10]),
+ An : ndarray(M),
+ [U, S_nd, Vt] : np_svd(An),
+ s_num : sort(np_to_list(S_nd)),
+ s_lap : sort(dgesvd(float(M))[1]),
+ list_closeto(s_num, s_lap));
+true;
+
+/* SVD reconstruction: U * diag(S) * Vt ~ original */
+(M : matrix([1,2,3],[4,5,6],[7,8,10]),
+ An : ndarray(M),
+ [U, S_nd, Vt] : np_svd(An),
+ S_mat : np_diag(np_to_list(S_nd)),
+ recon : np_matmul(np_matmul(U, S_mat), Vt),
+ mat_closeto(np_to_matrix(recon), float(M)));
+true;
+
+/* === Eigenvalues: np_eig vs dgeev === */
+
+/* Symmetric matrix, real eigenvalues */
+(M : matrix([2,1,0],[1,3,1],[0,1,2]),
+ An : ndarray(M),
+ [vals_nd, vecs_nd] : np_eig(An),
+ eigs_num : sort(np_to_list(vals_nd)),
+ eigs_lap : sort(dgeev(float(M))[1]),
+ list_closeto(eigs_num, eigs_lap));
+true;
+
+/* Eigendecomposition: A * v = lambda * v */
+(M : matrix([2,1,0],[1,3,1],[0,1,2]),
+ An : ndarray(M),
+ [vals_nd, vecs_nd] : np_eig(An),
+ Av : np_matmul(An, vecs_nd),
+ lv : np_matmul(vecs_nd, np_diag(np_to_list(vals_nd))),
+ mat_closeto(np_to_matrix(Av), np_to_matrix(lv)));
+true;
+
+/* === QR: np_qr vs dgeqrf === */
+
+/* Both reconstruct to original */
+(M : matrix([1,2,3],[4,5,6],[7,8,10]),
+ An : ndarray(M),
+ [Q1, R1] : np_qr(An),
+ recon1 : np_to_matrix(np_matmul(Q1, R1)),
+ [Q2, R2] : dgeqrf(float(M)),
+ recon2 : Q2 . R2,
+ mat_closeto(recon1, float(M)) and mat_closeto(recon2, float(M)));
+true;
+
+/* R matrices agree (up to sign of rows) */
+(M : matrix([1,2,3],[4,5,6],[7,8,10]),
+ An : ndarray(M),
+ [Q1, R1] : np_qr(An),
+ R1m : np_to_matrix(R1),
+ [Q2, R2] : dgeqrf(float(M)),
+ check : true,
+ for i : 1 thru 3 do (
+   s1 : if R1m[i,i] >= 0 then 1 else -1,
+   s2 : if R2[i,i] >= 0 then 1 else -1,
+   for j : 1 thru 3 do
+     if not closeto(s1 * R1m[i,j], s2 * R2[i,j]) then check : false
+ ),
+ check);
+true;
+
+/* === Linear solve: larger random system === */
+
+(block([n : 20],
+  An : np_rand([n, n]),
+  bn : np_rand([n, 1]),
+  Am : np_to_matrix(An),
+  bm : np_to_matrix(bn),
+  x_num : np_solve(An, bn),
+  x_lap : dgesv(Am, bm),
+  resid_num : np_to_matrix(np_sub(np_matmul(An, x_num), bn)),
+  resid_lap : Am . x_lap - bm,
+  mat_closeto(resid_num, 0 * resid_num)
+    and mat_closeto(resid_lap, 0 * resid_lap)));
+true;
+
+/* === Frobenius norm vs SVD === */
+
+/* Frobenius norm equals sqrt of sum of squared singular values */
+(M : matrix([1,2,3],[4,5,6],[7,8,10]),
+ An : ndarray(M),
+ frob : np_norm(An),
+ [U, S_nd, Vt] : np_svd(An),
+ s_list : np_to_list(S_nd),
+ svd_norm : sqrt(apply("+", map(lambda([x], x^2), s_list))),
+ closeto(frob, svd_norm));
+true;
+
+/* === Rank via dgesvd === */
+
+/* Full-rank matrix */
+(M : matrix([1,2,3],[4,5,6],[7,8,10]),
+ An : ndarray(M),
+ r_num : np_rank(An),
+ s_lap : dgesvd(float(M))[1],
+ tol : lmax(s_lap) * 3 * 2.220446049250313e-16,
+ r_lap : length(sublist(s_lap, lambda([x], x > tol))),
+ is(r_num = r_lap));
+true;
+
+/* Rank-deficient matrix */
+(M : matrix([1,2,3],[2,4,6],[3,6,9]),
+ An : ndarray(M),
+ r_num : np_rank(An),
+ s_lap : dgesvd(float(M))[1],
+ tol : lmax(s_lap) * 3 * 2.220446049250313e-16,
+ r_lap : length(sublist(s_lap, lambda([x], x > tol))),
+ is(r_num = 1 and r_num = r_lap));
+true;
+
+/* === lstsq vs dgesv for square systems === */
+
+(M : matrix([2,1,0],[1,3,1],[0,1,2]),
+ b_mat : matrix([1],[2],[3]),
+ An : ndarray(M), bn : ndarray(b_mat),
+ [x_lstsq, res_, rnk_, S_] : np_lstsq(An, bn),
+ x_dgesv : dgesv(float(M), float(b_mat)),
+ mat_closeto(np_to_matrix(x_lstsq), x_dgesv));
+true;
+
+/* === Pseudo-inverse: Moore-Penrose conditions === */
+
+(M : matrix([1,2],[3,4],[5,6]),
+ An : ndarray(M),
+ pinv_num : np_to_matrix(np_pinv(An)),
+ Mf : float(M),
+ /* Condition 1: A * A+ * A = A */
+ c1 : mat_closeto(Mf . pinv_num . Mf, Mf),
+ /* Condition 2: A+ * A * A+ = A+ */
+ c2 : mat_closeto(pinv_num . Mf . pinv_num, pinv_num),
+ /* Condition 3: (A * A+)^T = A * A+ */
+ c3 : mat_closeto(transpose(Mf . pinv_num), Mf . pinv_num),
+ /* Condition 4: (A+ * A)^T = A+ * A */
+ c4 : mat_closeto(transpose(pinv_num . Mf), pinv_num . Mf),
+ c1 and c2 and c3 and c4);
+true;
+
+/* === lstsq minimizes residual === */
+
+(M : matrix([1,1],[1,2],[1,3],[1,4]),
+ b_mat : matrix([2.1],[2.9],[4.1],[4.8]),
+ An : ndarray(M), bn : ndarray(b_mat),
+ [x_opt, res_, rnk_, S_] : np_lstsq(An, bn),
+ resid_opt : np_norm(np_sub(np_matmul(An, x_opt), bn)),
+ /* Try a non-optimal x */
+ x_bad : ndarray(matrix([1],[1])),
+ resid_bad : np_norm(np_sub(np_matmul(An, x_bad), bn)),
+ is(resid_opt <= resid_bad));
+true;
+
+/* === LU: P*A = L*U on random matrix === */
+
+(block([n : 10],
+  An : np_rand([n, n]),
+  [L, U, P] : np_lu(An),
+  PA : np_matmul(P, An),
+  LU : np_matmul(L, U),
+  is(lmax(map(abs, np_to_list(np_sub(PA, LU)))) < 1e-10)));
+true;
+
+/* === det vs Maxima determinant === */
+
+(M : matrix([1,2,3],[0,4,5],[1,0,6]),
+ closeto(np_det(ndarray(M)), float(determinant(M))));
+true;
+
+/* det of identity = 1 */
+(closeto(np_det(np_eye(5)), 1.0));
+true;
+
+/* === inv vs Maxima invert === */
+
+(M : matrix([1,2],[3,5]),
+ np_inv_M : np_to_matrix(np_inv(ndarray(M))),
+ max_inv_M : float(invert(M)),
+ mat_closeto(np_inv_M, max_inv_M));
+true;
+
+(M : matrix([2,1,0],[1,3,1],[0,1,4]),
+ np_inv_M : np_to_matrix(np_inv(ndarray(M))),
+ max_inv_M : float(invert(M)),
+ mat_closeto(np_inv_M, max_inv_M));
+true;
+
+/* === trace vs sum of diagonal === */
+
+(M : matrix([1,2,3],[4,5,6],[7,8,9]),
+ manual_trace : float(M[1,1] + M[2,2] + M[3,3]),
+ closeto(np_trace(ndarray(M)), manual_trace));
+true;
+
+/* === norms via manual computation === */
+
+/* Vector 1-norm = sum(abs(elements)) */
+(v : ndarray([1, -2, 3, -4], [4]),
+ manual : np_sum(np_abs(v)),
+ closeto(np_norm(v, 1), manual));
+true;
+
+/* Vector inf-norm = max(abs(elements)) */
+(v : ndarray([1, -2, 3, -4], [4]),
+ manual : np_max(np_abs(v)),
+ closeto(np_norm(v, inf), manual));
+true;
+
+/* Matrix 2-norm = largest singular value */
+(M : matrix([1,2,3],[4,5,6]),
+ An : ndarray(M),
+ [U, S, Vt] : np_svd(An),
+ closeto(np_norm(An, 2), np_max(S)));
+true;
+
+/* === rank via det === */
+
+/* Full rank: det != 0 */
+(M : matrix([1,2],[3,5]),
+ An : ndarray(M),
+ is(np_rank(An) = 2 and not closeto(np_det(An), 0.0)));
+true;
+
+/* Rank deficient: det = 0 */
+(M : matrix([1,2],[2,4]),
+ An : ndarray(M),
+ is(np_rank(An) = 1 and closeto(np_det(An), 0.0)));
+true;
+
+/* === real/imag reconstruction === */
+
+/* A = real(A) + %i * imag(A) for complex arrays */
+(A : ndarray([1+2*%i, 3-4*%i, -1+%i], [3], complex),
+ R : np_real(A),
+ I : np_imag(A),
+ /* Reconstruct: R + i*I should match A */
+ recon : np_add(ndarray(np_to_list(R), [3], complex),
+                np_scale(%i, ndarray(np_to_list(I), [3], complex))),
+ La : np_to_list(A),
+ Lr : np_to_list(recon),
+ closeto(realpart(La[1]), realpart(Lr[1]))
+   and closeto(imagpart(La[1]), imagpart(Lr[1]))
+   and closeto(realpart(La[2]), realpart(Lr[2]))
+   and closeto(imagpart(La[2]), imagpart(Lr[2]))
+   and closeto(realpart(La[3]), realpart(Lr[3]))
+   and closeto(imagpart(La[3]), imagpart(Lr[3])));
+true;
+
+/* === eigenvalues vs Maxima eigenvalues === */
+
+/* Symmetric matrix: eigenvalues should match */
+(M : matrix([4,1],[1,3]),
+ An : ndarray(M),
+ [vals, vecs] : np_eig(An),
+ eigs_num : sort(np_to_list(vals)),
+ /* Maxima eigenvalues: characteristic polynomial */
+ eigs_sym : sort(map(lambda([x], float(x)), eigenvalues(M)[1])),
+ list_closeto(eigs_num, eigs_sym));
+true;
+
+/* === matmul vs Maxima matrix multiply === */
+
+(M1 : matrix([1,2],[3,4]),
+ M2 : matrix([5,6],[7,8]),
+ np_result : np_to_matrix(np_matmul(ndarray(M1), ndarray(M2))),
+ max_result : float(M1 . M2),
+ mat_closeto(np_result, max_result));
+true;
+
+/* Larger matrix multiply */
+(M1 : matrix([1,2,3],[4,5,6]),
+ M2 : matrix([7,8],[9,10],[11,12]),
+ np_result : np_to_matrix(np_matmul(ndarray(M1), ndarray(M2))),
+ max_result : float(M1 . M2),
+ mat_closeto(np_result, max_result));
+true;
+
+/* === expm via eigendecomposition === */
+
+/* For diagonal matrix, expm(D) = diag(e^d1, e^d2) */
+(D : ndarray(matrix([2, 0], [0, 3])),
+ E : np_expm(D),
+ closeto(np_ref(E, 0, 0), float(%e^2))
+   and closeto(np_ref(E, 1, 1), float(%e^3))
+   and closeto(np_ref(E, 0, 1), 0.0)
+   and closeto(np_ref(E, 1, 0), 0.0));
+true;
+
+/* === sum/mean vs Maxima === */
+
+/* np_sum matches Maxima sum over matrix elements */
+(M : matrix([1,2,3],[4,5,6]),
+ np_s : np_sum(ndarray(M)),
+ max_s : float(apply("+", flatten(args(M)))),
+ closeto(np_s, max_s));
+true;
+
+/* np_sum axis=0 matches column sums */
+(M : matrix([1,2],[3,4],[5,6]),
+ An : ndarray(M),
+ s0 : np_to_list(np_sum(An, 0)),
+ /* column sums: [1+3+5, 2+4+6] = [9, 12] */
+ list_closeto(s0, [9.0, 12.0]));
+true;
+
+/* np_sum axis=1 matches row sums */
+(M : matrix([1,2],[3,4],[5,6]),
+ An : ndarray(M),
+ s1 : np_to_list(np_sum(An, 1)),
+ /* row sums: [1+2, 3+4, 5+6] = [3, 7, 11] */
+ list_closeto(s1, [3.0, 7.0, 11.0]));
+true;

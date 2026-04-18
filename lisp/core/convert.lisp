@@ -14,8 +14,11 @@
                       :double-float)))
        (numerics-wrap (maxima-matrix-to-ndarray a dtype))))
     (($listp a)
-     (let ((shape-arg (car options)))
-       (numerics-wrap (maxima-list-to-ndarray a shape-arg :double-float))))
+     (let* ((dtype (if (member '$complex options) :complex-double-float
+                       :double-float))
+            (shape-arg (find-if (lambda (o) (not (member o '($complex $complex128 $float64 $real))))
+                                options)))
+       (numerics-wrap (maxima-list-to-ndarray a shape-arg dtype))))
     (t (merror "ndarray: expected a matrix or list, got: ~M" a))))
 
 (defun maxima-matrix-to-ndarray (mat dtype)
@@ -34,7 +37,7 @@
           (let ((c 0))
             (dolist (col (cdr row))
               (setf (magicl:tref tensor r c)
-                    (coerce ($float col) element-type))
+                    (maxima-to-lisp-number col dtype))
               (incf c)))
           (incf r)))
       (numerics:make-ndarray tensor :dtype dtype))))
@@ -66,7 +69,7 @@
                                  (c (mod i ncol)))
                             (list r c)))))
           (apply #'(setf magicl:tref)
-                 (coerce ($float el) element-type)
+                 (maxima-to-lisp-number el dtype)
                  tensor indices))
         (incf i)))
     (numerics:make-ndarray tensor :dtype dtype)))
@@ -108,7 +111,7 @@
         ;; 1D: just dump elements in order
         (let ((vals nil))
           (dotimes (i n)
-            (push (magicl:tref tensor i) vals))
+            (push (lisp-to-maxima-number (magicl:tref tensor i)) vals))
           `((mlist simp) ,@(nreverse vals)))
         ;; 2D+: iterate in row-major order
         (let* ((nrow (first shape))
@@ -116,5 +119,5 @@
                (vals nil))
           (dotimes (i nrow)
             (dotimes (j ncol)
-              (push (magicl:tref tensor i j) vals)))
+              (push (lisp-to-maxima-number (magicl:tref tensor i j)) vals)))
           `((mlist simp) ,@(nreverse vals))))))

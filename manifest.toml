@@ -12,4 +12,12 @@ keywords = ["numerics", "linear-algebra", "blas", "lapack", "ndarray"]
 quicklisp_systems = ["magicl", "trivial-garbage", "alexandria", "cffi", "static-vectors"]
 
 [test]
-files = ["rtest_numerics.mac"]
+files = [
+    "tests/test_constructors.mac",
+    "tests/test_linalg.mac",
+    "tests/test_elementwise.mac",
+    "tests/test_slicing.mac",
+    "tests/test_aggregation.mac",
+    "tests/test_complex.mac",
+    "tests/test_crossval.mac",
+]

@@ -4,48 +4,57 @@
 
 (defun $np_sum (a &optional axis)
   "Sum of elements. np_sum(A) => scalar; np_sum(A, 0) => column sums."
-  (let* ((tensor (numerics:ndarray-tensor (numerics-unwrap a))))
+  (let* ((handle (numerics-unwrap a))
+         (tensor (numerics:ndarray-tensor handle))
+         (dtype (numerics:ndarray-dtype handle))
+         (et (numerics-element-type dtype)))
     (if (null axis)
         ;; Total sum: return scalar
         (let ((flat (numerics-flat-array tensor))
-              (sum 0.0d0))
+              (sum (coerce 0 et)))
           (map nil (lambda (x) (incf sum x)) flat)
-          sum)
+          (lisp-to-maxima-number sum))
         ;; Along axis: return ndarray
         (let* ((shape (magicl:shape tensor))
                (nrow (first shape))
                (ncol (second shape)))
           (ecase axis
             (0 ;; Sum across rows => 1D of length ncol
-             (let ((result (magicl:zeros (list ncol) :type 'double-float)))
+             (let ((result (magicl:zeros (list ncol) :type et)))
                (dotimes (j ncol)
-                 (let ((s 0.0d0))
+                 (let ((s (coerce 0 et)))
                    (dotimes (i nrow) (incf s (magicl:tref tensor i j)))
                    (setf (magicl:tref result j) s)))
-               (numerics-wrap (numerics:make-ndarray result))))
+               (numerics-wrap (numerics:make-ndarray result :dtype dtype))))
             (1 ;; Sum across columns => 1D of length nrow
-             (let ((result (magicl:zeros (list nrow) :type 'double-float)))
+             (let ((result (magicl:zeros (list nrow) :type et)))
                (dotimes (i nrow)
-                 (let ((s 0.0d0))
+                 (let ((s (coerce 0 et)))
                    (dotimes (j ncol) (incf s (magicl:tref tensor i j)))
                    (setf (magicl:tref result i) s)))
-               (numerics-wrap (numerics:make-ndarray result)))))))))
+               (numerics-wrap (numerics:make-ndarray result :dtype dtype)))))))))
 
 (defun $np_mean (a &optional axis)
   "Mean of elements. np_mean(A) => scalar; np_mean(A, 0) => column means."
-  (let* ((tensor (numerics:ndarray-tensor (numerics-unwrap a))))
+  (let* ((handle (numerics-unwrap a))
+         (tensor (numerics:ndarray-tensor handle))
+         (dtype (numerics:ndarray-dtype handle)))
     (if (null axis)
-        (/ ($np_sum a) (coerce (magicl:size tensor) 'double-float))
+        (let ((s ($np_sum a))
+              (n (coerce (magicl:size tensor) 'double-float)))
+          (lisp-to-maxima-number
+           (/ (maxima-to-lisp-number s dtype) n)))
         (let* ((shape (magicl:shape tensor))
                (sum-result (numerics-unwrap ($np_sum a axis)))
                (sum-tensor (numerics:ndarray-tensor sum-result))
                (result (magicl:deep-copy-tensor sum-tensor))
                (divisor (coerce (nth axis shape) 'double-float)))
           (magicl:map! (lambda (x) (/ x divisor)) result)
-          (numerics-wrap (numerics:make-ndarray result))))))
+          (numerics-wrap (numerics:make-ndarray result :dtype dtype))))))
 
 (defun $np_min (a &optional axis)
   "Minimum element. np_min(A) => scalar; np_min(A, 0) => column mins."
+  (numerics-require-real a "np_min")
   (let* ((tensor (numerics:ndarray-tensor (numerics-unwrap a))))
     (if (null axis)
         (reduce #'min (numerics-flat-array tensor))
@@ -75,6 +84,7 @@
 
 (defun $np_max (a &optional axis)
   "Maximum element. np_max(A) => scalar; np_max(A, 0) => column maxes."
+  (numerics-require-real a "np_max")
   (let* ((tensor (numerics:ndarray-tensor (numerics-unwrap a))))
     (if (null axis)
         (reduce #'max (numerics-flat-array tensor))
@@ -104,6 +114,7 @@
 
 (defun $np_argmin (a &optional axis)
   "Index of minimum element. np_argmin(A) => integer; np_argmin(A, 0) => 1D ndarray."
+  (numerics-require-real a "np_argmin")
   (let* ((tensor (numerics:ndarray-tensor (numerics-unwrap a))))
     (if (null axis)
         ;; Scalar: flat index
@@ -147,6 +158,7 @@
 
 (defun $np_argmax (a &optional axis)
   "Index of maximum element. np_argmax(A) => integer; np_argmax(A, 0) => 1D ndarray."
+  (numerics-require-real a "np_argmax")
   (let* ((tensor (numerics:ndarray-tensor (numerics-unwrap a))))
     (if (null axis)
         ;; Scalar: flat index
@@ -189,8 +201,10 @@
                (numerics-wrap (numerics:make-ndarray result)))))))))
 
 (defun $np_var (a &optional axis)
-  "Variance. np_var(A) => scalar; np_var(A, 0) => column variances."
-  (let* ((tensor (numerics:ndarray-tensor (numerics-unwrap a))))
+  "Variance. np_var(A) => scalar; np_var(A, 0) => column variances.
+   For complex arrays, computes |x - mean|^2. Result is always real."
+  (let* ((handle (numerics-unwrap a))
+         (tensor (numerics:ndarray-tensor handle)))
     (if (null axis)
         ;; Scalar variance
         (let* ((flat (numerics-flat-array tensor))
@@ -199,10 +213,10 @@
                (sum-sq 0.0d0))
           (map nil (lambda (x)
                      (let ((d (- x mean)))
-                       (incf sum-sq (* d d))))
+                       (incf sum-sq (expt (abs d) 2))))
                flat)
           (/ sum-sq (coerce n 'double-float)))
-        ;; Along axis
+        ;; Along axis — result always real
         (let* ((shape (magicl:shape tensor))
                (nrow (first shape))
                (ncol (second shape)))
@@ -211,13 +225,14 @@
              (let ((result (magicl:empty (list ncol) :type 'double-float
                                                      :layout :column-major)))
                (dotimes (j ncol)
-                 (let ((mean 0.0d0))
+                 (let ((mean (coerce 0 (numerics-element-type
+                                        (numerics:ndarray-dtype handle)))))
                    (dotimes (i nrow) (incf mean (magicl:tref tensor i j)))
                    (setf mean (/ mean (coerce nrow 'double-float)))
                    (let ((sum-sq 0.0d0))
                      (dotimes (i nrow)
                        (let ((d (- (magicl:tref tensor i j) mean)))
-                         (incf sum-sq (* d d))))
+                         (incf sum-sq (expt (abs d) 2))))
                      (setf (magicl:tref result j)
                            (/ sum-sq (coerce nrow 'double-float))))))
                (numerics-wrap (numerics:make-ndarray result))))
@@ -225,13 +240,14 @@
              (let ((result (magicl:empty (list nrow) :type 'double-float
                                                      :layout :column-major)))
                (dotimes (i nrow)
-                 (let ((mean 0.0d0))
+                 (let ((mean (coerce 0 (numerics-element-type
+                                        (numerics:ndarray-dtype handle)))))
                    (dotimes (j ncol) (incf mean (magicl:tref tensor i j)))
                    (setf mean (/ mean (coerce ncol 'double-float)))
                    (let ((sum-sq 0.0d0))
                      (dotimes (j ncol)
                        (let ((d (- (magicl:tref tensor i j) mean)))
-                         (incf sum-sq (* d d))))
+                         (incf sum-sq (expt (abs d) 2))))
                      (setf (magicl:tref result i)
                            (/ sum-sq (coerce ncol 'double-float))))))
                (numerics-wrap (numerics:make-ndarray result)))))))))
@@ -249,15 +265,19 @@
 
 (defun $np_cumsum (a)
   "Cumulative sum (1D): np_cumsum(A)"
-  (let* ((tensor (numerics:ndarray-tensor (numerics-unwrap a)))
+  (let* ((handle (numerics-unwrap a))
+         (tensor (numerics:ndarray-tensor handle))
+         (dtype (numerics:ndarray-dtype handle))
+         (et (numerics-element-type dtype))
          (n (magicl:size tensor))
-         (acc 0.0d0)
+         (acc (coerce 0 et))
          (vals (loop for i below n
                      do (incf acc (magicl:tref tensor i))
                      collect acc)))
     (numerics-wrap
      (numerics:make-ndarray
-      (magicl:from-list vals (list n) :type 'double-float)))))
+      (magicl:from-list vals (list n) :type et)
+      :dtype dtype))))
 
 (defun $np_dot (a b)
   "Dot product of two 1D vectors: np_dot(a, b) => scalar"
@@ -268,14 +288,15 @@
     (unless (= (length sa) (length sb))
       (merror "np_dot: vectors must have same length, got ~D and ~D"
               (length sa) (length sb)))
-    (let ((sum 0.0d0))
+    (let ((sum 0))
       (dotimes (i (length sa))
         (incf sum (* (aref sa i) (aref sb i))))
-      sum)))
+      (lisp-to-maxima-number sum))))
 
 (defun $np_sort (a &optional axis)
   "Sort elements. np_sort(A) => sorted 1D; np_sort(A, 0) => sort columns;
    np_sort(A, 1) => sort rows. Returns a new ndarray (stable ascending sort)."
+  (numerics-require-real a "np_sort")
   (let* ((tensor (numerics:ndarray-tensor (numerics-unwrap a))))
     (if (null axis)
         ;; No axis: flatten, sort, return 1D
@@ -312,6 +333,7 @@
   "Indices that sort elements. np_argsort(A) => 1D indices;
    np_argsort(A, 0) => row indices per column; np_argsort(A, 1) => col indices per row.
    Returns ndarray of indices as double-float (stable ascending sort)."
+  (numerics-require-real a "np_argsort")
   (let* ((tensor (numerics:ndarray-tensor (numerics-unwrap a))))
     (if (null axis)
         ;; No axis: flatten, argsort, return 1D

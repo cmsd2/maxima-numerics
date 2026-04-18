@@ -1,0 +1,287 @@
+/* Tests for linear algebra operations */
+
+(load("tests/test_helpers"), true);
+true;
+
+/* === Basic linear algebra === */
+
+/* matmul: I * A = A */
+(A : ndarray(matrix([1,2],[3,4])),
+ I3 : np_eye(2),
+ B : np_matmul(I3, A),
+ is(np_to_matrix(B) = np_to_matrix(A)));
+true;
+
+/* inv: A * inv(A) ~ I */
+(A : ndarray(matrix([1,2],[3,4])),
+ Ainv : np_inv(A),
+ prod : np_matmul(A, Ainv),
+ M : np_to_matrix(prod),
+ closeto(M[1,1], 1.0) and closeto(M[1,2], 0.0)
+   and closeto(M[2,1], 0.0) and closeto(M[2,2], 1.0));
+true;
+
+/* det */
+(A : ndarray(matrix([1,2],[3,4])),
+ closeto(np_det(A), -2.0));
+true;
+
+/* SVD returns 1D singular values */
+(A : ndarray(matrix([1,0],[0,2],[0,0])),
+ [U, S, Vt] : np_svd(A),
+ is(length(np_shape(U)) = 2 and length(np_shape(S)) = 1));
+true;
+
+/* transpose */
+(A : ndarray(matrix([1,2],[3,4])),
+ T : np_transpose(A),
+ M : np_to_matrix(T),
+ is(M = matrix([1.0, 3.0], [2.0, 4.0])));
+true;
+
+/* np_conj: element-wise conjugate (identity for real arrays) */
+(A : ndarray(matrix([1,2],[3,4])),
+ C : np_conj(A),
+ is(np_to_matrix(C) = matrix([1.0, 2.0], [3.0, 4.0])
+    and np_shape(C) = [2, 2]));
+true;
+
+/* np_ctranspose: conjugate transpose (same as transpose for real) */
+(A : ndarray(matrix([1,2],[3,4])),
+ CT : np_ctranspose(A),
+ is(np_to_matrix(CT) = matrix([1.0, 3.0], [2.0, 4.0])));
+true;
+
+/* trace */
+(A : ndarray(matrix([1,2],[3,4])),
+ closeto(np_trace(A), 5.0));
+true;
+
+/* solve: Ax = b */
+(A : ndarray(matrix([2,1],[5,3])),
+ b : ndarray(matrix([4],[7])),
+ x : np_solve(A, b),
+ check : np_matmul(A, x),
+ M : np_to_matrix(check),
+ Mb : np_to_matrix(b),
+ closeto(M[1,1], Mb[1,1]) and closeto(M[2,1], Mb[2,1]));
+true;
+
+/* === Norm === */
+
+/* Vector 2-norm */
+(v : np_arange(5),
+ closeto(np_norm(v), sqrt(0.0 + 1.0 + 4.0 + 9.0 + 16.0)));
+true;
+
+/* Matrix Frobenius norm */
+(A : ndarray(matrix([1,2],[3,4])),
+ closeto(np_norm(A), sqrt(1.0 + 4.0 + 9.0 + 16.0)));
+true;
+
+/* === LU decomposition === */
+
+/* LU returns L, U, P with correct shapes */
+(A : ndarray(matrix([1,2,3],[4,5,6],[7,8,10])),
+ [L, U, P] : np_lu(A),
+ is(np_shape(L) = [3, 3] and np_shape(U) = [3, 3] and np_shape(P) = [3, 3]));
+true;
+
+/* P*A = L*U */
+(A : ndarray(matrix([1,2,3],[4,5,6],[7,8,10])),
+ [L, U, P] : np_lu(A),
+ PA : np_matmul(P, A),
+ LU : np_matmul(L, U),
+ is(lmax(map(abs, np_to_list(np_sub(PA, LU)))) < 1e-10));
+true;
+
+/* L is lower-triangular with unit diagonal */
+(A : ndarray(matrix([1,2,3],[4,5,6],[7,8,10])),
+ [L, U, P] : np_lu(A),
+ Lm : np_to_matrix(L),
+ is(Lm[1,1] = 1.0 and Lm[2,2] = 1.0 and Lm[3,3] = 1.0
+    and Lm[1,2] = 0.0 and Lm[1,3] = 0.0 and Lm[2,3] = 0.0));
+true;
+
+/* U is upper-triangular */
+(A : ndarray(matrix([1,2,3],[4,5,6],[7,8,10])),
+ [L, U, P] : np_lu(A),
+ Um : np_to_matrix(U),
+ is(Um[2,1] = 0.0 and Um[3,1] = 0.0 and Um[3,2] = 0.0));
+true;
+
+/* === Rank === */
+
+/* Full-rank matrix */
+(A : ndarray(matrix([1,2],[3,4])),
+ is(np_rank(A) = 2));
+true;
+
+/* Rank-deficient matrix */
+(A : ndarray(matrix([1,2],[2,4])),
+ is(np_rank(A) = 1));
+true;
+
+/* === Least squares === */
+
+/* lstsq: exact fit y = x through (1,1), (2,2), (3,3) */
+(AA : ndarray(matrix([1,1],[1,2],[1,3])),
+ bb : ndarray(matrix([1],[2],[3])),
+ [x, res, rnk, S] : np_lstsq(AA, bb),
+ is(np_shape(x) = [2, 1])
+   and closeto(np_ref(x, 0, 0), 0.0)
+   and closeto(np_ref(x, 1, 0), 1.0));
+true;
+
+/* lstsq: residual Ax - b ~ 0 for consistent system */
+(AA : ndarray(matrix([1,1],[1,2],[1,3])),
+ bb : ndarray(matrix([1],[2],[3])),
+ [x, res, rnk, S] : np_lstsq(AA, bb),
+ resid : np_sub(np_matmul(AA, x), bb),
+ is(lmax(map(abs, np_to_list(resid))) < 1e-10));
+true;
+
+/* === Pseudo-inverse === */
+
+/* pinv shape: (3x2) -> (2x3) */
+(AA : ndarray(matrix([1,1],[1,2],[1,3])),
+ Ap : np_pinv(AA),
+ is(np_shape(Ap) = [2, 3]));
+true;
+
+/* pinv: A * pinv(A) * A ~ A */
+(AA : ndarray(matrix([1,1],[1,2],[1,3])),
+ Ap : np_pinv(AA),
+ recon : np_matmul(np_matmul(AA, Ap), AA),
+ is(lmax(map(abs, np_to_list(np_sub(recon, AA)))) < 1e-10));
+true;
+
+/* pinv * b agrees with lstsq */
+(AA : ndarray(matrix([1,1],[1,2],[1,3])),
+ bb : ndarray(matrix([1],[2],[3])),
+ x_pinv : np_matmul(np_pinv(AA), bb),
+ [x_lstsq, res_, rnk_, S_] : np_lstsq(AA, bb),
+ is(lmax(map(abs, np_to_list(np_sub(x_pinv, x_lstsq)))) < 1e-10));
+true;
+
+/* === Matrix exponential === */
+
+/* expm(0) = I */
+(E : np_expm(np_zeros([3, 3])),
+ mat_closeto(np_to_matrix(E), float(ident(3))));
+true;
+
+/* expm(I) = e*I */
+(E : np_expm(np_eye(2)),
+ closeto(np_ref(E, 0, 0), float(%e))
+   and closeto(np_ref(E, 1, 1), float(%e))
+   and closeto(np_ref(E, 0, 1), 0.0));
+true;
+
+/* expm of nilpotent: [[0,1],[0,0]] => [[1,1],[0,1]] */
+(E : np_expm(ndarray(matrix([0, 1], [0, 0]))),
+ M : np_to_matrix(E),
+ mat_closeto(M, matrix([1.0, 1.0], [0.0, 1.0])));
+true;
+
+/* expm(a*I) = e^a * I */
+(a_val : 2.5,
+ E : np_expm(np_scale(a_val, np_eye(3))),
+ expected : float(%e^a_val),
+ closeto(np_ref(E, 0, 0), expected)
+   and closeto(np_ref(E, 1, 1), expected)
+   and closeto(np_ref(E, 2, 2), expected)
+   and closeto(np_ref(E, 0, 1), 0.0));
+true;
+
+/* expm(A) * expm(-A) = I for any A */
+(A : ndarray(matrix([1, 2], [3, 4])),
+ negA : np_neg(A),
+ prod : np_matmul(np_expm(A), np_expm(negA)),
+ mat_closeto(np_to_matrix(prod), float(ident(2))));
+true;
+
+/* === np_lstsq 4-tuple return === */
+
+/* lstsq returns [x, residuals, rank, S] */
+(AA : ndarray(matrix([1,1],[1,2],[1,3])),
+ bb : ndarray(matrix([1],[2],[3])),
+ result : np_lstsq(AA, bb),
+ is(length(result) = 4));
+true;
+
+/* lstsq rank for full-rank 3x2 matrix */
+(AA : ndarray(matrix([1,1],[1,2],[1,3])),
+ bb : ndarray(matrix([1],[2],[3])),
+ [x, res, rnk, S] : np_lstsq(AA, bb),
+ is(rnk = 2));
+true;
+
+/* lstsq singular values are positive and sorted descending */
+(AA : ndarray(matrix([1,1],[1,2],[1,3])),
+ bb : ndarray(matrix([1],[2],[3])),
+ [x, res, rnk, S] : np_lstsq(AA, bb),
+ sl : np_to_list(S),
+ is(length(sl) = 2 and first(sl) >= second(sl) and second(sl) > 0));
+true;
+
+/* lstsq residuals for overdetermined system */
+(AA : ndarray(matrix([1,1],[1,2],[1,3],[1,4])),
+ bb : ndarray(matrix([2.1],[2.9],[4.1],[4.8])),
+ [x, res, rnk, S] : np_lstsq(AA, bb),
+ is(rnk = 2 and np_size(res) = 1 and np_ref(res, 0) > 0));
+true;
+
+/* lstsq residuals empty for exact/underdetermined */
+(AA : ndarray(matrix([1,0],[0,1])),
+ bb : ndarray(matrix([3],[4])),
+ [x, res, rnk, S] : np_lstsq(AA, bb),
+ is(listp(res) and length(res) = 0));
+true;
+
+/* === np_norm with ord === */
+
+/* Vector 1-norm */
+(v : ndarray([1, -2, 3], [3]),
+ closeto(np_norm(v, 1), 6.0));
+true;
+
+/* Vector inf-norm */
+(v : ndarray([1, -2, 3], [3]),
+ closeto(np_norm(v, inf), 3.0));
+true;
+
+/* Vector 2-norm explicit */
+(v : np_arange(5),
+ closeto(np_norm(v, 2), np_norm(v)));
+true;
+
+/* Matrix 1-norm: max absolute column sum */
+(A : ndarray(matrix([1, -7], [2, -3])),
+ closeto(np_norm(A, 1), 10.0));
+true;
+
+/* Matrix inf-norm: max absolute row sum */
+(A : ndarray(matrix([1, -7], [2, -3])),
+ closeto(np_norm(A, inf), 8.0));
+true;
+
+/* Matrix 2-norm: largest singular value */
+(A : ndarray(matrix([1, 0], [0, 2])),
+ closeto(np_norm(A, 2), 2.0));
+true;
+
+/* Matrix fro-norm explicit */
+(A : ndarray(matrix([1, 2], [3, 4])),
+ closeto(np_norm(A, fro), np_norm(A)));
+true;
+
+/* === Error handling === */
+
+/* Singular matrix */
+(errcatch(np_inv(ndarray(matrix([1,0],[0,0])))));
+[];
+
+/* Type error */
+(errcatch(np_inv(42)));
+[];
