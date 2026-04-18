@@ -331,7 +331,7 @@ Conditional selection.
 - For 1D input: returns `[indices]` (a list containing one 1D ndarray).
 - For 2D input: returns `[row_indices, col_indices]` (two 1D ndarrays).
 
-**Form 2: `np_where(condition, x, y)`** — element-wise selection. All three arguments must be ndarrays of the same shape. Returns a new ndarray: takes from `x` where condition is nonzero, from `y` where condition is zero.
+**Form 2: `np_where(condition, x, y)`** — element-wise selection. Returns a new ndarray: takes from `x` where condition is nonzero, from `y` where condition is zero. The arguments `x` and `y` can be ndarrays (same shape as condition) or scalars.
 
 #### Examples
 
@@ -354,6 +354,140 @@ Conditional selection.
 (%i7) np_to_list(np_where(cond, ndarray([10,20,30],[3]),
                                 ndarray([100,200,300],[3])));
 (%o7)               [10.0, 200.0, 30.0]
+(%i8) /* Form 2: scalar broadcasting */
+      np_to_list(np_where(np_greater(A, 2), A, 0));
+(%o8)              [0.0, 0.0, 0.0, 3.0, 0.0]
 ```
 
-See also: `np_map`, `np_sort`
+See also: `np_greater`, `np_extract`, `np_map`
+
+### Function: np_greater (a, b)
+
+Element-wise greater-than comparison.
+
+Returns a new ndarray with 1.0 where `a > b` and 0.0 elsewhere. Supports ndarray + ndarray, ndarray + scalar, and scalar + ndarray.
+
+#### Examples
+
+```maxima
+(%i1) A : ndarray([1, 5, 3, 7, 2], [5]);
+(%o1)            ndarray([5], DOUBLE-FLOAT)
+(%i2) np_to_list(np_greater(A, 3));
+(%o2)           [0.0, 1.0, 0.0, 1.0, 0.0]
+(%i3) B : ndarray([2, 4, 3], [3]);
+(%o3)            ndarray([3], DOUBLE-FLOAT)
+(%i4) np_to_list(np_greater(ndarray([1,5,3],[3]), B));
+(%o4)                  [0.0, 1.0, 0.0]
+```
+
+See also: `np_less`, `np_greater_equal`, `np_equal`
+
+### Function: np_greater_equal (a, b)
+
+Element-wise greater-than-or-equal comparison. Returns 1.0/0.0 ndarray.
+
+See also: `np_greater`, `np_less_equal`
+
+### Function: np_less (a, b)
+
+Element-wise less-than comparison. Returns 1.0/0.0 ndarray.
+
+See also: `np_greater`, `np_less_equal`
+
+### Function: np_less_equal (a, b)
+
+Element-wise less-than-or-equal comparison. Returns 1.0/0.0 ndarray.
+
+See also: `np_less`, `np_greater_equal`
+
+### Function: np_equal (a, b)
+
+Element-wise equality comparison. Returns 1.0/0.0 ndarray.
+
+See also: `np_not_equal`
+
+### Function: np_not_equal (a, b)
+
+Element-wise not-equal comparison. Returns 1.0/0.0 ndarray.
+
+See also: `np_equal`
+
+### Function: np_logical_and (a, b)
+
+Element-wise logical AND. Nonzero is true. Returns 1.0/0.0 ndarray.
+
+#### Examples
+
+```maxima
+(%i1) A : ndarray([1, 0, 1, 0], [4]);
+(%o1)            ndarray([4], DOUBLE-FLOAT)
+(%i2) B : ndarray([1, 1, 0, 0], [4]);
+(%o2)            ndarray([4], DOUBLE-FLOAT)
+(%i3) np_to_list(np_logical_and(A, B));
+(%o3)              [1.0, 0.0, 0.0, 0.0]
+```
+
+See also: `np_logical_or`, `np_logical_not`
+
+### Function: np_logical_or (a, b)
+
+Element-wise logical OR. Nonzero is true. Returns 1.0/0.0 ndarray.
+
+See also: `np_logical_and`, `np_logical_not`
+
+### Function: np_logical_not (a)
+
+Element-wise logical NOT. Nonzero becomes 0.0, zero becomes 1.0.
+
+See also: `np_logical_and`, `np_logical_or`
+
+### Function: np_test (f, a)
+
+Apply a predicate function element-wise, returning a 1.0/0.0 mask ndarray.
+
+The function `f` can be:
+- A named function: `np_test(is_positive, A)` — fast if translated
+- A lambda: `np_test(lambda([x], is(x > 3)), A)` — slow, uses Maxima evaluator
+
+The result of `f(x)` is converted to 1.0 (truthy) or 0.0 (falsy). Numbers, booleans, and Maxima relational expressions are all handled.
+
+**Performance:** Named functions with `translate(f)` are fastest. Lambda expressions use the Maxima evaluator and are much slower for large arrays. For simple comparisons, prefer `np_greater`, `np_less`, etc.
+
+#### Examples
+
+```maxima
+(%i1) gt3(x) := if x > 3 then 1 else 0$
+(%i2) A : ndarray([1, 5, 3, 7, 2], [5]);
+(%o2)            ndarray([5], DOUBLE-FLOAT)
+(%i3) np_to_list(np_test(gt3, A));
+(%o3)           [0.0, 1.0, 0.0, 1.0, 0.0]
+(%i4) /* Lambda form */
+      np_to_list(np_test(lambda([x], is(x > 3)), A));
+(%o4)           [0.0, 1.0, 0.0, 1.0, 0.0]
+```
+
+See also: `np_greater`, `np_extract`, `np_map`
+
+### Function: np_extract (mask, a)
+
+Extract elements where mask is nonzero (boolean indexing).
+
+Returns a 1D ndarray containing the elements of `a` where the corresponding element in `mask` is nonzero. Elements are taken in row-major order. Returns an empty Maxima list `[]` if no elements match.
+
+This is the equivalent of NumPy's `A[mask]`.
+
+#### Examples
+
+```maxima
+(%i1) A : ndarray([10, 20, 30, 40, 50], [5]);
+(%o1)            ndarray([5], DOUBLE-FLOAT)
+(%i2) mask : ndarray([1, 0, 1, 0, 1], [5]);
+(%o2)            ndarray([5], DOUBLE-FLOAT)
+(%i3) np_to_list(np_extract(mask, A));
+(%o3)               [10.0, 30.0, 50.0]
+(%i4) /* With comparison-generated mask: A[A > 25] */
+      np_to_list(np_extract(np_greater(A, 25), A));
+(%o4)               [30.0, 40.0, 50.0]
+```
+
+See also: `np_where`, `np_greater`, `np_test`
