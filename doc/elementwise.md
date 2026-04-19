@@ -270,13 +270,18 @@ See also: `np_mul`, `np_add`
 
 Apply a user-defined function element-wise to an ndarray.
 
-Evaluates `f(x)` for each element `x` in `a` and returns a new ndarray of the same shape. The function `f` must accept a single numeric argument and return a numeric result.
+Evaluates `f(x)` for each element `x` in `a` and returns a new ndarray of the same shape. The function `f` can be a named function or a lambda expression, and must accept a single numeric argument and return a numeric result.
 
-**Performance:** If `f` has been translated with `translate(f)`, `np_map` automatically uses the fast compiled path (calling the CL function directly). Otherwise it falls back to the Maxima evaluator, which is convenient but much slower for large arrays.
+**Performance:** There are three speed tiers, from fastest to slowest:
+
+1. **Translated named function** (`translate(f)` first) — calls the compiled CL function directly. Use this for large arrays.
+2. **Named function** — calls through the Maxima evaluator. Convenient but slower.
+3. **Lambda expression** — also calls through the Maxima evaluator. Most convenient for one-off use, similar speed to an untranslated named function.
 
 Calling forms:
 
-- `np_map(f, A)` -- apply `f` element-wise
+- `np_map(f, A)` -- apply named function `f` element-wise
+- `np_map(lambda([x], expr), A)` -- apply lambda element-wise
 
 #### Examples
 
@@ -291,7 +296,17 @@ Calling forms:
 (%o5)           [1.0, 2.0, 5.0, 10.0, 17.0]
 ```
 
-For best performance on large arrays, translate the function first:
+Using a lambda expression:
+
+```maxima
+(%i1) A : np_arange(5)$
+(%i2) np_to_list(np_map(lambda([x], x^2 + 1), A));
+(%o2)           [1.0, 2.0, 5.0, 10.0, 17.0]
+(%i3) np_to_list(np_map(lambda([x], sin(x) + 1), A));
+(%o3)  [1.0, 1.841, 1.909, 1.141, 0.243]
+```
+
+For best performance on large arrays, use a translated named function:
 
 ```maxima
 (%i1) g(x) := exp(-x^2)$
@@ -306,9 +321,9 @@ See also: `np_map2`, `np_sqrt`, `np_exp`
 
 Apply a binary function element-wise to two ndarrays.
 
-Evaluates `f(x, y)` for corresponding elements of `a` and `b`. Both arrays must have the same shape. Returns a new ndarray.
+Evaluates `f(x, y)` for corresponding elements of `a` and `b`. Both arrays must have the same shape. Returns a new ndarray. The function `f` can be a named function or a lambda expression.
 
-Like `np_map`, uses the fast compiled path if `f` has been translated.
+Like `np_map`, uses the fast compiled path if `f` is a named function that has been translated. Lambda expressions use the slow path.
 
 #### Examples
 
@@ -320,6 +335,9 @@ Like `np_map`, uses the fast compiled path if `f` has been translated.
 (%o3)            ndarray([3], DOUBLE-FLOAT)
 (%i4) np_to_list(np_map2(f, A, B));
 (%o4)                 [1.0, 2.0, 5.0]
+
+(%i5) np_to_list(np_map2(lambda([x, y], x + 2*y), A, B));
+(%o5)                 [2.0, 3.0, 4.0]
 ```
 
 See also: `np_map`, `np_add`, `np_mul`

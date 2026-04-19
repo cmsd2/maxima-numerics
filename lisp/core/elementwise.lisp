@@ -167,9 +167,23 @@ For complex input, returns the magnitude as a double-float ndarray."
 
 ;;; Mapping user functions
 
+(defun numerics-lambda-p (f)
+  "Check if F is a Maxima lambda expression.
+   Unsimplified: (($LAMBDA) ...), simplified: ((LAMBDA SIMP) ...)"
+  (and (consp f) (consp (car f))
+       (or (eq (caar f) '$lambda) (eq (caar f) 'lambda))))
+
+(defun numerics-apply-fn (f arg &rest more-args)
+  "Apply a Maxima function F to arguments.
+   F can be a symbol (function name) or a lambda expression."
+  (if (symbolp f)
+      (apply #'mfuncall f arg more-args)
+      (mlambda f (cons arg more-args) t nil '$np_map)))
+
 (defun $np_map (f a)
   "Apply a function element-wise: np_map(f, A).
-   If f has been translate()'d, uses the fast compiled path.
+   f can be a function name or a lambda expression.
+   If f is a named function that has been translate()'d, uses the fast compiled path.
    Otherwise falls back to the Maxima evaluator (slow)."
   (let* ((handle (numerics-unwrap a))
          (tensor (numerics:ndarray-tensor handle))
@@ -177,10 +191,12 @@ For complex input, returns the magnitude as a double-float ndarray."
          (et (numerics-element-type dtype))
          (shape (magicl:shape tensor))
          (n (magicl:size tensor))
-         (fname (if (symbolp f) f
-                    (merror "np_map: expected a function name, got: ~M" f))))
+         (is-lambda (numerics-lambda-p f))
+         (fname (cond ((symbolp f) f)
+                      (is-lambda nil)
+                      (t (merror "np_map: expected a function name or lambda, got: ~M" f)))))
     ;; Check if the function has been translated (has a CL function)
-    (if (and (get fname 'translated)
+    (if (and fname (get fname 'translated)
              (fboundp fname))
         ;; Fast path: call the CL function directly via magicl:map!
         (let* ((cl-fn (symbol-function fname))
@@ -195,7 +211,7 @@ For complex input, returns the magnitude as a double-float ndarray."
           (if (= (length shape) 1)
               (dotimes (i n)
                 (let* ((x (magicl:tref tensor i))
-                       (y (mfuncall fname (lisp-to-maxima-number x))))
+                       (y (numerics-apply-fn f (lisp-to-maxima-number x))))
                   (setf (magicl:tref result i)
                         (maxima-to-lisp-number y dtype))))
               (let ((nrow (first shape))
@@ -203,15 +219,16 @@ For complex input, returns the magnitude as a double-float ndarray."
                 (dotimes (i nrow)
                   (dotimes (j ncol)
                     (let* ((x (magicl:tref tensor i j))
-                           (y (mfuncall fname (lisp-to-maxima-number x))))
+                           (y (numerics-apply-fn f (lisp-to-maxima-number x))))
                       (setf (magicl:tref result i j)
                             (maxima-to-lisp-number y dtype)))))))
           (numerics-wrap (numerics:make-ndarray result :dtype dtype))))))
 
 (defun $np_map2 (f a b)
   "Apply a binary function element-wise: np_map2(f, A, B).
+   f can be a function name or a lambda expression.
    Both arrays must have the same shape.
-   If f has been translate()'d, uses the fast compiled path."
+   If f is a named function that has been translate()'d, uses the fast compiled path."
   (let* ((ha (numerics-unwrap a))
          (hb (numerics-unwrap b))
          (ta (numerics:ndarray-tensor ha))
@@ -221,13 +238,15 @@ For complex input, returns the magnitude as a double-float ndarray."
                  (numerics:ndarray-dtype hb)))
          (et (numerics-element-type dtype))
          (shape (magicl:shape ta))
-         (fname (if (symbolp f) f
-                    (merror "np_map2: expected a function name, got: ~M" f))))
+         (is-lambda (numerics-lambda-p f))
+         (fname (cond ((symbolp f) f)
+                      (is-lambda nil)
+                      (t (merror "np_map2: expected a function name or lambda, got: ~M" f)))))
     (unless (equal shape (magicl:shape tb))
       (merror "np_map2: shape mismatch: ~A vs ~A" shape (magicl:shape tb)))
     (let ((result (magicl:empty shape :type et
                                       :layout :column-major)))
-      (if (and (get fname 'translated) (fboundp fname))
+      (if (and fname (get fname 'translated) (fboundp fname))
           ;; Fast path
           (let ((cl-fn (symbol-function fname)))
             (if (= (length shape) 1)
@@ -253,7 +272,7 @@ For complex input, returns the magnitude as a double-float ndarray."
               (dotimes (i (magicl:size ta))
                 (setf (magicl:tref result i)
                       (maxima-to-lisp-number
-                       (mfuncall fname
+                       (numerics-apply-fn f
                                  (lisp-to-maxima-number (magicl:tref ta i))
                                  (lisp-to-maxima-number (magicl:tref tb i)))
                        dtype)))
@@ -263,7 +282,7 @@ For complex input, returns the magnitude as a double-float ndarray."
                   (dotimes (j ncol)
                     (setf (magicl:tref result i j)
                           (maxima-to-lisp-number
-                           (mfuncall fname
+                           (numerics-apply-fn f
                                      (lisp-to-maxima-number (magicl:tref ta i j))
                                      (lisp-to-maxima-number (magicl:tref tb i j)))
                            dtype)))))))
