@@ -1096,7 +1096,7 @@
       "type": "Function",
       "signature": "np_map(f, a)",
       "summary": "Apply a user-defined function element-wise to an ndarray.",
-      "body_md": "Apply a user-defined function element-wise to an ndarray.\n\nEvaluates `f(x)` for each element `x` in `a` and returns a new ndarray of the same shape. The function `f` must accept a single numeric argument and return a numeric result.\n\n**Performance:** If `f` has been translated with `translate(f)`, `np_map` automatically uses the fast compiled path (calling the CL function directly). Otherwise it falls back to the Maxima evaluator, which is convenient but much slower for large arrays.\n\nCalling forms:\n\n- `np_map(f, A)` -- apply `f` element-wise\n\n#### Examples\n\n```maxima\n(%i1) f(x) := x^2 + 1$\n(%i2) A : np_arange(5);\n(%o2)            ndarray([5], DOUBLE-FLOAT)\n(%i3) np_to_list(np_map(f, A));\n(%o3)           [1.0, 2.0, 5.0, 10.0, 17.0]\n(%i4) translate(f)$\n(%i5) np_to_list(np_map(f, A));\n(%o5)           [1.0, 2.0, 5.0, 10.0, 17.0]\n```\n\nFor best performance on large arrays, translate the function first:\n\n```maxima\n(%i1) g(x) := exp(-x^2)$\n(%i2) translate(g)$\n(%i3) A : np_linspace(-3, 3, 10000)$\n(%i4) B : np_map(g, A)$\n```\n\nSee also: `np_map2`, `np_sqrt`, `np_exp`",
+      "body_md": "Apply a user-defined function element-wise to an ndarray.\n\nEvaluates `f(x)` for each element `x` in `a` and returns a new ndarray of the same shape. The function `f` can be a named function or a lambda expression, and must accept a single numeric argument and return a numeric result.\n\n**Performance:** There are three speed tiers, from fastest to slowest:\n\n1. **Translated named function** (`translate(f)` first) — calls the compiled CL function directly. Use this for large arrays.\n2. **Named function** — calls through the Maxima evaluator. Convenient but slower.\n3. **Lambda expression** — also calls through the Maxima evaluator. Most convenient for one-off use, similar speed to an untranslated named function.\n\nCalling forms:\n\n- `np_map(f, A)` -- apply named function `f` element-wise\n- `np_map(lambda([x], expr), A)` -- apply lambda element-wise\n\n#### Examples\n\n```maxima\n(%i1) f(x) := x^2 + 1$\n(%i2) A : np_arange(5);\n(%o2)            ndarray([5], DOUBLE-FLOAT)\n(%i3) np_to_list(np_map(f, A));\n(%o3)           [1.0, 2.0, 5.0, 10.0, 17.0]\n(%i4) translate(f)$\n(%i5) np_to_list(np_map(f, A));\n(%o5)           [1.0, 2.0, 5.0, 10.0, 17.0]\n```\n\nUsing a lambda expression:\n\n```maxima\n(%i1) A : np_arange(5)$\n(%i2) np_to_list(np_map(lambda([x], x^2 + 1), A));\n(%o2)           [1.0, 2.0, 5.0, 10.0, 17.0]\n(%i3) np_to_list(np_map(lambda([x], sin(x) + 1), A));\n(%o3)  [1.0, 1.841, 1.909, 1.141, 0.243]\n```\n\nFor best performance on large arrays, use a translated named function:\n\n```maxima\n(%i1) g(x) := exp(-x^2)$\n(%i2) translate(g)$\n(%i3) A : np_linspace(-3, 3, 10000)$\n(%i4) B : np_map(g, A)$\n```\n\nSee also: `np_map2`, `np_sqrt`, `np_exp`",
       "examples": [
         {
           "input": "f(x) := x^2 + 1$",
@@ -1117,6 +1117,18 @@
         {
           "input": "np_to_list(np_map(f, A));",
           "output": "[1.0, 2.0, 5.0, 10.0, 17.0]"
+        },
+        {
+          "input": "A : np_arange(5)$",
+          "output": ""
+        },
+        {
+          "input": "np_to_list(np_map(lambda([x], x^2 + 1), A));",
+          "output": "[1.0, 2.0, 5.0, 10.0, 17.0]"
+        },
+        {
+          "input": "np_to_list(np_map(lambda([x], sin(x) + 1), A));",
+          "output": "[1.0, 1.841, 1.909, 1.141, 0.243]"
         },
         {
           "input": "g(x) := exp(-x^2)$",
@@ -1146,7 +1158,7 @@
       "type": "Function",
       "signature": "np_map2(f, a, b)",
       "summary": "Apply a binary function element-wise to two ndarrays.",
-      "body_md": "Apply a binary function element-wise to two ndarrays.\n\nEvaluates `f(x, y)` for corresponding elements of `a` and `b`. Both arrays must have the same shape. Returns a new ndarray.\n\nLike `np_map`, uses the fast compiled path if `f` has been translated.\n\n#### Examples\n\n```maxima\n(%i1) f(x, y) := x^2 + y^2$\n(%i2) A : np_arange(3);\n(%o2)            ndarray([3], DOUBLE-FLOAT)\n(%i3) B : np_ones(3);\n(%o3)            ndarray([3], DOUBLE-FLOAT)\n(%i4) np_to_list(np_map2(f, A, B));\n(%o4)                 [1.0, 2.0, 5.0]\n```\n\nSee also: `np_map`, `np_add`, `np_mul`",
+      "body_md": "Apply a binary function element-wise to two ndarrays.\n\nEvaluates `f(x, y)` for corresponding elements of `a` and `b`. Both arrays must have the same shape. Returns a new ndarray. The function `f` can be a named function or a lambda expression.\n\nLike `np_map`, uses the fast compiled path if `f` is a named function that has been translated. Lambda expressions use the slow path.\n\n#### Examples\n\n```maxima\n(%i1) f(x, y) := x^2 + y^2$\n(%i2) A : np_arange(3);\n(%o2)            ndarray([3], DOUBLE-FLOAT)\n(%i3) B : np_ones(3);\n(%o3)            ndarray([3], DOUBLE-FLOAT)\n(%i4) np_to_list(np_map2(f, A, B));\n(%o4)                 [1.0, 2.0, 5.0]\n\n(%i5) np_to_list(np_map2(lambda([x, y], x + 2*y), A, B));\n(%o5)                 [2.0, 3.0, 4.0]\n```\n\nSee also: `np_map`, `np_add`, `np_mul`",
       "examples": [
         {
           "input": "f(x, y) := x^2 + y^2$",
@@ -1163,6 +1175,10 @@
         {
           "input": "np_to_list(np_map2(f, A, B));",
           "output": "[1.0, 2.0, 5.0]"
+        },
+        {
+          "input": "np_to_list(np_map2(lambda([x, y], x + 2*y), A, B));",
+          "output": "[2.0, 3.0, 4.0]"
         }
       ],
       "see_also": [
