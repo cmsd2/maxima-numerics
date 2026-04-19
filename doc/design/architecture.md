@@ -386,6 +386,116 @@ When `load("numerics")` runs in Maxima:
 
 ---
 
+## Interoperability with Maxima Packages
+
+Maxima ships several numerical packages in `share/`. They all follow the same
+data flow: Maxima expression → `coerce-float-fun` / `$float` → Lisp
+`double-float` arrays → solver → Maxima lists/matrices. The conversion cost is
+paid on every call. The ndarray handle sits naturally at the "Lisp double-float
+arrays" stage, so interop can bypass marshalling in both directions.
+
+### FFTPACK5 — best candidate
+
+FFTPACK5 (`share/fftpack5/`) uses `(simple-array (complex double-float) (*))`
+internally — exactly our complex ndarray storage format. The lower-level
+functions (`fftpack5:cfft`, `fftpack5:inverse-cfft`, `fftpack5:rfft`,
+`fftpack5:inverse-rfft`) are exported and accept raw CL arrays directly. An
+`np_fft` / `np_ifft` pair can extract `magicl:storage` from the ndarray, call
+these functions, and wrap the result — no modification to `share/fftpack5/`
+required.
+
+This enables natural workflows like windowing, spectral analysis, and filtering
+entirely in ndarray space, eliminating two marshalling steps per call.
+
+### LAPACK — already superseded
+
+Our magicl wrapper calls the same BLAS/LAPACK routines that `share/lapack/`
+wraps via f2cl, but without per-call marshalling. There is no need to interop;
+our API replaces theirs. The one feature `share/lapack/` exposes that we don't
+is `$dgemm`'s full `alpha*A*B + beta*C` interface — a niche use case.
+
+### DISTRIB — vectorization opportunity
+
+`share/distrib/` operates on scalars: `pdf_normal(x, mu, sigma)` returns a
+single float, and `random_normal(0, 1, 100)` returns a Maxima list. Vectorized
+versions (`np_random_normal(mu, sigma, shape)` returning an ndarray, or
+element-wise PDF/CDF evaluation over ndarrays) would be valuable but don't
+require deep interop — they'd be new functions reusing the same underlying RNG
+and distribution math.
+
+### ODEPACK — trajectory output
+
+`share/odepack/` returns ODE solutions step-by-step as Maxima lists. Wrapping
+the output as a 2D ndarray (rows = timesteps, columns = state variables) would
+make downstream computation (plotting, spectral analysis, parameter fitting)
+more natural. The solver's inner loop compiles Maxima expressions via
+`coerce-float-fun`, so the bottleneck is expression evaluation, not data format.
+
+### NUMERICALIO — direct file loading
+
+`share/numericalio/` reads CSV and binary files into Maxima matrices. Binary
+format uses IEEE 754 `double-float` — the same storage as ndarray — so direct
+loading via `read-sequence` into ndarray storage is possible with zero parsing
+overhead. CSV loading could similarly bypass Maxima matrix construction.
+
+### MINPACK / COBYLA / LBFGS — limited benefit
+
+The optimization packages (`share/minpack/`, `share/cobyla/`, `share/lbfgs/`)
+pass scalar objectives and small parameter vectors. Their bottleneck is
+evaluating Maxima expressions in the inner loop, not data format conversion.
+Accepting ndarray initial guesses or returning ndarray solutions would be a
+minor convenience but not a performance win.
+
+### Integration approach
+
+The bundled packages live in Maxima's `share/` tree and are maintained upstream.
+Modifying them would require either contributing changes upstream or maintaining
+a fork — neither is practical for an external package. All interop must therefore
+be non-invasive: numerics wraps the bundled packages from the outside, without
+modifying their source.
+
+This is feasible because the packages that matter most expose their internals at
+the right level:
+
+- **FFTPACK5**: Exports `cfft`, `inverse-cfft`, `rfft`, `inverse-rfft` which
+  accept raw CL arrays. We call these directly with `magicl:storage`.
+- **DISTRIB**: The RNG and distribution functions are callable from Lisp. We
+  write new vectorized wrappers that loop internally.
+- **NUMERICALIO**: We implement our own file I/O rather than wrapping theirs.
+  Binary `double-float` I/O is trivial; CSV parsing is independent.
+- **ODEPACK**: We call `dlsode_step` at the Maxima level and collect results
+  into an ndarray. The per-step output is a small Maxima list (one per state
+  variable), so the marshalling cost is negligible.
+- **MINPACK / COBYLA / LBFGS**: We convert ndarray initial guesses to Maxima
+  lists at the boundary, call the existing Maxima functions, and convert back.
+  Parameter vectors are small, so this is not a bottleneck.
+
+### Performance expectations
+
+The ndarray type eliminates marshalling overhead — but that only matters when
+marshalling is the bottleneck. The packages above fall into two categories:
+
+**Data-dominated** (FFTPACK5, NUMERICALIO, LAPACK): The solver operates on raw
+arrays and the cost is proportional to data size. ndarray interop eliminates
+O(n) marshalling per call, which is significant for large arrays and repeated
+operations. FFTPACK5 in particular benefits because FFT workflows typically
+chain multiple transforms with windowing and filtering between them.
+
+**Evaluation-dominated** (ODEPACK, MINPACK, COBYLA, LBFGS): The inner loop
+evaluates Maxima expressions compiled via `coerce-float-fun`. Each solver
+iteration invokes a Lisp closure that evaluates the user's formula — the cost
+is in the expression evaluation, not in moving data. For these packages, ndarray
+wrappers improve ergonomics (collect results into a 2D ndarray, pass ndarray
+initial conditions) but don't change the computational complexity. The
+marshalling overhead at the boundary is O(n) for n state variables, which is
+typically small (tens, not millions).
+
+In short: ndarray interop is a performance win where the data is large and the
+solver touches it directly (FFT, file I/O, BLAS). Where the solver's inner loop
+evaluates symbolic expressions, the benefit is API convenience, not speed.
+
+---
+
 ## Reference: Key Maxima Files
 
 These files in the Maxima source tree informed the design patterns used here:
