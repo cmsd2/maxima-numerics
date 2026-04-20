@@ -11,7 +11,7 @@
          (dtype (numerics-result-dtype
                  (numerics:ndarray-dtype ha)
                  (numerics:ndarray-dtype hb))))
-    (numerics-wrap (numerics:make-ndarray (magicl:@ ta tb) :dtype dtype))))
+    (numerics-wrap (numerics:make-ndarray (numerics-with-lapack (magicl:@ ta tb)) :dtype dtype))))
 
 (defun $np_inv (a)
   "Matrix inverse: np_inv(A)"
@@ -19,14 +19,14 @@
          (ta (numerics:ndarray-tensor ha))
          (dtype (numerics:ndarray-dtype ha)))
     (handler-case
-        (numerics-wrap (numerics:make-ndarray (magicl:inv ta) :dtype dtype))
+        (numerics-wrap (numerics:make-ndarray (numerics-with-lapack (magicl:inv ta)) :dtype dtype))
       (error (e)
         (merror "np_inv: singular matrix or error: ~A" e)))))
 
 (defun $np_det (a)
   "Determinant: np_det(A) => scalar"
   (lisp-to-maxima-number
-   (magicl:det (numerics:ndarray-tensor (numerics-unwrap a)))))
+   (numerics-with-lapack (magicl:det (numerics:ndarray-tensor (numerics-unwrap a))))))
 
 (defun $np_solve (a b)
   "Solve Ax = b: np_solve(A, b)"
@@ -38,18 +38,20 @@
                  (numerics:ndarray-dtype ha)
                  (numerics:ndarray-dtype hb))))
     (handler-case
-        (numerics-wrap (numerics:make-ndarray (magicl:linear-solve ta tb) :dtype dtype))
+        (numerics-wrap (numerics:make-ndarray (numerics-with-lapack (magicl:linear-solve ta tb)) :dtype dtype))
       (error (e)
         (merror "np_solve: ~A" e)))))
 
 (defun $np_svd (a)
   "SVD: np_svd(A) => [U, S, Vt]
-   S is returned as a 1D ndarray of singular values (not a diagonal matrix).
+   Returns the economy (reduced) SVD so that A = U * diag(S) * Vt works
+   directly for any m*n matrix.  U is m*k, S is length k, Vt is k*n
+   where k = min(m, n).
    S is always real (double-float) even for complex inputs."
   (let* ((ha (numerics-unwrap a))
          (ta (numerics:ndarray-tensor ha))
          (dtype (numerics:ndarray-dtype ha)))
-    (multiple-value-bind (u sigma vt) (magicl:svd ta)
+    (multiple-value-bind (u sigma vt) (numerics-with-lapack (magicl:svd ta :reduced t))
       ;; magicl returns sigma as a diagonal matrix; extract the diagonal
       ;; as a 1D vector of singular values (always real)
       (let* ((shape (magicl:shape sigma))
@@ -82,7 +84,7 @@
   (let* ((ha (numerics-unwrap a))
          (ta (numerics:ndarray-tensor ha))
          (input-complex (eq (numerics:ndarray-dtype ha) :complex-double-float)))
-    (multiple-value-bind (vals vecs) (magicl:eig ta)
+    (multiple-value-bind (vals vecs) (numerics-with-lapack (magicl:eig ta))
       ;; Use complex output if input was complex or eigenvalues have
       ;; non-negligible imaginary parts
       (let* ((n (length vals))
@@ -128,12 +130,67 @@
               ,(numerics-wrap (numerics:make-ndarray v-vec :dtype out-dtype))
               ,(numerics-wrap (numerics:make-ndarray out-vecs :dtype out-dtype)))))))))
 
+(defun numerics-qr-householder (a-tensor)
+  "QR decomposition via Householder reflections for double-float matrices.
+   Works for any m*n matrix including wide (m < n) matrices that magicl's
+   LAPACK wrapper cannot handle.  Returns (values Q R) where Q is m*m
+   orthogonal and R is m*n upper trapezoidal."
+  (let* ((m (magicl:nrows a-tensor))
+         (n (magicl:ncols a-tensor))
+         (p (min m n))
+         (r (magicl:deep-copy-tensor a-tensor))
+         (q (magicl:eye m :type 'double-float :layout :column-major)))
+    (dotimes (k p)
+      (let* ((len (- m k))
+             (v (make-array len :element-type 'double-float
+                                :initial-element 0.0d0)))
+        ;; Extract sub-column R[k:m, k]
+        (dotimes (i len) (setf (aref v i) (magicl:tref r (+ k i) k)))
+        (let ((alpha (sqrt (loop for vi across v sum (* vi vi)))))
+          (when (> alpha (* 100 double-float-epsilon))
+            ;; v[0] += sign(v[0]) * alpha
+            (if (>= (aref v 0) 0.0d0)
+                (incf (aref v 0) alpha)
+                (decf (aref v 0) alpha))
+            ;; Normalize v
+            (let ((nv (sqrt (loop for vi across v sum (* vi vi)))))
+              (dotimes (i len) (setf (aref v i) (/ (aref v i) nv)))
+              ;; H = I - 2*v*v^T; apply to R from left
+              (dotimes (j n)
+                (let ((d 0.0d0))
+                  (dotimes (i len)
+                    (incf d (* (aref v i) (magicl:tref r (+ k i) j))))
+                  (setf d (* 2.0d0 d))
+                  (dotimes (i len)
+                    (decf (magicl:tref r (+ k i) j) (* (aref v i) d)))))
+              ;; Apply to Q from right
+              (dotimes (i m)
+                (let ((d 0.0d0))
+                  (dotimes (j len)
+                    (incf d (* (magicl:tref q i (+ k j)) (aref v j))))
+                  (setf d (* 2.0d0 d))
+                  (dotimes (j len)
+                    (decf (magicl:tref q i (+ k j)) (* d (aref v j)))))))))))
+    ;; Force positive diagonal (match LAPACK/magicl convention)
+    (dotimes (k p)
+      (when (minusp (magicl:tref r k k))
+        (dotimes (j n) (setf (magicl:tref r k j) (- (magicl:tref r k j))))
+        (dotimes (i m) (setf (magicl:tref q i k) (- (magicl:tref q i k))))))
+    (values q r)))
+
 (defun $np_qr (a)
-  "QR decomposition: np_qr(A) => [Q, R]"
+  "QR decomposition: np_qr(A) => [Q, R]
+   Works for any m*n matrix.  Uses LAPACK for tall/square matrices (m >= n)
+   and Householder reflections for wide matrices (m < n)."
   (let* ((ha (numerics-unwrap a))
          (ta (numerics:ndarray-tensor ha))
-         (dtype (numerics:ndarray-dtype ha)))
-    (multiple-value-bind (q r) (magicl:qr ta)
+         (dtype (numerics:ndarray-dtype ha))
+         (m (magicl:nrows ta))
+         (n (magicl:ncols ta)))
+    (multiple-value-bind (q r)
+        (if (<= n m)
+            (numerics-with-lapack (magicl:qr ta))
+            (numerics-with-lapack (numerics-qr-householder ta)))
       `((mlist simp)
         ,(numerics-wrap (numerics:make-ndarray q :dtype dtype))
         ,(numerics-wrap (numerics:make-ndarray r :dtype dtype))))))
@@ -150,7 +207,7 @@
          (m (first (magicl:shape ta)))
          (n (second (magicl:shape ta)))
          (k (min m n)))
-    (multiple-value-bind (lu-packed ipiv) (magicl:lu ta)
+    (multiple-value-bind (lu-packed ipiv) (numerics-with-lapack (magicl:lu ta))
       ;; Extract L: lower triangle of lu-packed with 1s on diagonal
       (let ((l-mat (magicl:zeros (list m k) :type et
                                              :layout :column-major))
@@ -236,7 +293,7 @@
                mx))
             ((eql ord 2)
              ;; 2-norm (spectral): largest singular value
-             (let* ((sigma (nth-value 1 (magicl:svd tensor)))
+             (let* ((sigma (nth-value 1 (numerics-with-lapack (magicl:svd tensor))))
                     (s-arr (numerics-svd-values sigma)))
                (reduce #'max s-arr)))
             ((or (eql ord '$inf) (eql ord '$INF))
@@ -252,7 +309,7 @@
 (defun $np_rank (a)
   "Numerical rank via SVD: np_rank(A)"
   (let* ((ta (numerics:ndarray-tensor (numerics-unwrap a)))
-         (sigma (nth-value 1 (magicl:svd ta)))
+         (sigma (nth-value 1 (numerics-with-lapack (magicl:svd ta))))
          (s-arr (numerics-svd-values sigma))
          (tol (* (max (first (magicl:shape ta))
                       (second (magicl:shape ta)))
@@ -460,7 +517,7 @@
                  (numerics:ndarray-dtype ha)
                  (numerics:ndarray-dtype hb)))
          (et (numerics-element-type dtype)))
-    (multiple-value-bind (u sigma vt) (magicl:svd ta)
+    (multiple-value-bind (u sigma vt) (numerics-with-lapack (magicl:svd ta))
       (let* ((ut (magicl:conjugate-transpose u))
              (v (magicl:conjugate-transpose vt))
              (utb (magicl:@ ut tb))
@@ -516,7 +573,7 @@
          (ta (numerics:ndarray-tensor ha))
          (dtype (numerics:ndarray-dtype ha))
          (et (numerics-element-type dtype)))
-    (multiple-value-bind (u sigma vt) (magicl:svd ta)
+    (multiple-value-bind (u sigma vt) (numerics-with-lapack (magicl:svd ta))
       (let* ((v (magicl:conjugate-transpose vt))
              (ut (magicl:conjugate-transpose u))
              (s-arr (numerics-svd-values sigma))

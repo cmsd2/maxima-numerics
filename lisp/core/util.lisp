@@ -27,6 +27,21 @@
                     :element-type (array-element-type arr)
                     :displaced-to arr))))
 
+;;; LAPACK float-trap masking
+;;; SBCL traps on overflow by default, but LAPACK routines (e.g. dgeev) may
+;;; produce intermediate overflows that are harmless.  magicl's with-blapack
+;;; masks :divide-by-zero and :invalid but NOT :overflow, so we provide our
+;;; own wrapper that also masks :overflow.
+
+#+sbcl
+(defmacro numerics-with-lapack (&body body)
+  `(sb-int:with-float-traps-masked (:overflow :divide-by-zero :invalid)
+     ,@body))
+
+#-sbcl
+(defmacro numerics-with-lapack (&body body)
+  `(magicl:with-blapack ,@body))
+
 ;;; Dtype helpers for complex number support
 
 (defun numerics-element-type (dtype)

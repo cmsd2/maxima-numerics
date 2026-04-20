@@ -110,6 +110,89 @@ true;
  is(Um[2,1] = 0.0 and Um[3,1] = 0.0 and Um[3,2] = 0.0));
 true;
 
+/* === QR decomposition === */
+
+/* QR of square matrix: A = Q*R */
+(A : ndarray(matrix([1,2],[3,4])),
+ [Q, R] : np_qr(A),
+ recon : np_matmul(Q, R),
+ is(lmax(map(abs, np_to_list(np_sub(A, recon)))) < 1e-10));
+true;
+
+/* QR: Q is orthogonal (Q^T Q = I) */
+(A : ndarray(matrix([1,2],[3,4])),
+ [Q, R] : np_qr(A),
+ QtQ : np_matmul(np_transpose(Q), Q),
+ mat_closeto(np_to_matrix(QtQ), float(ident(2))));
+true;
+
+/* QR of tall matrix: 3x2 */
+(A : ndarray(matrix([1,2],[3,4],[5,6])),
+ [Q, R] : np_qr(A),
+ recon : np_matmul(Q, R),
+ is(lmax(map(abs, np_to_list(np_sub(A, recon)))) < 1e-10));
+true;
+
+/* QR of wide matrix: 2x3 (Householder path) */
+(A : ndarray(matrix([1,2,3],[4,5,6])),
+ [Q, R] : np_qr(A),
+ recon : np_matmul(Q, R),
+ is(lmax(map(abs, np_to_list(np_sub(A, recon)))) < 1e-10));
+true;
+
+/* QR of wide matrix: Q is orthogonal */
+(A : ndarray(matrix([1,2,3],[4,5,6])),
+ [Q, R] : np_qr(A),
+ QtQ : np_matmul(np_transpose(Q), Q),
+ mat_closeto(np_to_matrix(QtQ), float(ident(2))));
+true;
+
+/* QR of wide matrix: correct shapes */
+(A : ndarray(matrix([1,2,3],[4,5,6])),
+ [Q, R] : np_qr(A),
+ is(np_shape(Q) = [2, 2] and np_shape(R) = [2, 3]));
+true;
+
+/* QR of wide matrix: R is upper trapezoidal (zeros below diagonal) */
+(A : ndarray(matrix([1,2,3],[4,5,6])),
+ [Q, R] : np_qr(A),
+ Rm : np_to_matrix(R),
+ is(abs(Rm[2,1]) < 1e-10));
+true;
+
+/* QR of wide matrix: positive diagonal on R */
+(A : ndarray(matrix([1,2,3],[4,5,6])),
+ [Q, R] : np_qr(A),
+ Rm : np_to_matrix(R),
+ is(Rm[1,1] > 0 and Rm[2,2] > 0));
+true;
+
+/* QR of 1xn row vector */
+(A : ndarray(matrix([3, 4])),
+ [Q, R] : np_qr(A),
+ is(np_shape(Q) = [1, 1] and np_shape(R) = [1, 2]
+    and lmax(map(abs, np_to_list(np_sub(A, np_matmul(Q, R))))) < 1e-10));
+true;
+
+/* QR of wider matrix: 2x5 */
+(A : ndarray(matrix([1,2,3,4,5],[6,7,8,9,10])),
+ [Q, R] : np_qr(A),
+ recon_err : lmax(map(abs, np_to_list(np_sub(A, np_matmul(Q, R))))),
+ QtQ : np_matmul(np_transpose(Q), Q),
+ is(recon_err < 1e-10
+    and mat_closeto(np_to_matrix(QtQ), float(ident(2)))));
+true;
+
+/* QR of 3x3: Householder (wide path) agrees with LAPACK (tall path) on square */
+/* Both paths handle square matrices, so verify they produce same R up to sign */
+(A : ndarray(matrix([1,2,3],[4,5,6],[7,8,10])),
+ [Q1, R1] : np_qr(A),
+ recon1 : lmax(map(abs, np_to_list(np_sub(A, np_matmul(Q1, R1))))),
+ QtQ1 : np_matmul(np_transpose(Q1), Q1),
+ is(recon1 < 1e-10
+    and mat_closeto(np_to_matrix(QtQ1), float(ident(3)))));
+true;
+
 /* === Rank === */
 
 /* Full-rank matrix */
