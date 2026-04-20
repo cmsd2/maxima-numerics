@@ -88,9 +88,7 @@ Singular Value Decomposition. Supports complex arrays.
 
 Decomposes `a` into U, S, and Vt such that A = U * diag(S) * Vt, where U and Vt are orthogonal (or unitary for complex) matrices. S is returned as a **1D ndarray** of singular values (not a diagonal matrix), always `double-float`. Returns a Maxima list `[U, S, Vt]`.
 
-For an m-by-n matrix, U is m-by-m, S has min(m,n) elements, and Vt is n-by-n.
-
-To reconstruct A, build a diagonal matrix from S: `np_matmul(np_matmul(U, np_diag(np_to_list(S))), Vt)`.
+Returns the **economy (reduced) SVD**: for an m-by-n matrix with k = min(m,n), U is m-by-k, S has k elements, and Vt is k-by-n. This means `np_matmul(np_matmul(U, np_diag(np_to_list(S))), Vt)` reconstructs A directly for any shape.
 
 #### Examples
 
@@ -99,13 +97,15 @@ To reconstruct A, build a diagonal matrix from S: `np_matmul(np_matmul(U, np_dia
 (%o1)            ndarray([3, 2], DOUBLE-FLOAT)
 (%i2) [U, S, Vt] : np_svd(A);
 (%o2)        [ndarray, ndarray, ndarray]
-(%i3) np_shape(S);
-(%o3)                          [2]
-(%i4) np_to_list(S);
-(%o4)                      [2.0, 1.0]
-(%i5) /* Reconstruct */
-      S_mat : np_diag(np_to_list(S));
-(%o5)            ndarray([2, 2], DOUBLE-FLOAT)
+(%i3) np_shape(U);
+(%o3)                        [3, 2]
+(%i4) np_shape(Vt);
+(%o4)                        [2, 2]
+(%i5) np_to_list(S);
+(%o5)                      [2.0, 1.0]
+(%i6) /* Reconstruct: U * diag(S) * Vt works directly */
+      np_norm(np_sub(A, np_matmul(np_matmul(U, np_diag(np_to_list(S))), Vt)));
+(%o6)                          0.0
 ```
 
 See also: `np_eig`, `np_rank`, `np_lstsq`, `np_pinv`
@@ -137,9 +137,9 @@ See also: `np_svd`
 
 ### Function: np_qr (a)
 
-QR decomposition. Supports complex arrays.
+QR decomposition. Works for any m-by-n matrix. Supports complex arrays.
 
-Decomposes `a` into an orthogonal (or unitary for complex) matrix Q and an upper triangular matrix R such that A = Q * R. Returns a Maxima list `[Q, R]`.
+Decomposes `a` into an orthogonal (or unitary for complex) matrix Q and an upper triangular (or upper trapezoidal) matrix R such that A = Q * R. Returns a Maxima list `[Q, R]`. For tall/square matrices (m >= n), uses LAPACK. For wide matrices (m < n), uses Householder reflections.
 
 #### Examples
 
