@@ -1506,8 +1506,8 @@
     "np_qr": {
       "type": "Function",
       "signature": "np_qr(a)",
-      "summary": "QR decomposition. Supports complex arrays.",
-      "body_md": "QR decomposition. Supports complex arrays.\n\nDecomposes `a` into an orthogonal (or unitary for complex) matrix Q and an upper triangular matrix R such that A = Q * R. Returns a Maxima list `[Q, R]`.\n\n#### Examples\n\n```maxima\n(%i1) A : ndarray(matrix([1, 2], [3, 4], [5, 6]));\n(%o1)            ndarray([3, 2], DOUBLE-FLOAT)\n(%i2) [Q, R] : np_qr(A);\n(%o2)              [ndarray, ndarray]\n(%i3) np_shape(Q);\n(%o3)                        [3, 3]\n(%i4) np_shape(R);\n(%o4)                        [3, 2]\n```\n\nSee also: `np_lu`, `np_svd`",
+      "summary": "QR decomposition. Works for any m-by-n matrix. Supports complex arrays.",
+      "body_md": "QR decomposition. Works for any m-by-n matrix. Supports complex arrays.\n\nDecomposes `a` into an orthogonal (or unitary for complex) matrix Q and an upper triangular (or upper trapezoidal) matrix R such that A = Q * R. Returns a Maxima list `[Q, R]`. For tall/square matrices (m >= n), uses LAPACK. For wide matrices (m < n), uses Householder reflections.\n\n#### Examples\n\n```maxima\n(%i1) A : ndarray(matrix([1, 2], [3, 4], [5, 6]));\n(%o1)            ndarray([3, 2], DOUBLE-FLOAT)\n(%i2) [Q, R] : np_qr(A);\n(%o2)              [ndarray, ndarray]\n(%i3) np_shape(Q);\n(%o3)                        [3, 3]\n(%i4) np_shape(R);\n(%o4)                        [3, 2]\n```\n\nSee also: `np_lu`, `np_svd`",
       "examples": [
         {
           "input": "A : ndarray(matrix([1, 2], [3, 4], [5, 6]));",
@@ -2052,7 +2052,7 @@
       "type": "Function",
       "signature": "np_svd(a)",
       "summary": "Singular Value Decomposition. Supports complex arrays.",
-      "body_md": "Singular Value Decomposition. Supports complex arrays.\n\nDecomposes `a` into U, S, and Vt such that A = U * diag(S) * Vt, where U and Vt are orthogonal (or unitary for complex) matrices. S is returned as a **1D ndarray** of singular values (not a diagonal matrix), always `double-float`. Returns a Maxima list `[U, S, Vt]`.\n\nFor an m-by-n matrix, U is m-by-m, S has min(m,n) elements, and Vt is n-by-n.\n\nTo reconstruct A, build a diagonal matrix from S: `np_matmul(np_matmul(U, np_diag(np_to_list(S))), Vt)`.\n\n#### Examples\n\n```maxima\n(%i1) A : ndarray(matrix([1, 0], [0, 2], [0, 0]));\n(%o1)            ndarray([3, 2], DOUBLE-FLOAT)\n(%i2) [U, S, Vt] : np_svd(A);\n(%o2)        [ndarray, ndarray, ndarray]\n(%i3) np_shape(S);\n(%o3)                          [2]\n(%i4) np_to_list(S);\n(%o4)                      [2.0, 1.0]\n(%i5) /* Reconstruct */\n      S_mat : np_diag(np_to_list(S));\n(%o5)            ndarray([2, 2], DOUBLE-FLOAT)\n```\n\nSee also: `np_eig`, `np_rank`, `np_lstsq`, `np_pinv`",
+      "body_md": "Singular Value Decomposition. Supports complex arrays.\n\nDecomposes `a` into U, S, and Vt such that A = U * diag(S) * Vt, where U and Vt are orthogonal (or unitary for complex) matrices. S is returned as a **1D ndarray** of singular values (not a diagonal matrix), always `double-float`. Returns a Maxima list `[U, S, Vt]`.\n\nReturns the **economy (reduced) SVD**: for an m-by-n matrix with k = min(m,n), U is m-by-k, S has k elements, and Vt is k-by-n. This means `np_matmul(np_matmul(U, np_diag(np_to_list(S))), Vt)` reconstructs A directly for any shape.\n\n#### Examples\n\n```maxima\n(%i1) A : ndarray(matrix([1, 0], [0, 2], [0, 0]));\n(%o1)            ndarray([3, 2], DOUBLE-FLOAT)\n(%i2) [U, S, Vt] : np_svd(A);\n(%o2)        [ndarray, ndarray, ndarray]\n(%i3) np_shape(U);\n(%o3)                        [3, 2]\n(%i4) np_shape(Vt);\n(%o4)                        [2, 2]\n(%i5) np_to_list(S);\n(%o5)                      [2.0, 1.0]\n(%i6) /* Reconstruct: U * diag(S) * Vt works directly */\n      np_norm(np_sub(A, np_matmul(np_matmul(U, np_diag(np_to_list(S))), Vt)));\n(%o6)                          0.0\n```\n\nSee also: `np_eig`, `np_rank`, `np_lstsq`, `np_pinv`",
       "examples": [
         {
           "input": "A : ndarray(matrix([1, 0], [0, 2], [0, 0]));",
@@ -2063,16 +2063,20 @@
           "output": "[ndarray, ndarray, ndarray]"
         },
         {
-          "input": "np_shape(S);",
-          "output": "[2]"
+          "input": "np_shape(U);",
+          "output": "[3, 2]"
+        },
+        {
+          "input": "np_shape(Vt);",
+          "output": "[2, 2]"
         },
         {
           "input": "np_to_list(S);",
           "output": "[2.0, 1.0]"
         },
         {
-          "input": "/* Reconstruct */\n      S_mat : np_diag(np_to_list(S));",
-          "output": "ndarray([2, 2], DOUBLE-FLOAT)"
+          "input": "/* Reconstruct: U * diag(S) * Vt works directly */\n      np_norm(np_sub(A, np_matmul(np_matmul(U, np_diag(np_to_list(S))), Vt)));",
+          "output": "0.0"
         }
       ],
       "see_also": [

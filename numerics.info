@@ -2272,11 +2272,10 @@ File: numerics.info,  Node: Function np_svd a,  Next: Function np_eig a,  Prev: 
      matrix), always ‘double-float’.  Returns a Maxima list ‘[U, S,
      Vt]’.
 
-     For an m-by-n matrix, U is m-by-m, S has min(m,n) elements, and Vt
-     is n-by-n.
-
-     To reconstruct A, build a diagonal matrix from S:
-     ‘np_matmul(np_matmul(U, np_diag(np_to_list(S))), Vt)’.
+     Returns the *economy (reduced) SVD*: for an m-by-n matrix with k =
+     min(m,n), U is m-by-k, S has k elements, and Vt is k-by-n. This
+     means ‘np_matmul(np_matmul(U, np_diag(np_to_list(S))), Vt)’
+     reconstructs A directly for any shape.
 
 * Menu:
 
@@ -2289,13 +2288,15 @@ File: numerics.info,  Node: Function np_svd a,  Next: Function np_eig a,  Prev: 
 (%o1)            ndarray([3, 2], DOUBLE-FLOAT)
 (%i2) [U, S, Vt] : np_svd(A);
 (%o2)        [ndarray, ndarray, ndarray]
-(%i3) np_shape(S);
-(%o3)                          [2]
-(%i4) np_to_list(S);
-(%o4)                      [2.0, 1.0]
-(%i5) /* Reconstruct */
-      S_mat : np_diag(np_to_list(S));
-(%o5)            ndarray([2, 2], DOUBLE-FLOAT)
+(%i3) np_shape(U);
+(%o3)                        [3, 2]
+(%i4) np_shape(Vt);
+(%o4)                        [2, 2]
+(%i5) np_to_list(S);
+(%o5)                      [2.0, 1.0]
+(%i6) /* Reconstruct: U * diag(S) * Vt works directly */
+      np_norm(np_sub(A, np_matmul(np_matmul(U, np_diag(np_to_list(S))), Vt)));
+(%o6)                          0.0
 
 See also: ‘np_eig’, ‘np_rank’, ‘np_lstsq’, ‘np_pinv’
 
@@ -2339,11 +2340,14 @@ See also: ‘np_svd’
 File: numerics.info,  Node: Function np_qr a,  Next: Function np_lu a,  Prev: Function np_eig a,  Up: Conversion
 
  -- Function: np_qr (A)
-     QR decomposition.  Supports complex arrays.
+     QR decomposition.  Works for any m-by-n matrix.  Supports complex
+     arrays.
 
      Decomposes ‘a’ into an orthogonal (or unitary for complex) matrix Q
-     and an upper triangular matrix R such that A = Q * R. Returns a
-     Maxima list ‘[Q, R]’.
+     and an upper triangular (or upper trapezoidal) matrix R such that A
+     = Q * R. Returns a Maxima list ‘[Q, R]’.  For tall/square matrices
+     (m >= n), uses LAPACK. For wide matrices (m < n), uses Householder
+     reflections.
 
 * Menu:
 
@@ -3143,53 +3147,53 @@ Ref: #function-np_solve-a-b67170
 Ref: #examples-6367479
 Node: Function np_svd a67842
 Ref: #function-np_svd-a67989
-Ref: #examples-6468630
-Node: Function np_eig a69092
-Ref: #function-np_eig-a69234
-Ref: #examples-6569829
-Node: Function np_qr a70308
-Ref: #function-np_qr-a70448
-Ref: #examples-6670741
-Node: Function np_lu a71050
-Ref: #function-np_lu-a71207
-Ref: #examples-6771640
-Node: Function np_norm a / np_norm a ord72027
-Ref: #function-np_norm-a-np_norm-a-ord72207
-Ref: #examples-6873078
-Node: Function np_rank a73644
-Ref: #function-np_rank-a73808
-Ref: #examples-6974093
-Node: Function np_trace a74341
-Ref: #function-np_trace-a74495
-Ref: #examples-7074718
-Node: Function np_transpose a74964
-Ref: #function-np_transpose-a75122
-Ref: #examples-7175359
-Node: Function np_conj a75690
-Ref: #function-np_conj-a75848
-Ref: #examples-7276229
-Node: Function np_ctranspose a76621
-Ref: #function-np_ctranspose-a76780
-Ref: #examples-7377055
-Node: Function np_real a77274
-Ref: #function-np_real-a77427
-Ref: #examples-7477674
-Node: Function np_imag a77900
-Ref: #function-np_imag-a78048
-Ref: #examples-7578287
-Node: Function np_angle a78513
-Ref: #function-np_angle-a78662
-Ref: #examples-7678954
-Node: Function np_expm a79197
-Ref: #function-np_expm-a79348
-Ref: #examples-7780008
-Node: Function np_lstsq a b80797
-Ref: #function-np_lstsq-a-b80951
-Ref: #examples-7882017
-Node: Function np_pinv a82575
-Ref: #function-np_pinv-a82698
-Ref: #examples-7983282
-Node: Function and variable index83869
+Ref: #examples-6468676
+Node: Function np_eig a69257
+Ref: #function-np_eig-a69399
+Ref: #examples-6569994
+Node: Function np_qr a70473
+Ref: #function-np_qr-a70613
+Ref: #examples-6671080
+Node: Function np_lu a71389
+Ref: #function-np_lu-a71546
+Ref: #examples-6771979
+Node: Function np_norm a / np_norm a ord72366
+Ref: #function-np_norm-a-np_norm-a-ord72546
+Ref: #examples-6873417
+Node: Function np_rank a73983
+Ref: #function-np_rank-a74147
+Ref: #examples-6974432
+Node: Function np_trace a74680
+Ref: #function-np_trace-a74834
+Ref: #examples-7075057
+Node: Function np_transpose a75303
+Ref: #function-np_transpose-a75461
+Ref: #examples-7175698
+Node: Function np_conj a76029
+Ref: #function-np_conj-a76187
+Ref: #examples-7276568
+Node: Function np_ctranspose a76960
+Ref: #function-np_ctranspose-a77119
+Ref: #examples-7377394
+Node: Function np_real a77613
+Ref: #function-np_real-a77766
+Ref: #examples-7478013
+Node: Function np_imag a78239
+Ref: #function-np_imag-a78387
+Ref: #examples-7578626
+Node: Function np_angle a78852
+Ref: #function-np_angle-a79001
+Ref: #examples-7679293
+Node: Function np_expm a79536
+Ref: #function-np_expm-a79687
+Ref: #examples-7780347
+Node: Function np_lstsq a b81136
+Ref: #function-np_lstsq-a-b81290
+Ref: #examples-7882356
+Node: Function np_pinv a82914
+Ref: #function-np_pinv-a83037
+Ref: #examples-7983621
+Node: Function and variable index84208
 
 End Tag Table
 
