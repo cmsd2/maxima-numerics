@@ -48,6 +48,5 @@
     :components
     ((:file "schema")
      (:file "array")
-     (:file "table")
      (:file "bridge")
      (:file "io")))))
