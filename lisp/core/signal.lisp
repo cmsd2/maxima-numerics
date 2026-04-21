@@ -63,6 +63,58 @@
         (setf (aref z i) (/ (aref z i) nf)))
       (numerics-wrap (numerics:make-ndarray result :dtype :complex-double-float)))))
 
+(defun numerics-require-2d (handle op-name)
+  "Signal an error if the ndarray is not 2D."
+  (let ((shape (magicl:shape (numerics:ndarray-tensor handle))))
+    (unless (= (length shape) 2)
+      (merror "~A: expected 2D array, got shape ~A" op-name shape))))
+
+(defun $np_convolve2d (a kernel)
+  "2D convolution: np_convolve2d(A, kernel).
+   Both inputs must be 2D real ndarrays. Single-channel only.
+   Returns a 2D ndarray of shape (h - kh + 1, w - kw + 1) (valid mode).
+   Uses flat storage with manual column-major indexing for performance."
+  (let* ((ha (numerics-unwrap a))
+         (hk (numerics-unwrap kernel)))
+    (numerics-require-2d ha "np_convolve2d")
+    (numerics-require-2d hk "np_convolve2d")
+    (numerics-require-real a "np_convolve2d")
+    (numerics-require-real kernel "np_convolve2d")
+    (let* ((ta (numerics:ndarray-tensor ha))
+           (tk (numerics:ndarray-tensor hk))
+           (shape-a (magicl:shape ta))
+           (shape-k (magicl:shape tk))
+           (h  (first shape-a))
+           (w  (second shape-a))
+           (kh (first shape-k))
+           (kw (second shape-k))
+           (oh (- h kh -1))
+           (ow (- w kw -1)))
+      (when (or (<= oh 0) (<= ow 0))
+        (merror "np_convolve2d: kernel (~Ax~A) larger than input (~Ax~A)"
+                kh kw h w))
+      (let* ((result (magicl:zeros (list oh ow) :type 'double-float
+                                                 :layout :column-major))
+             (fa  (numerics-tensor-storage ta))
+             (fk  (numerics-tensor-storage tk))
+             (out (numerics-tensor-storage result)))
+        (declare (type (simple-array double-float (*)) fa fk out))
+        ;; Column-major flat index: element (row, col) of shape (nrow, ncol)
+        ;; is at flat offset row + col * nrow.
+        ;; Direct convolution O(oh * ow * kh * kw)
+        (dotimes (j ow)
+          (dotimes (i oh)
+            (let ((sum 0d0))
+              (declare (type double-float sum))
+              (dotimes (kj kw)
+                (let ((a-col-off (* (+ j kj) h))
+                      (k-col-off (* kj kh)))
+                  (dotimes (ki kh)
+                    (incf sum (* (aref fa (+ (+ i ki) a-col-off))
+                                 (aref fk (+ ki k-col-off)))))))
+              (setf (aref out (+ i (* j oh))) sum))))
+        (numerics-wrap (numerics:make-ndarray result))))))
+
 (defun $np_convolve (a b)
   "1D convolution: np_convolve(A, B).
    Returns a 1D ndarray of length len(A) + len(B) - 1.

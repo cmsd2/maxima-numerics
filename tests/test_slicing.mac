@@ -66,3 +66,67 @@ true;
  recon : np_vstack(top, bot),
  mat_closeto(np_to_matrix(recon), np_to_matrix(A)));
 true;
+
+/* === N-dimensional slicing === */
+
+/* 'all' spec on 2D */
+(A : ndarray(matrix([1,2,3],[4,5,6])),
+ B : np_slice(A, all, [1, 3]),
+ is(np_shape(B) = [2, 2] and np_to_matrix(B) = matrix([2.0, 3.0], [5.0, 6.0])));
+true;
+
+/* scalar index collapses dimension: select row 0 => 1D */
+(A : ndarray(matrix([1,2,3],[4,5,6])),
+ B : np_slice(A, 0, all),
+ is(np_shape(B) = [3] and np_ref(B, 0) = 1.0 and np_ref(B, 1) = 2.0 and np_ref(B, 2) = 3.0));
+true;
+
+/* scalar index: select column 1 => 1D */
+(A : ndarray(matrix([1,2,3],[4,5,6])),
+ B : np_slice(A, all, 1),
+ is(np_shape(B) = [2] and np_ref(B, 0) = 2.0 and np_ref(B, 1) = 5.0));
+true;
+
+/* 3D: range on last dim */
+(A : np_reshape(np_arange(24), [2, 3, 4]),
+ B : np_slice(A, all, all, [0, 1]),
+ is(np_shape(B) = [2, 3, 1]));
+true;
+
+/* 3D: scalar on last dim collapses to 2D */
+(A : np_reshape(np_arange(24), [2, 3, 4]),
+ B : np_slice(A, all, all, 0),
+ is(np_shape(B) = [2, 3]));
+true;
+
+/* 3D: value correctness — first channel of a 2x3x4 tensor */
+/* Column-major layout: element (i,j,k) = i + j*2 + k*6 for shape (2,3,4)
+   Channel 0 (k=0): (0,0)=0, (1,0)=1, (0,1)=2, (1,1)=3, (0,2)=4, (1,2)=5 */
+(A : np_reshape(np_arange(24), [2, 3, 4]),
+ B : np_slice(A, all, all, 0),
+ is(np_ref(B, 0, 0) = 0.0 and np_ref(B, 1, 0) = 1.0
+    and np_ref(B, 0, 1) = 2.0 and np_ref(B, 1, 1) = 3.0
+    and np_ref(B, 0, 2) = 4.0 and np_ref(B, 1, 2) = 5.0));
+true;
+
+/* 3D: negative index */
+(A : np_reshape(np_arange(24), [2, 3, 4]),
+ B : np_slice(A, all, [-2, -1], all),
+ is(np_shape(B) = [2, 1, 4]));
+true;
+
+/* all dimensions collapsed => scalar */
+(A : ndarray(matrix([1,2],[3,4])),
+ is(np_slice(A, 0, 1) = 2.0));
+true;
+
+/* 1D slicing with all */
+(A : np_arange(10),
+ B : np_slice(A, [2, 5]),
+ is(np_shape(B) = [3] and np_ref(B, 0) = 2.0 and np_ref(B, 2) = 4.0));
+true;
+
+/* 1D slicing: scalar => Maxima number */
+(A : np_arange(10),
+ is(np_slice(A, 3) = 3.0));
+true;

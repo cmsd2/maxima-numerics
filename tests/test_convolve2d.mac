@@ -1,0 +1,67 @@
+/* Tests for np_convolve2d */
+
+(load("tests/test_helpers"), true);
+true;
+
+/* === np_convolve2d === */
+
+/* Identity kernel [[1]] preserves values, output same shape */
+(A : ndarray(matrix([1,2,3],[4,5,6],[7,8,9])),
+ K : ndarray(matrix([1])),
+ C : np_convolve2d(A, K),
+ is(np_shape(C) = [3, 3]));
+true;
+
+(closeto(np_ref(C, 0, 0), 1.0));
+true;
+
+(closeto(np_ref(C, 1, 1), 5.0));
+true;
+
+(closeto(np_ref(C, 2, 2), 9.0));
+true;
+
+/* 3x3 averaging kernel on 4x4 input → 2x2 output */
+(A : ndarray(matrix([1,2,3,4],[5,6,7,8],[9,10,11,12],[13,14,15,16])),
+ K : np_scale(np_ones([3,3]), 1.0/9.0),
+ C : np_convolve2d(A, K),
+ is(np_shape(C) = [2, 2]));
+true;
+
+/* Top-left output: mean of 3x3 block starting at (0,0) = mean(1..9) */
+(closeto(np_ref(C, 0, 0), (1+2+3+5+6+7+9+10+11)/9.0));
+true;
+
+/* Bottom-right output: mean of 3x3 block starting at (1,1) = mean(6..16) */
+(closeto(np_ref(C, 1, 1), (6+7+8+10+11+12+14+15+16)/9.0));
+true;
+
+/* Known Sobel-x convolution */
+(A : ndarray(matrix([0,0,0],[0,1,0],[0,0,0])),
+ K : ndarray(matrix([-1,0,1],[-2,0,2],[-1,0,1])),
+ C : np_convolve2d(A, K),
+ is(np_shape(C) = [1, 1]));
+true;
+
+/* Center of impulse * Sobel = sum of kernel = 0 */
+(closeto(np_ref(C, 0, 0), 0.0));
+true;
+
+/* Output shape: (h - kh + 1, w - kw + 1) */
+(A : np_zeros([10, 8]),
+ K : np_ones([3, 5]),
+ C : np_convolve2d(A, K),
+ is(np_shape(C) = [8, 4]));
+true;
+
+/* Error: kernel larger than input */
+errcatch(np_convolve2d(np_zeros([2, 2]), np_ones([3, 3])));
+[];
+
+/* Error: 1D input */
+errcatch(np_convolve2d(np_ones(5), np_ones([3, 3])));
+[];
+
+/* Error: complex input */
+errcatch(np_convolve2d(np_full([3,3], 1+%i, complex), np_ones([2,2])));
+[];

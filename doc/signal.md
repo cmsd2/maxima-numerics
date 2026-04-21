@@ -99,4 +99,34 @@ Returns a 1D ndarray of length `len(a) + len(b) - 1` ("full" mode, matching NumP
 (%o6)                          [7]
 ```
 
-See also: `np_fft`, `np_ifft`
+See also: `np_fft`, `np_ifft`, `np_convolve2d`
+
+### Function: np_convolve2d (a, kernel)
+
+Compute the 2D discrete convolution of a matrix with a kernel ("valid" mode).
+
+Both inputs must be 2D real ndarrays. Returns a 2D ndarray of shape `(h - kh + 1, w - kw + 1)`, where `(h, w)` is the input shape and `(kh, kw)` is the kernel shape. Only positions where the kernel fully overlaps the input are computed (no padding).
+
+Uses direct O(h * w * kh * kw) computation with flat column-major indexing for performance.
+
+#### Examples
+
+```maxima
+(%i1) /* Identity convolution with a 1x1 kernel */
+      A : ndarray(matrix([1, 2, 3], [4, 5, 6]));
+(%o1)            ndarray([2, 3], DOUBLE-FLOAT)
+(%i2) np_to_matrix(np_convolve2d(A, ndarray(matrix([1]))));
+(%o2)      matrix([1.0, 2.0, 3.0], [4.0, 5.0, 6.0])
+(%i3) /* 3x3 box blur kernel */
+      blur : np_scale(1/9, np_ones([3, 3]));
+(%o3)            ndarray([3, 3], DOUBLE-FLOAT)
+(%i4) img : np_ones([5, 5]);
+(%o4)            ndarray([5, 5], DOUBLE-FLOAT)
+(%i5) result : np_convolve2d(img, blur);
+(%o5)            ndarray([3, 3], DOUBLE-FLOAT)
+(%i6) /* Sobel horizontal edge detector */
+      sobel_x : ndarray(matrix([-1, 0, 1], [-2, 0, 2], [-1, 0, 1]));
+(%o6)            ndarray([3, 3], DOUBLE-FLOAT)
+```
+
+See also: `np_convolve`, `np_fft`

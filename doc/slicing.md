@@ -98,24 +98,64 @@ The column index `j` is 0-based. Returns a new 1D ndarray containing a copy of t
 
 See also: `np_row`, `np_slice`, `np_ref`
 
-### Function: np_slice (a, rows, cols)
+### Function: np_slice (a, spec0, spec1, ..., specN)
 
-Extract a sub-matrix from a 2D ndarray.
+Extract a sub-array from an N-dimensional ndarray.
 
-The `rows` and `cols` arguments are Maxima lists specifying half-open ranges `[start, end)`, where indices are 0-based and `end` is exclusive. Negative indices count from the end of the dimension.
+One spec argument is required per dimension. Each spec can be:
+
+- `all` — select the entire dimension
+- `[start, end]` — half-open range `[start, end)`, 0-based, end exclusive
+- An integer — select a single index, **collapsing** (removing) that dimension from the result
+
+Negative indices count from the end of the dimension (`-1` is the last element).
+
+Calling forms:
+
+- `np_slice(a, rows, cols)` — 2D sub-matrix (unchanged from earlier versions)
+- `np_slice(a, all, all, [0, 1])` — 3D slice selecting a channel from an image
+- `np_slice(a, 0, all)` — select row 0, returning a 1D result
+- `np_slice(a, [2, 5])` — slice a 1D array
 
 #### Examples
 
 ```maxima
 (%i1) A : ndarray(matrix([1, 2, 3], [4, 5, 6], [7, 8, 9]));
 (%o1)            ndarray([3, 3], DOUBLE-FLOAT)
-(%i2) B : np_slice(A, [0, 2], [1, 3]);
+(%i2) /* Range slicing */
+      B : np_slice(A, [0, 2], [1, 3]);
 (%o2)            ndarray([2, 2], DOUBLE-FLOAT)
 (%i3) np_to_matrix(B);
 (%o3)            matrix([2.0, 3.0], [5.0, 6.0])
+(%i4) /* Use 'all' to select entire rows */
+      C : np_slice(A, all, [0, 2]);
+(%o4)            ndarray([3, 2], DOUBLE-FLOAT)
+(%i5) /* Scalar index collapses a dimension */
+      D : np_slice(A, 0, all);
+(%o5)            ndarray([3], DOUBLE-FLOAT)
+(%i6) np_to_list(D);
+(%o6)                  [1.0, 2.0, 3.0]
+(%i7) /* All indices scalar: returns a number */
+      np_slice(A, 1, 2);
+(%o7)                          6.0
 ```
 
-See also: `np_row`, `np_col`, `np_ref`
+3D slicing (e.g. extracting a colour channel from an image):
+
+```maxima
+(%i1) img : np_reshape(np_arange(24), [2, 3, 4]);
+(%o1)            ndarray([2, 3, 4], DOUBLE-FLOAT)
+(%i2) /* Extract channel 0 as a 2D array */
+      ch0 : np_slice(img, all, all, 0);
+(%o2)            ndarray([2, 3], DOUBLE-FLOAT)
+(%i3) np_shape(ch0);
+(%o3)                        [2, 3]
+(%i4) /* Keep channel dimension with a range */
+      ch0_3d : np_slice(img, all, all, [0, 1]);
+(%o4)            ndarray([2, 3, 1], DOUBLE-FLOAT)
+```
+
+See also: `np_row`, `np_col`, `np_ref`, `np_reshape`
 
 ### Function: np_reshape (a, shape)
 

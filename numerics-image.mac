@@ -1,0 +1,7 @@
+/* numerics-image — Image I/O and opticl interop for Maxima */
+/* Requires numerics to be loaded first: load("numerics")$ */
+
+if not fboundp('np_zeros) then
+  error("numerics-image requires numerics. Load it first: load(\"numerics\")$")$
+
+load("numerics-image-loader.lisp")$

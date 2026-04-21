@@ -1,0 +1,108 @@
+/* Tests for numerics/image: np_read_image, np_write_image, np_to_image,
+   np_from_image, np_mandrill */
+
+(load("tests/test_helpers"), true);
+true;
+
+/* === np_read_image / np_write_image round-trip === */
+
+/* Create a small 3x3 grayscale ndarray, write to temp PNG, read back */
+(A : ndarray(matrix([0, 128, 255], [64, 192, 32], [200, 100, 50])),
+ tmppath : sconcat(maxima_tempdir, "/test_gray.png"),
+ np_write_image(A, tmppath),
+ B : np_read_image(tmppath),
+ is(np_shape(B) = [3, 3]));
+true;
+
+/* Pixel values should round-trip (PNG is lossless) */
+(closeto(np_ref(B, 0, 0), 0.0));
+true;
+
+(closeto(np_ref(B, 0, 1), 128.0));
+true;
+
+(closeto(np_ref(B, 0, 2), 255.0));
+true;
+
+(closeto(np_ref(B, 2, 2), 50.0));
+true;
+
+/* === Color image round-trip === */
+
+/* Create a 2x2x3 color ndarray */
+(A : np_zeros([2, 2, 3]),
+ /* Set red channel */
+ np_set(A, 0, 0, 0, 255.0),
+ np_set(A, 0, 1, 0, 128.0),
+ /* Set green channel */
+ np_set(A, 0, 0, 1, 64.0),
+ /* Set blue channel */
+ np_set(A, 1, 1, 2, 200.0),
+ tmppath : sconcat(maxima_tempdir, "/test_color.png"),
+ np_write_image(A, tmppath),
+ B : np_read_image(tmppath),
+ is(np_shape(B) = [2, 2, 3]));
+true;
+
+(closeto(np_ref(B, 0, 0, 0), 255.0));
+true;
+
+(closeto(np_ref(B, 0, 0, 1), 64.0));
+true;
+
+(closeto(np_ref(B, 1, 1, 2), 200.0));
+true;
+
+/* === Clamping on write === */
+
+/* Values outside [0, 255] should be clamped */
+(A : ndarray(matrix([-50, 300])),
+ tmppath : sconcat(maxima_tempdir, "/test_clamp.png"),
+ np_write_image(A, tmppath),
+ B : np_read_image(tmppath),
+ closeto(np_ref(B, 0, 0), 0.0));
+true;
+
+(closeto(np_ref(B, 0, 1), 255.0));
+true;
+
+/* === np_to_image / np_from_image round-trip === */
+
+(A : ndarray(matrix([10, 20], [30, 40])),
+ img : np_to_image(A),
+ B : np_from_image(img),
+ is(np_shape(B) = [2, 2]));
+true;
+
+(closeto(np_ref(B, 0, 0), 10.0));
+true;
+
+(closeto(np_ref(B, 1, 1), 40.0));
+true;
+
+/* === np_mandrill === */
+
+(M : np_mandrill(),
+ is(np_shape(M) = [512, 512, 3]));
+true;
+
+/* Pixel values in valid range */
+(is(np_min(M) >= 0.0));
+true;
+
+(is(np_max(M) <= 255.0));
+true;
+
+/* Second call returns same (cached) object */
+(is(np_mandrill() = M));
+true;
+
+/* === Error cases === */
+
+/* 1D array should error on write */
+errcatch(np_write_image(np_ones(5), "/tmp/bad.png"));
+[];
+
+/* 3D array with wrong channel count should error on write */
+errcatch(np_write_image(np_ones([2,2,5]), "/tmp/bad.png"));
+[];

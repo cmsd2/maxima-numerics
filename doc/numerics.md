@@ -101,5 +101,6 @@ All element-wise functions support ndarray-ndarray and ndarray-scalar combinatio
 <!-- include: slicing.md -->
 <!-- include: elementwise.md -->
 <!-- include: signal.md -->
+<!-- include: image.md -->
 <!-- include: aggregation.md -->
 <!-- include: linalg.md -->

@@ -52,3 +52,16 @@
      (:file "array")
      (:file "bridge")
      (:file "io")))))
+
+;; Image I/O system (core + opticl)
+(defsystem "numerics/image"
+  :description "Image I/O and opticl interop for numerics"
+  :version "0.1.0"
+  :license "MIT"
+  :depends-on ("numerics/core" "opticl")
+  :serial t
+  :components
+  ((:module "image"
+    :serial t
+    :components
+    ((:file "image")))))
