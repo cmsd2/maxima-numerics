@@ -2,11 +2,96 @@
 
 (in-package #:maxima)
 
-;;; Helpers
+;;; Broadcasting helpers
+
+(defun numerics-broadcast-shapes (shape-a shape-b)
+  "Compute the broadcast output shape from two input shapes, following NumPy rules.
+   Shapes are aligned from the right; each dimension must match or be 1.
+   Returns the output shape, or signals an error if incompatible."
+  (let* ((ndim (max (length shape-a) (length shape-b)))
+         ;; Left-pad shorter shape with 1s
+         (pa (append (make-list (- ndim (length shape-a)) :initial-element 1) shape-a))
+         (pb (append (make-list (- ndim (length shape-b)) :initial-element 1) shape-b))
+         (result nil))
+    (loop for da in pa for db in pb do
+      (cond
+        ((= da db) (push da result))
+        ((= da 1)  (push db result))
+        ((= db 1)  (push da result))
+        (t (merror "Cannot broadcast shapes ~A and ~A" shape-a shape-b))))
+    (nreverse result)))
+
+(defun numerics-broadcast-binop (ta shape-a tb shape-b out-shape scalar-op et)
+  "Element-wise binary op with broadcasting. Handles 1D and 2D tensors.
+   For each output index, maps back to the input index (using 0 for broadcast dims)."
+  (let ((result (magicl:empty out-shape :type et :layout :column-major))
+        (ndim (length out-shape)))
+    (cond
+      ((= ndim 1)
+       (let ((n (first out-shape))
+             (stride-a (if (= (first shape-a) 1) 0 1))
+             (stride-b (if (= (first shape-b) 1) 0 1)))
+         (dotimes (i n)
+           (setf (magicl:tref result i)
+                 (funcall scalar-op
+                          (magicl:tref ta (* i stride-a))
+                          (magicl:tref tb (* i stride-b)))))))
+      ((= ndim 2)
+       (let ((nrow (first out-shape))
+             (ncol (second out-shape))
+             ;; Pad shapes to 2D
+             (sa (if (= (length shape-a) 1)
+                     (list 1 (first shape-a))
+                     shape-a))
+             (sb (if (= (length shape-b) 1)
+                     (list 1 (first shape-b))
+                     shape-b)))
+         (let ((row-stride-a (if (= (first sa) 1) 0 1))
+               (col-stride-a (if (= (second sa) 1) 0 1))
+               (row-stride-b (if (= (first sb) 1) 0 1))
+               (col-stride-b (if (= (second sb) 1) 0 1)))
+           ;; Handle 1D inputs: access with single index
+           (cond
+             ((and (= (length shape-a) 1) (= (length shape-b) 1))
+              ;; Both 1D — result is 1D, handled above; shouldn't reach here
+              (dotimes (i nrow)
+                (dotimes (j ncol)
+                  (setf (magicl:tref result i j)
+                        (funcall scalar-op
+                                 (magicl:tref ta (* j col-stride-a))
+                                 (magicl:tref tb (* j col-stride-b)))))))
+             ((= (length shape-a) 1)
+              ;; A is 1D (treated as row), B is 2D
+              (dotimes (i nrow)
+                (dotimes (j ncol)
+                  (setf (magicl:tref result i j)
+                        (funcall scalar-op
+                                 (magicl:tref ta (* j col-stride-a))
+                                 (magicl:tref tb (* i row-stride-b) (* j col-stride-b)))))))
+             ((= (length shape-b) 1)
+              ;; A is 2D, B is 1D (treated as row)
+              (dotimes (i nrow)
+                (dotimes (j ncol)
+                  (setf (magicl:tref result i j)
+                        (funcall scalar-op
+                                 (magicl:tref ta (* i row-stride-a) (* j col-stride-a))
+                                 (magicl:tref tb (* j col-stride-b)))))))
+             (t
+              ;; Both 2D
+              (dotimes (i nrow)
+                (dotimes (j ncol)
+                  (setf (magicl:tref result i j)
+                        (funcall scalar-op
+                                 (magicl:tref ta (* i row-stride-a) (* j col-stride-a))
+                                 (magicl:tref tb (* i row-stride-b) (* j col-stride-b)))))))))))
+      (t (merror "Broadcasting only supports 1D and 2D arrays")))
+    result))
+
+;;; Core binary operation dispatchers
 
 (defun numerics-binary-op (a b op)
-  "Apply a CL binary op element-wise via magicl:map!.
-   Supports ndarray+ndarray, ndarray+scalar, and scalar+ndarray."
+  "Apply a CL binary op element-wise.
+   Supports ndarray+ndarray (with broadcasting), ndarray+scalar, scalar+ndarray."
   (cond
     ;; Both ndarrays
     ((and ($ndarray_p a) ($ndarray_p b))
@@ -16,8 +101,23 @@
             (tb (numerics:ndarray-tensor hb))
             (dtype (numerics-result-dtype
                     (numerics:ndarray-dtype ha)
-                    (numerics:ndarray-dtype hb))))
-       (numerics-wrap (numerics:make-ndarray (funcall op ta tb) :dtype dtype))))
+                    (numerics:ndarray-dtype hb)))
+            (shape-a (magicl:shape ta))
+            (shape-b (magicl:shape tb))
+            (out-shape (numerics-broadcast-shapes shape-a shape-b))
+            (et (numerics-element-type dtype)))
+       (numerics-wrap
+        (numerics:make-ndarray
+         (if (equal shape-a shape-b)
+             ;; Fast path: same shape, use magicl:map! on copies
+             (let ((ra (magicl:deep-copy-tensor ta))
+                   (rb (magicl:deep-copy-tensor tb)))
+               (declare (ignore rb))
+               ;; Can't use map! with two tensors; use broadcast path
+               (numerics-broadcast-binop ta shape-a tb shape-b out-shape op et))
+             ;; Broadcast path
+             (numerics-broadcast-binop ta shape-a tb shape-b out-shape op et))
+         :dtype dtype))))
     ;; ndarray + scalar
     (($ndarray_p a)
      (let* ((ha (numerics-unwrap a))
@@ -43,7 +143,8 @@
     (t (merror "Expected at least one ndarray argument"))))
 
 (defun numerics-binary-op-magicl (a b magicl-op scalar-op)
-  "Binary op using magicl operations for ndarray+ndarray and scalar fallback."
+  "Binary op using magicl operations for same-shape ndarray+ndarray,
+   broadcasting for mismatched shapes, and scalar fallback."
   (cond
     ((and ($ndarray_p a) ($ndarray_p b))
      (let* ((ha (numerics-unwrap a))
@@ -52,8 +153,19 @@
             (tb (numerics:ndarray-tensor hb))
             (dtype (numerics-result-dtype
                     (numerics:ndarray-dtype ha)
-                    (numerics:ndarray-dtype hb))))
-       (numerics-wrap (numerics:make-ndarray (funcall magicl-op ta tb) :dtype dtype))))
+                    (numerics:ndarray-dtype hb)))
+            (shape-a (magicl:shape ta))
+            (shape-b (magicl:shape tb)))
+       (if (equal shape-a shape-b)
+           ;; Fast path: same shape, use magicl vectorized op
+           (numerics-wrap (numerics:make-ndarray (funcall magicl-op ta tb) :dtype dtype))
+           ;; Broadcast path: element-wise with index mapping
+           (let* ((out-shape (numerics-broadcast-shapes shape-a shape-b))
+                  (et (numerics-element-type dtype)))
+             (numerics-wrap
+              (numerics:make-ndarray
+               (numerics-broadcast-binop ta shape-a tb shape-b out-shape scalar-op et)
+               :dtype dtype))))))
     (($ndarray_p a)
      (let* ((ha (numerics-unwrap a))
             (dtype (numerics:ndarray-dtype ha))

@@ -97,24 +97,22 @@
     (numerics-wrap
      (numerics:make-ndarray (magicl:reshape tensor (list n)) :dtype dtype))))
 
-(defun $np_hstack (a b)
-  "Horizontal concatenation: np_hstack(A, B)
-   Concatenates along columns (axis 1)."
-  (let* ((ha (numerics-unwrap a))
-         (hb (numerics-unwrap b))
-         (ta (numerics:ndarray-tensor ha))
-         (tb (numerics:ndarray-tensor hb))
-         (dtype (numerics-result-dtype
-                 (numerics:ndarray-dtype ha)
-                 (numerics:ndarray-dtype hb)))
+(defun numerics-ensure-2d (tensor)
+  "If tensor is 1D of length n, reshape to (n, 1). Otherwise return as-is."
+  (if (= (length (magicl:shape tensor)) 1)
+      (magicl:reshape tensor (list (first (magicl:shape tensor)) 1))
+      tensor))
+
+(defun numerics-hstack-two (ta tb dtype)
+  "Horizontally concatenate two 2D tensors."
+  (let* ((ta (numerics-ensure-2d ta))
+         (tb (numerics-ensure-2d tb))
          (et (numerics-element-type dtype))
-         (sha (magicl:shape ta))
-         (shb (magicl:shape tb))
-         (nrow (first sha))
-         (ncol-a (second sha))
-         (ncol-b (second shb)))
-    (unless (= nrow (first shb))
-      (merror "np_hstack: row counts differ: ~D vs ~D" nrow (first shb)))
+         (nrow (first (magicl:shape ta)))
+         (ncol-a (second (magicl:shape ta)))
+         (ncol-b (second (magicl:shape tb))))
+    (unless (= nrow (first (magicl:shape tb)))
+      (merror "np_hstack: row counts differ: ~D vs ~D" nrow (first (magicl:shape tb))))
     (let ((result (magicl:empty (list nrow (+ ncol-a ncol-b))
                                 :type et :layout :column-major)))
       (dotimes (i nrow)
@@ -122,26 +120,47 @@
           (setf (magicl:tref result i j) (magicl:tref ta i j)))
         (dotimes (j ncol-b)
           (setf (magicl:tref result i (+ ncol-a j)) (magicl:tref tb i j))))
-      (numerics-wrap (numerics:make-ndarray result :dtype dtype)))))
+      result)))
 
-(defun $np_vstack (a b)
-  "Vertical concatenation: np_vstack(A, B)
-   Concatenates along rows (axis 0)."
-  (let* ((ha (numerics-unwrap a))
-         (hb (numerics-unwrap b))
-         (ta (numerics:ndarray-tensor ha))
-         (tb (numerics:ndarray-tensor hb))
-         (dtype (numerics-result-dtype
-                 (numerics:ndarray-dtype ha)
-                 (numerics:ndarray-dtype hb)))
+(defun numerics-stack-args (args name)
+  "Normalize stack arguments: accept np_hstack(A,B,...) or np_hstack([A,B,...]).
+   Returns a list of Maxima ndarray expressions."
+  (let ((items (if (and (= (length args) 1)
+                        (consp (first args))
+                        (consp (car (first args)))
+                        (eq (caar (first args)) 'mlist))
+                   ;; Single Maxima list argument: extract elements
+                   (cdr (first args))
+                   ;; Variadic arguments
+                   args)))
+    (when (< (length items) 2)
+      (merror "~A: need at least 2 arrays" name))
+    items))
+
+(defun $np_hstack (&rest args)
+  "Horizontal concatenation: np_hstack(A, B, ...) or np_hstack([A, B, ...])
+   Concatenates along columns (axis 1). Accepts 2 or more ndarrays.
+   1D arrays are treated as column vectors."
+  (let* ((items (numerics-stack-args args "np_hstack"))
+         (handles (mapcar #'numerics-unwrap items))
+         (dtype (reduce #'numerics-result-dtype
+                        (mapcar #'numerics:ndarray-dtype handles)))
+         (tensors (mapcar #'numerics:ndarray-tensor handles))
+         (result (reduce (lambda (acc t2) (numerics-hstack-two acc t2 dtype))
+                         (cdr tensors)
+                         :initial-value (numerics-ensure-2d (car tensors)))))
+    (numerics-wrap (numerics:make-ndarray result :dtype dtype))))
+
+(defun numerics-vstack-two (ta tb dtype)
+  "Vertically concatenate two 2D tensors."
+  (let* ((ta (numerics-ensure-2d ta))
+         (tb (numerics-ensure-2d tb))
          (et (numerics-element-type dtype))
-         (sha (magicl:shape ta))
-         (shb (magicl:shape tb))
-         (nrow-a (first sha))
-         (nrow-b (first shb))
-         (ncol (second sha)))
-    (unless (= ncol (second shb))
-      (merror "np_vstack: column counts differ: ~D vs ~D" ncol (second shb)))
+         (nrow-a (first (magicl:shape ta)))
+         (nrow-b (first (magicl:shape tb)))
+         (ncol (second (magicl:shape ta))))
+    (unless (= ncol (second (magicl:shape tb)))
+      (merror "np_vstack: column counts differ: ~D vs ~D" ncol (second (magicl:shape tb))))
     (let ((result (magicl:empty (list (+ nrow-a nrow-b) ncol)
                                 :type et :layout :column-major)))
       (dotimes (i nrow-a)
@@ -150,7 +169,21 @@
       (dotimes (i nrow-b)
         (dotimes (j ncol)
           (setf (magicl:tref result (+ nrow-a i) j) (magicl:tref tb i j))))
-      (numerics-wrap (numerics:make-ndarray result :dtype dtype)))))
+      result)))
+
+(defun $np_vstack (&rest args)
+  "Vertical concatenation: np_vstack(A, B, ...) or np_vstack([A, B, ...])
+   Concatenates along rows (axis 0). Accepts 2 or more ndarrays.
+   1D arrays are treated as column vectors."
+  (let* ((items (numerics-stack-args args "np_vstack"))
+         (handles (mapcar #'numerics-unwrap items))
+         (dtype (reduce #'numerics-result-dtype
+                        (mapcar #'numerics:ndarray-dtype handles)))
+         (tensors (mapcar #'numerics:ndarray-tensor handles))
+         (result (reduce (lambda (acc t2) (numerics-vstack-two acc t2 dtype))
+                         (cdr tensors)
+                         :initial-value (numerics-ensure-2d (car tensors)))))
+    (numerics-wrap (numerics:make-ndarray result :dtype dtype))))
 
 (defun $np_shape (a)
   "Shape as Maxima list: np_shape(A) => [3, 4]"
