@@ -313,3 +313,95 @@ Calling forms:
 ```
 
 See also: `np_sort`, `np_argmin`, `np_argmax`
+
+### Function: np_trapz (y) / np_trapz (y, x)
+
+Trapezoidal numerical integration of a 1D ndarray.
+
+Without an `x` argument, uses unit spacing (dx = 1). With an `x` argument, uses the spacing defined by the `x` array. Both `y` and `x` must be 1D ndarrays of the same length. Returns a scalar.
+
+Calling forms:
+
+- `np_trapz(y)` -- integrate with unit spacing
+- `np_trapz(y, x)` -- integrate with variable spacing defined by x
+
+#### Examples
+
+```maxima
+(%i1) /* Unit spacing: integral of [1, 2, 3] = 0.5*(1+2) + 0.5*(2+3) = 4 */
+      np_trapz(ndarray([1, 2, 3], [3]));
+(%o1)                          4.0
+(%i2) /* Variable spacing: y=x^2 on [0,1,2] */
+      x : ndarray([0, 1, 2], [3]);
+(%o2)            ndarray([3], DOUBLE-FLOAT)
+(%i3) y : ndarray([0, 1, 4], [3]);
+(%o3)            ndarray([3], DOUBLE-FLOAT)
+(%i4) np_trapz(y, x);
+(%o4)                          3.0
+```
+
+See also: `np_sum`, `np_cumsum`, `np_diff`
+
+### Function: np_diff (a)
+
+First-order finite differences of a 1D ndarray.
+
+Returns a new 1D ndarray of length n-1 where element i is `a[i+1] - a[i]`. The input must be a 1D ndarray with at least 2 elements.
+
+#### Examples
+
+```maxima
+(%i1) np_to_list(np_diff(ndarray([1, 3, 6, 10], [4])));
+(%o1)                  [2.0, 3.0, 4.0]
+(%i2) np_size(np_diff(np_arange(10)));
+(%o2)                           9
+(%i3) /* Constant array: all diffs are zero */
+      np_to_list(np_diff(np_ones([5])));
+(%o3)              [0.0, 0.0, 0.0, 0.0]
+```
+
+See also: `np_cumsum`, `np_trapz`
+
+### Function: np_cov (a)
+
+Sample covariance matrix of a 2D ndarray.
+
+Treats each column as a variable and each row as an observation. Returns a p-by-p covariance matrix (where p is the number of columns) using the sample covariance formula (divides by n-1). The result is symmetric.
+
+#### Examples
+
+```maxima
+(%i1) /* 3 observations of 2 variables, perfectly correlated */
+      A : ndarray(matrix([1, 2], [3, 6], [5, 10]));
+(%o1)            ndarray([3, 2], DOUBLE-FLOAT)
+(%i2) np_to_matrix(np_cov(A));
+(%o2)         matrix([4.0, 8.0], [8.0, 16.0])
+(%i3) /* Symmetry: C[i,j] = C[j,i] */
+      C : np_to_matrix(np_cov(ndarray(matrix([1,2,3],[4,5,6],[7,8,9]))));
+(%o3)  matrix([9.0, 9.0, 9.0], [9.0, 9.0, 9.0], [9.0, 9.0, 9.0])
+```
+
+See also: `np_corrcoef`, `np_var`, `np_std`
+
+### Function: np_corrcoef (a)
+
+Pearson correlation coefficient matrix of a 2D ndarray.
+
+Treats each column as a variable and each row as an observation. Returns a p-by-p correlation matrix where element (i,j) is the Pearson correlation between columns i and j. Diagonal elements are always 1.0. Built on `np_cov`.
+
+#### Examples
+
+```maxima
+(%i1) /* Perfect positive correlation gives 1 */
+      A : ndarray(matrix([1, 2], [3, 6], [5, 10]));
+(%o1)            ndarray([3, 2], DOUBLE-FLOAT)
+(%i2) np_to_matrix(np_corrcoef(A));
+(%o2)         matrix([1.0, 1.0], [1.0, 1.0])
+(%i3) /* Anti-correlation gives -1 */
+      B : ndarray(matrix([1, 10], [3, 6], [5, 2]));
+(%o3)            ndarray([3, 2], DOUBLE-FLOAT)
+(%i4) np_to_matrix(np_corrcoef(B));
+(%o4)        matrix([1.0, -1.0], [-1.0, 1.0])
+```
+
+See also: `np_cov`, `np_var`, `np_std`

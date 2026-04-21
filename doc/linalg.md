@@ -455,3 +455,25 @@ For an m-by-n matrix, the pseudo-inverse is n-by-m.
 ```
 
 See also: `np_inv`, `np_lstsq`, `np_svd`
+
+### Function: np_outer (a, b)
+
+Outer product of two 1D ndarrays.
+
+Returns an m-by-n 2D ndarray where element (i,j) is `a[i] * b[j]`. Both arguments must be 1D ndarrays.
+
+#### Examples
+
+```maxima
+(%i1) np_to_matrix(np_outer(ndarray([1, 2, 3], [3]), ndarray([4, 5], [2])));
+(%o1)  matrix([4.0, 5.0], [8.0, 10.0], [12.0, 15.0])
+(%i2) np_shape(np_outer(np_ones([4]), np_ones([3])));
+(%o2)                        [4, 3]
+(%i3) /* Outer product with self gives rank-1 matrix */
+      v : ndarray([1, 2], [2]);
+(%o3)            ndarray([2], DOUBLE-FLOAT)
+(%i4) np_det(np_outer(v, v));
+(%o4)                          0.0
+```
+
+See also: `np_matmul`, `np_dot`

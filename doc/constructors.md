@@ -238,3 +238,22 @@ Returns a new ndarray with the same shape, dtype, and values. Modifications to t
 ```
 
 See also: `ndarray`, `np_reshape`
+
+### Function: np_logspace (start, stop, n)
+
+Create `n` logarithmically spaced points from 10^start to 10^stop (inclusive).
+
+Both endpoints are included. If `n` is 1, returns a single-element array containing 10^start. Always returns `double-float`.
+
+#### Examples
+
+```maxima
+(%i1) np_to_list(np_logspace(0, 3, 4));
+(%o1)           [1.0, 10.0, 100.0, 1000.0]
+(%i2) np_to_list(np_logspace(2, 5, 1));
+(%o2)                      [100.0]
+(%i3) np_size(np_logspace(0, 1, 50));
+(%o3)                         50
+```
+
+See also: `np_linspace`, `np_arange`
