@@ -329,6 +329,104 @@
                  (dotimes (j ncol) (setf (magicl:tref result i j) (aref row j)))))))
           (numerics-wrap (numerics:make-ndarray result))))))
 
+(defun $np_trapz (y &optional x)
+  "Trapezoidal integration of 1D data.
+   np_trapz(y) — assumes unit spacing (dx=1).
+   np_trapz(y, x) — uses x values for spacing."
+  (let* ((hy (numerics-unwrap y))
+         (ty (numerics:ndarray-tensor hy))
+         (n (magicl:size ty)))
+    (when (< n 2)
+      (merror "np_trapz: need at least 2 points, got ~D" n))
+    (if (null x)
+        ;; Unit spacing
+        (let ((sum 0.0d0))
+          (loop for i from 0 below (1- n)
+                do (incf sum (* 0.5d0
+                                (+ (magicl:tref ty i)
+                                   (magicl:tref ty (1+ i))))))
+          sum)
+        ;; Variable spacing
+        (let* ((hx (numerics-unwrap x))
+               (tx (numerics:ndarray-tensor hx))
+               (nx (magicl:size tx))
+               (sum 0.0d0))
+          (unless (= n nx)
+            (merror "np_trapz: x and y must have same length, got ~D and ~D" nx n))
+          (loop for i from 0 below (1- n)
+                for dx = (- (magicl:tref tx (1+ i)) (magicl:tref tx i))
+                do (incf sum (* 0.5d0 dx
+                                (+ (magicl:tref ty i)
+                                   (magicl:tref ty (1+ i))))))
+          sum))))
+
+(defun $np_diff (a)
+  "First-order finite differences of a 1D ndarray: np_diff(a)
+   Returns an ndarray of length n-1 where result[i] = a[i+1] - a[i]."
+  (let* ((handle (numerics-unwrap a))
+         (tensor (numerics:ndarray-tensor handle))
+         (dtype (numerics:ndarray-dtype handle))
+         (et (numerics-element-type dtype))
+         (n (magicl:size tensor)))
+    (when (< n 2)
+      (merror "np_diff: need at least 2 elements, got ~D" n))
+    (let* ((m (1- n))
+           (result (magicl:empty (list m) :type et :layout :column-major)))
+      (dotimes (i m)
+        (setf (magicl:tref result i)
+              (- (magicl:tref tensor (1+ i)) (magicl:tref tensor i))))
+      (numerics-wrap (numerics:make-ndarray result :dtype dtype)))))
+
+(defun $np_cov (a)
+  "Sample covariance matrix of a 2D ndarray (columns = variables).
+   np_cov(A) => p x p matrix where A is n x p.
+   Uses sample covariance (divides by n-1)."
+  (let* ((handle (numerics-unwrap a))
+         (tensor (numerics:ndarray-tensor handle))
+         (shape (magicl:shape tensor))
+         (n (first shape))
+         (p (second shape)))
+    (when (< n 2)
+      (merror "np_cov: need at least 2 observations, got ~D" n))
+    ;; Compute column means
+    (let ((means (make-array p :element-type 'double-float :initial-element 0.0d0)))
+      (dotimes (j p)
+        (dotimes (i n)
+          (incf (aref means j) (magicl:tref tensor i j)))
+        (setf (aref means j) (/ (aref means j) (coerce n 'double-float))))
+      ;; Compute covariance matrix
+      (let ((result (magicl:zeros (list p p) :type 'double-float
+                                              :layout :column-major))
+            (denom (coerce (1- n) 'double-float)))
+        (dotimes (j1 p)
+          (loop for j2 from j1 below p do
+            (let ((s 0.0d0))
+              (dotimes (i n)
+                (incf s (* (- (magicl:tref tensor i j1) (aref means j1))
+                           (- (magicl:tref tensor i j2) (aref means j2)))))
+              (setf s (/ s denom))
+              (setf (magicl:tref result j1 j2) s)
+              (setf (magicl:tref result j2 j1) s))))
+        (numerics-wrap (numerics:make-ndarray result))))))
+
+(defun $np_corrcoef (a)
+  "Pearson correlation matrix of a 2D ndarray (columns = variables).
+   np_corrcoef(A) => p x p matrix where A is n x p."
+  (let* ((cov-mx (numerics-unwrap ($np_cov a)))
+         (cov-tensor (numerics:ndarray-tensor cov-mx))
+         (p (first (magicl:shape cov-tensor)))
+         (result (magicl:zeros (list p p) :type 'double-float
+                                           :layout :column-major)))
+    ;; corr[i,j] = cov[i,j] / sqrt(cov[i,i] * cov[j,j])
+    (dotimes (i p)
+      (dotimes (j p)
+        (let ((denom (sqrt (* (magicl:tref cov-tensor i i)
+                              (magicl:tref cov-tensor j j)))))
+          (setf (magicl:tref result i j)
+                (if (zerop denom) 0.0d0
+                    (/ (magicl:tref cov-tensor i j) denom))))))
+    (numerics-wrap (numerics:make-ndarray result))))
+
 (defun $np_argsort (a &optional axis)
   "Indices that sort elements. np_argsort(A) => 1D indices;
    np_argsort(A, 0) => row indices per column; np_argsort(A, 1) => col indices per row.

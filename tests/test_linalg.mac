@@ -359,6 +359,25 @@ true;
  closeto(np_norm(A, fro), np_norm(A)));
 true;
 
+/* === np_outer === */
+
+/* Basic outer product: [1,2,3] x [4,5] = [[4,5],[8,10],[12,15]] */
+(A : ndarray([1, 2, 3], [3]),
+ B : ndarray([4, 5], [2]),
+ R : np_to_matrix(np_outer(A, B)),
+ is(R = matrix([4.0, 5.0], [8.0, 10.0], [12.0, 15.0])));
+true;
+
+/* Shape check: outer(m, n) => m x n */
+(np_shape(np_outer(np_ones([4]), np_ones([3]))));
+[4, 3];
+
+/* Outer product with self gives rank-1 matrix */
+(v : ndarray([1, 2], [2]),
+ R : np_outer(v, v),
+ closeto(np_det(R), 0.0));
+true;
+
 /* === Error handling === */
 
 /* Singular matrix */

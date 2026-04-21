@@ -142,3 +142,19 @@ true;
 
 (is(ndarray_p(np_zeros([2,2])) = true and ndarray_p(42) = false));
 true;
+
+/* === np_logspace === */
+
+/* Basic: 10^0=1 to 10^3=1000, 4 points */
+(L : np_to_list(np_logspace(0, 3, 4)),
+ list_closeto(L, [1.0, 10.0, 100.0, 1000.0]));
+true;
+
+/* Single point */
+(L : np_to_list(np_logspace(2, 5, 1)),
+ list_closeto(L, [100.0]));
+true;
+
+/* Size check */
+(np_size(np_logspace(0, 1, 50)));
+50;

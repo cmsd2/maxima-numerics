@@ -132,6 +132,24 @@
       (magicl:from-diag vals :type et)
       :dtype dtype))))
 
+(defun $np_logspace (start stop n)
+  "Create n logarithmically spaced points from 10^start to 10^stop:
+   np_logspace(0, 3, 50) => 50 points from 1 to 1000"
+  (let* ((start-f (coerce ($float start) 'double-float))
+         (stop-f  (coerce ($float stop)  'double-float))
+         (n-int   (truncate n))
+         (vals (if (= n-int 1)
+                   (list (expt 10.0d0 start-f))
+                   (loop for i below n-int
+                         for t-val = (+ start-f
+                                        (* (/ (float i 1.0d0)
+                                              (float (1- n-int) 1.0d0))
+                                           (- stop-f start-f)))
+                         collect (expt 10.0d0 t-val)))))
+    (numerics-wrap
+     (numerics:make-ndarray
+      (magicl:from-list vals (list n-int) :type 'double-float)))))
+
 (defun $np_copy (a)
   "Deep copy an ndarray: np_copy(A)"
   (let* ((handle (numerics-unwrap a))
