@@ -377,13 +377,10 @@
               (- (magicl:tref tensor (1+ i)) (magicl:tref tensor i))))
       (numerics-wrap (numerics:make-ndarray result :dtype dtype)))))
 
-(defun $np_cov (a)
-  "Sample covariance matrix of a 2D ndarray (columns = variables).
-   np_cov(A) => p x p matrix where A is n x p.
-   Uses sample covariance (divides by n-1)."
-  (let* ((handle (numerics-unwrap a))
-         (tensor (numerics:ndarray-tensor handle))
-         (shape (magicl:shape tensor))
+(defun compute-cov-tensor (tensor)
+  "Internal: compute sample covariance matrix from a 2D magicl tensor.
+   Returns the raw p x p magicl tensor (no ndarray wrapping)."
+  (let* ((shape (magicl:shape tensor))
          (n (first shape))
          (p (second shape)))
     (when (< n 2)
@@ -394,7 +391,7 @@
         (dotimes (i n)
           (incf (aref means j) (magicl:tref tensor i j)))
         (setf (aref means j) (/ (aref means j) (coerce n 'double-float))))
-      ;; Compute covariance matrix
+      ;; Compute covariance matrix (exploit symmetry)
       (let ((result (magicl:zeros (list p p) :type 'double-float
                                               :layout :column-major))
             (denom (coerce (1- n) 'double-float)))
@@ -407,24 +404,35 @@
               (setf s (/ s denom))
               (setf (magicl:tref result j1 j2) s)
               (setf (magicl:tref result j2 j1) s))))
-        (numerics-wrap (numerics:make-ndarray result))))))
+        result))))
+
+(defun $np_cov (a)
+  "Sample covariance matrix of a 2D ndarray (columns = variables).
+   np_cov(A) => p x p matrix where A is n x p.
+   Uses sample covariance (divides by n-1)."
+  (let* ((handle (numerics-unwrap a))
+         (tensor (numerics:ndarray-tensor handle)))
+    (numerics-wrap (numerics:make-ndarray (compute-cov-tensor tensor)))))
 
 (defun $np_corrcoef (a)
   "Pearson correlation matrix of a 2D ndarray (columns = variables).
    np_corrcoef(A) => p x p matrix where A is n x p."
-  (let* ((cov-mx (numerics-unwrap ($np_cov a)))
-         (cov-tensor (numerics:ndarray-tensor cov-mx))
+  (let* ((handle (numerics-unwrap a))
+         (cov-tensor (compute-cov-tensor (numerics:ndarray-tensor handle)))
          (p (first (magicl:shape cov-tensor)))
          (result (magicl:zeros (list p p) :type 'double-float
                                            :layout :column-major)))
     ;; corr[i,j] = cov[i,j] / sqrt(cov[i,i] * cov[j,j])
+    ;; Exploit symmetry
     (dotimes (i p)
-      (dotimes (j p)
+      (setf (magicl:tref result i i) 1.0d0)
+      (loop for j from (1+ i) below p do
         (let ((denom (sqrt (* (magicl:tref cov-tensor i i)
                               (magicl:tref cov-tensor j j)))))
-          (setf (magicl:tref result i j)
-                (if (zerop denom) 0.0d0
-                    (/ (magicl:tref cov-tensor i j) denom))))))
+          (let ((r (if (zerop denom) 0.0d0
+                       (/ (magicl:tref cov-tensor i j) denom))))
+            (setf (magicl:tref result i j) r)
+            (setf (magicl:tref result j i) r)))))
     (numerics-wrap (numerics:make-ndarray result))))
 
 (defun $np_argsort (a &optional axis)

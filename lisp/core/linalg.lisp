@@ -15,7 +15,8 @@
 
 (defun $np_outer (a b)
   "Outer product of two 1D ndarrays: np_outer(a, b) => m x n matrix
-   where result[i,j] = a[i] * b[j]."
+   where result[i,j] = a[i] * b[j].
+   Uses BLAS via magicl matmul: reshape a to (m,1) and b to (1,n)."
   (let* ((ha (numerics-unwrap a))
          (hb (numerics-unwrap b))
          (ta (numerics:ndarray-tensor ha))
@@ -23,15 +24,14 @@
          (dtype (numerics-result-dtype
                  (numerics:ndarray-dtype ha)
                  (numerics:ndarray-dtype hb)))
-         (et (numerics-element-type dtype))
          (m (magicl:size ta))
          (n (magicl:size tb))
-         (result (magicl:empty (list m n) :type et :layout :column-major)))
-    (dotimes (i m)
-      (dotimes (j n)
-        (setf (magicl:tref result i j)
-              (* (magicl:tref ta i) (magicl:tref tb j)))))
-    (numerics-wrap (numerics:make-ndarray result :dtype dtype))))
+         ;; Reshape to column vector (m,1) and row vector (1,n), then matmul
+         (col (magicl:reshape ta (list m 1)))
+         (row (magicl:reshape tb (list 1 n))))
+    (numerics-wrap (numerics:make-ndarray
+                    (numerics-with-lapack (magicl:@ col row))
+                    :dtype dtype))))
 
 (defun $np_inv (a)
   "Matrix inverse: np_inv(A)"
