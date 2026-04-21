@@ -261,6 +261,27 @@
       ],
       "section": "Aggregation"
     },
+    "np_clip": {
+      "type": "Function",
+      "signature": "np_clip(a, lo, hi)",
+      "summary": "Clamp values element-wise.",
+      "body_md": "Clamp values element-wise.\n\nReturns a new ndarray where each element is clamped to the range `[lo, hi]`. Values below `lo` become `lo`, values above `hi` become `hi`.\n\n#### Examples\n\n```maxima\n(%i1) A : ndarray([1.0, 5.0, 3.0, 8.0, 2.0]);\n(%o1)            ndarray([5], DOUBLE-FLOAT)\n(%i2) np_to_list(np_clip(A, 2.0, 6.0));\n(%o2)              [2.0, 5.0, 3.0, 6.0, 2.0]\n```\n\nSee also: `np_abs`, `np_where`",
+      "examples": [
+        {
+          "input": "A : ndarray([1.0, 5.0, 3.0, 8.0, 2.0]);",
+          "output": "ndarray([5], DOUBLE-FLOAT)"
+        },
+        {
+          "input": "np_to_list(np_clip(A, 2.0, 6.0));",
+          "output": "[2.0, 5.0, 3.0, 6.0, 2.0]"
+        }
+      ],
+      "see_also": [
+        "np_abs",
+        "np_where"
+      ],
+      "section": "Element-wise Operations"
+    },
     "np_col": {
       "type": "Function",
       "signature": "np_col(a, j)",
@@ -313,6 +334,43 @@
         "np_imag"
       ],
       "section": "Linear Algebra"
+    },
+    "np_convolve": {
+      "type": "Function",
+      "signature": "np_convolve(a, b)",
+      "summary": "Compute the 1D discrete linear convolution of two real signals.",
+      "body_md": "Compute the 1D discrete linear convolution of two real signals.\n\nReturns a 1D ndarray of length `len(a) + len(b) - 1` (\"full\" mode, matching NumPy's default). Both inputs must be 1D real ndarrays. Uses direct computation with O(len(a) * len(b)) complexity.\n\n#### Examples\n\n```maxima\n(%i1) /* Convolve with impulse: identity operation */\n      A : ndarray([1.0, 2.0, 3.0]);\n(%o1)            ndarray([3], DOUBLE-FLOAT)\n(%i2) np_to_list(np_convolve(A, ndarray([1.0])));\n(%o2)                  [1.0, 2.0, 3.0]\n(%i3) /* Moving average (box filter) */\n      signal : ndarray([1.0, 3.0, 2.0, 5.0, 4.0]);\n(%o3)            ndarray([5], DOUBLE-FLOAT)\n(%i4) kernel : np_scale(1/3, np_ones(3));\n(%o4)            ndarray([3], DOUBLE-FLOAT)\n(%i5) np_to_list(np_convolve(signal, kernel));\n(%o5) [0.333, 1.333, 2.0, 3.333, 3.666, 3.0, 1.333]\n(%i6) /* Output length = len(signal) + len(kernel) - 1 */\n      np_shape(np_convolve(signal, kernel));\n(%o6)                          [7]\n```\n\nSee also: `np_fft`, `np_ifft`",
+      "examples": [
+        {
+          "input": "/* Convolve with impulse: identity operation */\n      A : ndarray([1.0, 2.0, 3.0]);",
+          "output": "ndarray([3], DOUBLE-FLOAT)"
+        },
+        {
+          "input": "np_to_list(np_convolve(A, ndarray([1.0])));",
+          "output": "[1.0, 2.0, 3.0]"
+        },
+        {
+          "input": "/* Moving average (box filter) */\n      signal : ndarray([1.0, 3.0, 2.0, 5.0, 4.0]);",
+          "output": "ndarray([5], DOUBLE-FLOAT)"
+        },
+        {
+          "input": "kernel : np_scale(1/3, np_ones(3));",
+          "output": "ndarray([3], DOUBLE-FLOAT)"
+        },
+        {
+          "input": "np_to_list(np_convolve(signal, kernel));",
+          "output": "[0.333, 1.333, 2.0, 3.333, 3.666, 3.0, 1.333]"
+        },
+        {
+          "input": "/* Output length = len(signal) + len(kernel) - 1 */\n      np_shape(np_convolve(signal, kernel));",
+          "output": "[7]"
+        }
+      ],
+      "see_also": [
+        "np_fft",
+        "np_ifft"
+      ],
+      "section": "Signal Processing"
     },
     "np_copy": {
       "type": "Function",
@@ -812,6 +870,62 @@
       ],
       "section": "Constructors"
     },
+    "np_fft": {
+      "type": "Function",
+      "signature": "np_fft(a)",
+      "summary": "Compute the discrete Fourier transform of a 1D ndarray.",
+      "body_md": "Compute the discrete Fourier transform of a 1D ndarray.\n\n**Scaling convention (matches NumPy):**\n\n    Y[k] = sum(x[n] * exp(-2 * %pi * %i * k * n / N),  n, 0, N-1)\n\nThe forward transform does **not** include a 1/N factor. Use `np_ifft` to invert.\n\nThe input `a` must be a 1D ndarray (real or complex). The result is always a complex 1D ndarray of the same length.\n\n#### Examples\n\n```maxima\n(%i1) /* FFT of a real signal */\n      A : ndarray([1.0, 2.0, 3.0, 4.0]);\n(%o1)            ndarray([4], DOUBLE-FLOAT)\n(%i2) F : np_fft(A);\n(%o2)            ndarray([4], COMPLEX-DOUBLE-FLOAT)\n(%i3) np_to_list(F);\n(%o3)     [10.0, 2.0 %i - 2.0, - 2.0, - 2.0 %i - 2.0]\n(%i4) /* DC component = sum of signal */\n      np_ref(F, 0);\n(%o4)                         10.0\n(%i5) /* Round-trip: ifft(fft(x)) = x */\n      np_to_list(np_real(np_ifft(F)));\n(%o5)               [1.0, 2.0, 3.0, 4.0]\n```\n\nFrequency analysis of a sine wave:\n\n```maxima\n(%i1) N : 128$\n(%i2) t : np_linspace(0, 1, N)$\n(%i3) /* 10 Hz sine wave, sampled at 128 Hz */\n      x : np_sin(np_scale(2 * %pi * 10, t))$\n(%i4) F : np_fft(x)$\n(%i5) /* Magnitude spectrum */\n      mag : np_abs(F)$\n```\n\nSee also: `np_ifft`, `np_abs`, `np_real`, `np_imag`, `np_angle`",
+      "examples": [
+        {
+          "input": "/* FFT of a real signal */\n      A : ndarray([1.0, 2.0, 3.0, 4.0]);",
+          "output": "ndarray([4], DOUBLE-FLOAT)"
+        },
+        {
+          "input": "F : np_fft(A);",
+          "output": "ndarray([4], COMPLEX-DOUBLE-FLOAT)"
+        },
+        {
+          "input": "np_to_list(F);",
+          "output": "[10.0, 2.0 %i - 2.0, - 2.0, - 2.0 %i - 2.0]"
+        },
+        {
+          "input": "/* DC component = sum of signal */\n      np_ref(F, 0);",
+          "output": "10.0"
+        },
+        {
+          "input": "/* Round-trip: ifft(fft(x)) = x */\n      np_to_list(np_real(np_ifft(F)));",
+          "output": "[1.0, 2.0, 3.0, 4.0]"
+        },
+        {
+          "input": "N : 128$",
+          "output": ""
+        },
+        {
+          "input": "t : np_linspace(0, 1, N)$",
+          "output": ""
+        },
+        {
+          "input": "/* 10 Hz sine wave, sampled at 128 Hz */\n      x : np_sin(np_scale(2 * %pi * 10, t))$",
+          "output": ""
+        },
+        {
+          "input": "F : np_fft(x)$",
+          "output": ""
+        },
+        {
+          "input": "/* Magnitude spectrum */\n      mag : np_abs(F)$",
+          "output": ""
+        }
+      ],
+      "see_also": [
+        "np_ifft",
+        "np_abs",
+        "np_real",
+        "np_imag",
+        "np_angle"
+      ],
+      "section": "Signal Processing"
+    },
     "np_flatten": {
       "type": "Function",
       "signature": "np_flatten(a)",
@@ -939,6 +1053,39 @@
         "np_vstack"
       ],
       "section": "Slicing"
+    },
+    "np_ifft": {
+      "type": "Function",
+      "signature": "np_ifft(a)",
+      "summary": "Compute the inverse discrete Fourier transform of a 1D ndarray.",
+      "body_md": "Compute the inverse discrete Fourier transform of a 1D ndarray.\n\n**Scaling convention (matches NumPy):**\n\n    x[n] = (1/N) * sum(Y[k] * exp(+2 * %pi * %i * k * n / N),  k, 0, N-1)\n\nThe inverse transform includes the 1/N normalization factor.\n\nThe input `a` must be a 1D ndarray (real or complex). The result is always a complex 1D ndarray of the same length. For real-valued signals, use `np_real` to extract the real part of the result.\n\n#### Examples\n\n```maxima\n(%i1) /* Frequency-domain filtering */\n      x : np_arange(0, 64)$\n(%i2) F : np_fft(x)$\n(%i3) /* Zero out high-frequency components (low-pass) */\n(%i4) y : np_real(np_ifft(F))$\n(%i5) /* Verify round-trip */\n      closeto(np_ref(y, 0), 0.0);\n(%o5)                         true\n```\n\nSee also: `np_fft`, `np_real`",
+      "examples": [
+        {
+          "input": "/* Frequency-domain filtering */\n      x : np_arange(0, 64)$",
+          "output": ""
+        },
+        {
+          "input": "F : np_fft(x)$",
+          "output": ""
+        },
+        {
+          "input": "/* Zero out high-frequency components (low-pass) */",
+          "output": ""
+        },
+        {
+          "input": "y : np_real(np_ifft(F))$",
+          "output": ""
+        },
+        {
+          "input": "/* Verify round-trip */\n      closeto(np_ref(y, 0), 0.0);",
+          "output": "true"
+        }
+      ],
+      "see_also": [
+        "np_fft",
+        "np_real"
+      ],
+      "section": "Signal Processing"
     },
     "np_imag": {
       "type": "Function",
@@ -2576,6 +2723,10 @@
         {
           "title": "Element-wise Operations",
           "body_md": "All element-wise arithmetic and math operations support complex arrays unless noted otherwise. When one operand is complex and the other is real, the result is complex."
+        },
+        {
+          "title": "Signal Processing",
+          "body_md": "Functions for frequency-domain analysis and filtering. The FFT implementation uses Maxima's fftpack5 library (a Lisp translation of FFTPACK), which supports arbitrary input lengths (most efficient when the length has the form 2^r * 3^s * 5^t)."
         },
         {
           "title": "Aggregation",
