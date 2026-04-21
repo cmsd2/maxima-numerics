@@ -247,6 +247,23 @@ Returns a new ndarray where each element is negated (multiplied by -1).
 
 See also: `np_abs`, `np_sub`
 
+### Function: np_clip (a, lo, hi)
+
+Clamp values element-wise.
+
+Returns a new ndarray where each element is clamped to the range `[lo, hi]`. Values below `lo` become `lo`, values above `hi` become `hi`.
+
+#### Examples
+
+```maxima
+(%i1) A : ndarray([1.0, 5.0, 3.0, 8.0, 2.0]);
+(%o1)            ndarray([5], DOUBLE-FLOAT)
+(%i2) np_to_list(np_clip(A, 2.0, 6.0));
+(%o2)              [2.0, 5.0, 3.0, 6.0, 2.0]
+```
+
+See also: `np_abs`, `np_where`
+
 ### Function: np_scale (alpha, a)
 
 Multiply every element of an ndarray by a scalar.

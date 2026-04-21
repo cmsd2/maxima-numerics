@@ -277,6 +277,15 @@ For complex input, returns the magnitude as a double-float ndarray."
   "Element-wise negation: np_neg(A)"
   (numerics-unary-op a #'cl:-))
 
+(defun $np_clip (a lo hi)
+  "Clamp values element-wise: np_clip(A, lo, hi).
+   Values below lo become lo, values above hi become hi."
+  (let* ((handle (numerics-unwrap a))
+         (dtype (numerics:ndarray-dtype handle))
+         (lo-val (maxima-to-lisp-number lo dtype))
+         (hi-val (maxima-to-lisp-number hi dtype)))
+    (numerics-unary-op a (lambda (x) (max lo-val (min hi-val x))))))
+
 ;;; Mapping user functions
 
 (defun numerics-lambda-p (f)

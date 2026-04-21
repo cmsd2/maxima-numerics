@@ -19,6 +19,7 @@
      (:file "constructors")
      (:file "linalg")
      (:file "elementwise")
+     (:file "signal")
      (:file "slicing")
      (:file "aggregation")))))
 
@@ -41,6 +42,7 @@
      (:file "constructors")
      (:file "linalg")
      (:file "elementwise")
+     (:file "signal")
      (:file "slicing")
      (:file "aggregation")))
    (:module "arrow"

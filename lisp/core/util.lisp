@@ -17,6 +17,11 @@
          (ncol (length (cdar rows))))
     (values nrow ncol)))
 
+(defun numerics-tensor-storage (tensor)
+  "Return the actual backing simple-array of a magicl tensor.
+   Unlike magicl:lisp-array (which copies), this returns the live storage."
+  (slot-value tensor 'magicl::storage))
+
 (defun numerics-flat-array (tensor)
   "Return a flat 1D displaced array view of a tensor's backing storage.
    Works with any dimensionality — always returns a 1D array for iteration."

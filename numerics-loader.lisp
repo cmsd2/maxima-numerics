@@ -20,6 +20,10 @@
   (pushnew (merge-pathnames "lisp/" here)
            asdf:*central-registry* :test #'equal))
 
+;; Load fftpack5 (Maxima's mixed-radix FFT) — needed before ASDF compile
+(unless (find-package :fftpack5)
+  ($load "fftpack5"))
+
 ;; Load the core system via Quicklisp (resolves magicl + dependencies)
 (funcall (intern "QUICKLOAD" :ql) "numerics/core" :silent t)
 
