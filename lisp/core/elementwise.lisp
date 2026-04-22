@@ -409,6 +409,98 @@ For complex input, returns the magnitude as a double-float ndarray."
                            dtype)))))))
       (numerics-wrap (numerics:make-ndarray result :dtype dtype)))))
 
+;;; Symbolic evaluation at ndarray points
+
+(defun numerics-eval-subst-eval (expr var val dtype)
+  "Substitute VAL (a Maxima number) for VAR (a symbol) in EXPR,
+   then evaluate numerically. Returns a CL number."
+  (let* ((substituted (cl:subst val var expr))
+         (evaled ($float (meval* substituted))))
+    (maxima-to-lisp-number evaled dtype)))
+
+(defun numerics-eval-1var (expr var handle dtype)
+  "Evaluate EXPR at each point in the ndarray, substituting VAR.
+   Returns a wrapped ndarray."
+  (let* ((tensor (numerics:ndarray-tensor handle))
+         (et (numerics-element-type dtype))
+         (shape (magicl:shape tensor))
+         (result (magicl:empty shape :type et :layout :column-major)))
+    (if (= (length shape) 1)
+        (dotimes (i (first shape))
+          (let ((val (lisp-to-maxima-number (magicl:tref tensor i))))
+            (setf (magicl:tref result i)
+                  (numerics-eval-subst-eval expr var val dtype))))
+        (let ((nrow (first shape))
+              (ncol (second shape)))
+          (dotimes (i nrow)
+            (dotimes (j ncol)
+              (let ((val (lisp-to-maxima-number (magicl:tref tensor i j))))
+                (setf (magicl:tref result i j)
+                      (numerics-eval-subst-eval expr var val dtype)))))))
+    (numerics-wrap (numerics:make-ndarray result :dtype dtype))))
+
+(defun numerics-eval-nvars (expr vars handles dtype)
+  "Evaluate EXPR at each point, substituting multiple VARS simultaneously.
+   HANDLES is a list of unwrapped ndarray handles, all same shape."
+  (let* ((tensor0 (numerics:ndarray-tensor (first handles)))
+         (et (numerics-element-type dtype))
+         (shape (magicl:shape tensor0))
+         (tensors (mapcar #'numerics:ndarray-tensor handles))
+         (result (magicl:empty shape :type et :layout :column-major)))
+    (flet ((eval-at (&rest indices)
+             (let ((substituted expr))
+               (loop for var in vars
+                     for tensor in tensors
+                     for val = (lisp-to-maxima-number
+                                (apply #'magicl:tref tensor indices))
+                     do (setf substituted (cl:subst val var substituted)))
+               (maxima-to-lisp-number ($float (meval* substituted)) dtype))))
+      (if (= (length shape) 1)
+          (dotimes (i (first shape))
+            (setf (magicl:tref result i)
+                  (eval-at i)))
+          (let ((nrow (first shape))
+                (ncol (second shape)))
+            (dotimes (i nrow)
+              (dotimes (j ncol)
+                (setf (magicl:tref result i j)
+                      (eval-at i j)))))))
+    (numerics-wrap (numerics:make-ndarray result :dtype dtype))))
+
+(defun $np_eval (expr var-arg val-arg &rest more-args)
+  "Evaluate a symbolic expression at ndarray points.
+   np_eval(expr, x, x_vals)             — single variable
+   np_eval(expr, [x, y], x_vals, y_vals) — multiple variables
+   Returns an ndarray with the same shape as the value array(s)."
+  (cond
+    ;; Single variable: var-arg is a symbol
+    ((symbolp var-arg)
+     (when more-args
+       (merror "np_eval: single-variable form takes 3 arguments"))
+     (let* ((handle (numerics-unwrap val-arg))
+            (dtype (numerics:ndarray-dtype handle)))
+       (numerics-eval-1var expr var-arg handle dtype)))
+    ;; Multiple variables: var-arg is [x, y, ...]
+    (($listp var-arg)
+     (let* ((vars (cdr var-arg))
+            (nv (length vars))
+            (all-vals (cons val-arg more-args)))
+       (unless (= (length all-vals) nv)
+         (merror "np_eval: ~A variables but ~A value arrays" nv (length all-vals)))
+       (unless (every #'symbolp vars)
+         (merror "np_eval: variable list must contain symbols"))
+       (let* ((handles (mapcar (lambda (v)
+                                 (numerics-unwrap v))
+                               all-vals))
+              (shape0 (magicl:shape (numerics:ndarray-tensor (first handles))))
+              (dtype (numerics:ndarray-dtype (first handles))))
+         ;; Verify all shapes match
+         (dolist (h (rest handles))
+           (unless (equal (magicl:shape (numerics:ndarray-tensor h)) shape0)
+             (merror "np_eval: all value arrays must have the same shape")))
+         (numerics-eval-nvars expr vars handles dtype))))
+    (t (merror "np_eval: second argument must be a variable or list of variables"))))
+
 ;;; Scalar multiplication
 
 (defun $np_scale (alpha a)
