@@ -2,6 +2,13 @@
 
 Numerical optimization using the L-BFGS (Limited-memory Broyden-Fletcher-Goldfarb-Shanno) algorithm. Wraps Maxima's built-in L-BFGS implementation to work directly with ndarrays.
 
+The optimization functions are in a separate sub-module (loaded separately from the core `numerics` package):
+
+```maxima
+(%i1) load("numerics")$
+(%i2) load("numerics-optimize")$
+```
+
 ### Function: np_minimize (f, grad, x0)
 ### Function: np_minimize (f, grad, x0, tolerance)
 ### Function: np_minimize (f, grad, x0, tolerance, max_iter)
