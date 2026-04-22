@@ -21,7 +21,8 @@
      (:file "elementwise")
      (:file "signal")
      (:file "slicing")
-     (:file "aggregation")))))
+     (:file "aggregation")
+     (:file "optimize")))))
 
 ;; Full system (core + Arrow bridge)
 (defsystem "numerics"

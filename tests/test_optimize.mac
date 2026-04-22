@@ -1,0 +1,91 @@
+/* Tests for np_minimize (L-BFGS optimization) */
+
+/* === 1. Simple quadratic: f(x) = x1^2 + x2^2, minimum at origin === */
+
+(
+  f(x) := np_sum(np_pow(x, 2)),
+  grad(x) := np_scale(2.0, x),
+  x0 : ndarray([3.0, 4.0]),
+  result : np_minimize(f, grad, x0),
+  x_opt : result[1],
+  f_opt : result[2],
+  conv  : result[3],
+  true
+);
+true;
+
+/* Converged */
+is(conv = true);
+true;
+
+/* Minimum value near zero */
+is(f_opt < 1e-10);
+true;
+
+/* Solution near origin */
+is(abs(np_ref(x_opt, 0)) < 1e-4);
+true;
+
+is(abs(np_ref(x_opt, 1)) < 1e-4);
+true;
+
+/* Shape preserved */
+np_shape(x_opt);
+[2];
+
+/* === 2. Shifted quadratic: f(x) = (x1-3)^2 + (x2-5)^2 === */
+
+(
+  f2(x) := block([d], d : np_sub(x, ndarray([3.0, 5.0])), np_sum(np_pow(d, 2))),
+  g2(x) := np_scale(2.0, np_sub(x, ndarray([3.0, 5.0]))),
+  result2 : np_minimize(f2, g2, ndarray([0.0, 0.0])),
+  x2 : result2[1],
+  closeto(np_ref(x2, 0), 3.0) and closeto(np_ref(x2, 1), 5.0)
+);
+true;
+
+/* === 3. Rosenbrock function: f(x,y) = (1-x)^2 + 100*(y-x^2)^2 === */
+
+(
+  f_rosen(x) := block([x1, x2],
+    x1 : np_ref(x, 0), x2 : np_ref(x, 1),
+    (1 - x1)^2 + 100 * (x2 - x1^2)^2),
+  g_rosen(x) := block([x1, x2],
+    x1 : np_ref(x, 0), x2 : np_ref(x, 1),
+    ndarray([-2*(1 - x1) - 400*x1*(x2 - x1^2),
+             200*(x2 - x1^2)])),
+  result3 : np_minimize(f_rosen, g_rosen, ndarray([-1.0, 1.0]), 1e-10, 500),
+  x3 : result3[1],
+  closeto(np_ref(x3, 0), 1.0) and closeto(np_ref(x3, 1), 1.0)
+);
+true;
+
+/* === 4. Custom tolerance and max_iter === */
+
+(
+  result4 : np_minimize(f, grad, ndarray([10.0, 10.0]), 1e-4, 50),
+  result4[3]
+);
+true;
+
+/* === 5. Multi-dimensional shape preservation (2D input) === */
+
+(
+  f5(x) := np_sum(np_pow(x, 2)),
+  g5(x) := np_scale(2.0, x),
+  x0_2d : np_reshape(ndarray([2.0, 3.0, 4.0]), [3, 1]),
+  result5 : np_minimize(f5, g5, x0_2d),
+  np_shape(result5[1])
+);
+[3, 1];
+
+/* === 6. Lambda functions work === */
+
+(
+  result6 : np_minimize(
+    lambda([x], np_sum(np_pow(x, 2))),
+    lambda([x], np_scale(2.0, x)),
+    ndarray([5.0, 5.0])),
+  result6[3]
+);
+true;
