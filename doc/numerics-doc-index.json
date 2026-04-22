@@ -1744,6 +1744,74 @@
       ],
       "section": "Aggregation"
     },
+    "np_minimize": {
+      "type": "Function",
+      "signature": "np_minimize(f, grad, x0, tolerance, max_iter)",
+      "summary": "Minimize a scalar-valued function using gradient-based L-BFGS optimization.",
+      "body_md": "Minimize a scalar-valued function using gradient-based L-BFGS optimization.\n\n**Arguments:**\n- `f` — objective function taking an ndarray, returning a scalar\n- `grad` — gradient function taking an ndarray, returning an ndarray of the same shape\n- `x0` — initial point (real ndarray, any shape)\n- `tolerance` — convergence tolerance (default: `1e-8`)\n- `max_iter` — maximum number of iterations (default: `200`)\n\n**Returns:** a list `[x_opt, f_opt, converged]` where:\n- `x_opt` — the optimized ndarray (same shape as `x0`)\n- `f_opt` — the final objective value\n- `converged` — `true` if L-BFGS converged, `false` otherwise\n\nBoth `f` and `grad` can be named functions or lambda expressions. The shape of `x0` is preserved in the output — if you pass a `[p, 1]` column vector, you get a `[p, 1]` result.\n\n#### Examples\n\nSimple quadratic:\n\n```maxima\n(%i1) f(x) := np_sum(np_pow(x, 2))$\n(%i2) grad(x) := np_scale(2.0, x)$\n(%i3) [x_opt, f_opt, ok] : np_minimize(f, grad, ndarray([3.0, 4.0]));\n(%o3)       [ndarray([2], DOUBLE-FLOAT), 1.97e-30, true]\n(%i4) np_to_list(x_opt);\n(%o4)       [2.80e-16, 3.55e-16]\n```\n\nRosenbrock function (classic optimization benchmark):\n\n```maxima\n(%i1) f_rosen(x) := block([x1, x2],\n        x1 : np_ref(x, 0), x2 : np_ref(x, 1),\n        (1 - x1)^2 + 100 * (x2 - x1^2)^2)$\n(%i2) g_rosen(x) := block([x1, x2],\n        x1 : np_ref(x, 0), x2 : np_ref(x, 1),\n        ndarray([-2*(1 - x1) - 400*x1*(x2 - x1^2),\n                 200*(x2 - x1^2)]))$\n(%i3) [x_opt, f_opt, ok] : np_minimize(f_rosen, g_rosen,\n                              ndarray([-1.0, 1.0]), 1e-10, 500);\n(%o3)       [ndarray([2], DOUBLE-FLOAT), 0.0, true]\n(%i4) np_to_list(x_opt);\n(%o4)       [1.0, 1.0]\n```\n\nLinear regression (symbolic-numeric bridge):\n\n```maxima\n(%i1) /* Derive gradient symbolically */\n      L_i(a, b, x_i, y_i) := (1/2) * (y_i - a - b*x_i)^2$\n(%i2) diff(L_i(a, b, x[i], y[i]), a);\n(%o2)       -(y_i - b*x_i - a)\n(%i3) /* Implement as ndarray functions */\n      cost(w) := block([pred, res],\n        pred : np_matmul(X, w),\n        res : np_sub(pred, y),\n        np_sum(np_pow(res, 2)) / (2*n))$\n(%i4) grad(w) := np_scale(1.0/n,\n        np_matmul(np_transpose(X), np_sub(np_matmul(X, w), y)))$\n(%i5) [w_opt, loss, ok] : np_minimize(cost, grad, np_zeros([2, 1]))$\n```\n\nWith lambda expressions:\n\n```maxima\n(%i1) [x_opt, _, ok] : np_minimize(\n        lambda([x], np_sum(np_pow(x, 2))),\n        lambda([x], np_scale(2.0, x)),\n        ndarray([5.0, 5.0]));\n(%o1)       [ndarray([2], DOUBLE-FLOAT), 1.42e-29, true]\n```\n\nSee also: `np_lstsq` (for linear least-squares problems)",
+      "examples": [
+        {
+          "input": "f(x) := np_sum(np_pow(x, 2))$",
+          "output": ""
+        },
+        {
+          "input": "grad(x) := np_scale(2.0, x)$",
+          "output": ""
+        },
+        {
+          "input": "[x_opt, f_opt, ok] : np_minimize(f, grad, ndarray([3.0, 4.0]));",
+          "output": "[ndarray([2], DOUBLE-FLOAT), 1.97e-30, true]"
+        },
+        {
+          "input": "np_to_list(x_opt);",
+          "output": "[2.80e-16, 3.55e-16]"
+        },
+        {
+          "input": "f_rosen(x) := block([x1, x2],\n        x1 : np_ref(x, 0), x2 : np_ref(x, 1),\n        (1 - x1)^2 + 100 * (x2 - x1^2)^2)$",
+          "output": ""
+        },
+        {
+          "input": "g_rosen(x) := block([x1, x2],\n        x1 : np_ref(x, 0), x2 : np_ref(x, 1),\n        ndarray([-2*(1 - x1) - 400*x1*(x2 - x1^2),\n                 200*(x2 - x1^2)]))$",
+          "output": ""
+        },
+        {
+          "input": "[x_opt, f_opt, ok] : np_minimize(f_rosen, g_rosen,\n                              ndarray([-1.0, 1.0]), 1e-10, 500);",
+          "output": "[ndarray([2], DOUBLE-FLOAT), 0.0, true]"
+        },
+        {
+          "input": "np_to_list(x_opt);",
+          "output": "[1.0, 1.0]"
+        },
+        {
+          "input": "/* Derive gradient symbolically */\n      L_i(a, b, x_i, y_i) := (1/2) * (y_i - a - b*x_i)^2$",
+          "output": ""
+        },
+        {
+          "input": "diff(L_i(a, b, x[i], y[i]), a);",
+          "output": "-(y_i - b*x_i - a)"
+        },
+        {
+          "input": "/* Implement as ndarray functions */\n      cost(w) := block([pred, res],\n        pred : np_matmul(X, w),\n        res : np_sub(pred, y),\n        np_sum(np_pow(res, 2)) / (2*n))$",
+          "output": ""
+        },
+        {
+          "input": "grad(w) := np_scale(1.0/n,\n        np_matmul(np_transpose(X), np_sub(np_matmul(X, w), y)))$",
+          "output": ""
+        },
+        {
+          "input": "[w_opt, loss, ok] : np_minimize(cost, grad, np_zeros([2, 1]))$",
+          "output": ""
+        },
+        {
+          "input": "[x_opt, _, ok] : np_minimize(\n        lambda([x], np_sum(np_pow(x, 2))),\n        lambda([x], np_scale(2.0, x)),\n        ndarray([5.0, 5.0]));",
+          "output": "[ndarray([2], DOUBLE-FLOAT), 1.42e-29, true]"
+        }
+      ],
+      "see_also": [
+        "np_lstsq"
+      ],
+      "section": "Optimization"
+    },
     "np_mul": {
       "type": "Function",
       "signature": "np_mul(a, b)",
@@ -3015,6 +3083,10 @@
         {
           "title": "Aggregation",
           "body_md": ""
+        },
+        {
+          "title": "Optimization",
+          "body_md": "Numerical optimization using the L-BFGS (Limited-memory Broyden-Fletcher-Goldfarb-Shanno) algorithm. Wraps Maxima's built-in L-BFGS implementation to work directly with ndarrays."
         },
         {
           "title": "Linear Algebra",
