@@ -3086,7 +3086,7 @@
         },
         {
           "title": "Optimization",
-          "body_md": "Numerical optimization using the L-BFGS (Limited-memory Broyden-Fletcher-Goldfarb-Shanno) algorithm. Wraps Maxima's built-in L-BFGS implementation to work directly with ndarrays."
+          "body_md": "Numerical optimization using the L-BFGS (Limited-memory Broyden-Fletcher-Goldfarb-Shanno) algorithm. Wraps Maxima's built-in L-BFGS implementation to work directly with ndarrays.\n\nThe optimization functions are in a separate sub-module (loaded separately from the core `numerics` package):\n\n```maxima\n(%i1) load(\"numerics\")$\n(%i2) load(\"numerics-optimize\")$\n```"
         },
         {
           "title": "Linear Algebra",
