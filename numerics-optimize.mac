@@ -1,0 +1,7 @@
+/* numerics-optimize — L-BFGS optimization for Maxima ndarrays */
+/* Requires numerics to be loaded first: load("numerics")$ */
+
+if not fboundp('np_zeros) then
+  error("numerics-optimize requires numerics. Load it first: load(\"numerics\")$")$
+
+load("numerics-optimize-loader.lisp")$

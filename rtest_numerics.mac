@@ -19,6 +19,11 @@ batch("tests/test_fft2d.mac");
 batch("tests/test_slicing.mac");
 batch("tests/test_aggregation.mac");
 batch("tests/test_complex.mac");
+
+/* Optimization tests require numerics-optimize */
+(load("numerics-optimize"), true);
+true;
+
 batch("tests/test_optimize.mac");
 
 /* Cross-validation tests require lapack */

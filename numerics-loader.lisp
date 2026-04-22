@@ -24,13 +24,6 @@
 (unless (find-package :fftpack5)
   ($load "fftpack5"))
 
-;; Load lbfgs (Maxima's L-BFGS optimizer) — needed before ASDF compile
-;; Suppress SBCL's compile-time warning about flonum-epsilon (defined at runtime)
-(unless (fboundp 'common-lisp-user::lbfgs)
-  (let (#+sbcl (*error-output* (make-broadcast-stream)))
-    (handler-bind (#+sbcl (warning #'muffle-warning))
-      ($load "lbfgs"))))
-
 ;; Load the core system via Quicklisp (resolves magicl + dependencies)
 (funcall (intern "QUICKLOAD" :ql) "numerics/core" :silent t)
 

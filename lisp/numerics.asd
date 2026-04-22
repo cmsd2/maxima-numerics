@@ -21,8 +21,7 @@
      (:file "elementwise")
      (:file "signal")
      (:file "slicing")
-     (:file "aggregation")
-     (:file "optimize")))))
+     (:file "aggregation")))))
 
 ;; Full system (core + Arrow bridge)
 (defsystem "numerics"
@@ -53,6 +52,19 @@
      (:file "array")
      (:file "bridge")
      (:file "io")))))
+
+;; Optimization system (core + Maxima's lbfgs)
+(defsystem "numerics/optimize"
+  :description "L-BFGS optimization for numerics ndarrays"
+  :version "0.1.0"
+  :license "MIT"
+  :depends-on ("numerics/core")
+  :serial t
+  :components
+  ((:module "optimize"
+    :serial t
+    :components
+    ((:file "optimize")))))
 
 ;; Image I/O system (core + opticl)
 (defsystem "numerics/image"
