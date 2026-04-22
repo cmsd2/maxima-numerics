@@ -63,6 +63,116 @@
         (setf (aref z i) (/ (aref z i) nf)))
       (numerics-wrap (numerics:make-ndarray result :dtype :complex-double-float)))))
 
+;;; ============================================================
+;;; 2D FFT
+;;; ============================================================
+
+(defun fft2d-core (flat nrow ncol forward-p)
+  "Apply separable 1D FFT/IFFT to all columns then rows of a 2D complex array.
+   FLAT is a (simple-array (complex double-float) (*)) in column-major order.
+   FORWARD-P: t for forward FFT, nil for inverse.
+   Modifies FLAT in-place."
+  (declare (type (simple-array (complex double-float) (*)) flat)
+           (type fixnum nrow ncol))
+  ;; --- Pass 1: FFT each column (contiguous in column-major) ---
+  (let ((col-buf (make-array nrow :element-type '(complex double-float)))
+        (nrow-f (coerce nrow 'double-float)))
+    (declare (type (simple-array (complex double-float) (*)) col-buf))
+    (dotimes (j ncol)
+      (let ((off (* j nrow)))
+        ;; Copy column j into col-buf
+        (replace col-buf flat :start2 off :end2 (+ off nrow))
+        ;; In-place FFT/IFFT
+        (if forward-p
+            (fftpack5:cfft col-buf)
+            (fftpack5:inverse-cfft col-buf))
+        ;; Scale: forward → multiply by N (undo cfft's 1/N);
+        ;;        inverse → divide by N (apply 1/N)
+        (if forward-p
+            (dotimes (i nrow)
+              (setf (aref col-buf i) (* nrow-f (aref col-buf i))))
+            (dotimes (i nrow)
+              (setf (aref col-buf i) (/ (aref col-buf i) nrow-f))))
+        ;; Copy col-buf back
+        (replace flat col-buf :start1 off :end1 (+ off nrow)))))
+  ;; --- Pass 2: FFT each row (non-contiguous, scattered by stride nrow) ---
+  (let ((row-buf (make-array ncol :element-type '(complex double-float)))
+        (ncol-f (coerce ncol 'double-float)))
+    (declare (type (simple-array (complex double-float) (*)) row-buf))
+    (dotimes (i nrow)
+      ;; Gather row i into row-buf
+      (dotimes (k ncol)
+        (setf (aref row-buf k) (aref flat (+ i (* k nrow)))))
+      ;; In-place FFT/IFFT
+      (if forward-p
+          (fftpack5:cfft row-buf)
+          (fftpack5:inverse-cfft row-buf))
+      ;; Scale
+      (if forward-p
+          (dotimes (k ncol)
+            (setf (aref row-buf k) (* ncol-f (aref row-buf k))))
+          (dotimes (k ncol)
+            (setf (aref row-buf k) (/ (aref row-buf k) ncol-f))))
+      ;; Scatter row-buf back to flat
+      (dotimes (k ncol)
+        (setf (aref flat (+ i (* k nrow))) (aref row-buf k))))))
+
+(defun $np_fft2d (a)
+  "Compute the 2D FFT of a 2D ndarray: np_fft2d(A).
+   Uses the standard convention (matching NumPy's fft2):
+     Y[k1,k2] = sum_n1 sum_n2 x[n1,n2] * exp(-2*pi*i*(k1*n1/N1 + k2*n2/N2))
+   Returns a complex 2D ndarray of the same shape.
+   Accepts real or complex input."
+  (let* ((handle (numerics-unwrap a)))
+    (numerics-require-2d handle "np_fft2d")
+    (let* ((tensor-in (numerics:ndarray-tensor handle))
+           (shape (magicl:shape tensor-in))
+           (nrow (first shape))
+           (ncol (second shape))
+           (result (magicl:empty (list nrow ncol) :type '(complex double-float)
+                                                   :layout :column-major))
+           (z (numerics-tensor-storage result))
+           (src (numerics-tensor-storage tensor-in))
+           (total (* nrow ncol)))
+      ;; Copy input → result (promote real→complex if needed)
+      (if (eq (numerics:ndarray-dtype handle) :complex-double-float)
+          (replace z src)
+          (dotimes (i total)
+            (setf (aref z i) (complex (the double-float (aref src i)) 0d0))))
+      ;; Apply separable 2D FFT in-place
+      (fft2d-core z nrow ncol t)
+      (numerics-wrap (numerics:make-ndarray result :dtype :complex-double-float)))))
+
+(defun $np_ifft2d (a)
+  "Compute the inverse 2D FFT of a 2D ndarray: np_ifft2d(A).
+   Uses the standard convention (matching NumPy's ifft2):
+     x[n1,n2] = (1/(N1*N2)) * sum_k1 sum_k2 Y[k1,k2] * exp(+2*pi*i*(k1*n1/N1 + k2*n2/N2))
+   Returns a complex 2D ndarray of the same shape.
+   Accepts real or complex input."
+  (let* ((handle (numerics-unwrap a)))
+    (numerics-require-2d handle "np_ifft2d")
+    (let* ((tensor-in (numerics:ndarray-tensor handle))
+           (shape (magicl:shape tensor-in))
+           (nrow (first shape))
+           (ncol (second shape))
+           (result (magicl:empty (list nrow ncol) :type '(complex double-float)
+                                                   :layout :column-major))
+           (z (numerics-tensor-storage result))
+           (src (numerics-tensor-storage tensor-in))
+           (total (* nrow ncol)))
+      ;; Copy input → result (promote real→complex if needed)
+      (if (eq (numerics:ndarray-dtype handle) :complex-double-float)
+          (replace z src)
+          (dotimes (i total)
+            (setf (aref z i) (complex (the double-float (aref src i)) 0d0))))
+      ;; Apply separable 2D IFFT in-place
+      (fft2d-core z nrow ncol nil)
+      (numerics-wrap (numerics:make-ndarray result :dtype :complex-double-float)))))
+
+;;; ============================================================
+;;; Convolution
+;;; ============================================================
+
 (defun numerics-require-2d (handle op-name)
   "Signal an error if the ndarray is not 2D."
   (let ((shape (magicl:shape (numerics:ndarray-tensor handle))))

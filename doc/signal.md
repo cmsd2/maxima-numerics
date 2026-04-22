@@ -44,7 +44,7 @@ Frequency analysis of a sine wave:
       mag : np_abs(F)$
 ```
 
-See also: `np_ifft`, `np_abs`, `np_real`, `np_imag`, `np_angle`
+See also: `np_ifft`, `np_fft2d`, `np_abs`, `np_real`, `np_imag`, `np_angle`
 
 ### Function: np_ifft (a)
 
@@ -71,7 +71,65 @@ The input `a` must be a 1D ndarray (real or complex). The result is always a com
 (%o5)                         true
 ```
 
-See also: `np_fft`, `np_real`
+See also: `np_fft`, `np_ifft2d`, `np_real`
+
+### Function: np_fft2d (a)
+
+Compute the 2D discrete Fourier transform of a 2D ndarray.
+
+**Scaling convention (matches NumPy's `fft2`):**
+
+    Y[k1,k2] = sum_n1 sum_n2 x[n1,n2] * exp(-2 * %pi * %i * (k1*n1/N1 + k2*n2/N2))
+
+The forward transform does **not** include a 1/(N1*N2) factor. Use `np_ifft2d` to invert.
+
+The input `a` must be a 2D ndarray (real or complex). The result is always a complex 2D ndarray of the same shape. Internally uses separable 1D FFTs along columns then rows.
+
+#### Examples
+
+```maxima
+(%i1) A : ndarray(matrix([1, 2, 3], [4, 5, 6], [7, 8, 9]));
+(%o1)            ndarray([3, 3], DOUBLE-FLOAT)
+(%i2) F : np_fft2d(A);
+(%o2)            ndarray([3, 3], COMPLEX-DOUBLE-FLOAT)
+(%i3) /* DC component = sum of all elements */
+      realpart(np_ref(F, 0, 0));
+(%o3)                         45.0
+(%i4) /* Round-trip: ifft2d(fft2d(x)) = x */
+      B : np_ifft2d(F)$
+(%i5) realpart(np_ref(B, 0, 0));
+(%o5)                          1.0
+```
+
+See also: `np_ifft2d`, `np_fft`
+
+### Function: np_ifft2d (a)
+
+Compute the inverse 2D discrete Fourier transform of a 2D ndarray.
+
+**Scaling convention (matches NumPy's `ifft2`):**
+
+    x[n1,n2] = (1/(N1*N2)) * sum_k1 sum_k2 Y[k1,k2] * exp(+2 * %pi * %i * (k1*n1/N1 + k2*n2/N2))
+
+The inverse transform includes the 1/(N1*N2) normalization factor.
+
+The input `a` must be a 2D ndarray (real or complex). The result is always a complex 2D ndarray of the same shape. For real-valued data, use `np_real` to extract the real part.
+
+#### Examples
+
+```maxima
+(%i1) A : ndarray(matrix([1, 2], [3, 4]));
+(%o1)            ndarray([2, 2], DOUBLE-FLOAT)
+(%i2) F : np_fft2d(A)$
+(%i3) B : np_ifft2d(F)$
+(%i4) /* Recovered values match original */
+      realpart(np_ref(B, 0, 0));
+(%o4)                          1.0
+(%i5) realpart(np_ref(B, 1, 1));
+(%o5)                          4.0
+```
+
+See also: `np_fft2d`, `np_ifft`, `np_real`
 
 ### Function: np_convolve (a, b)
 

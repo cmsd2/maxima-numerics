@@ -15,6 +15,7 @@ batch("tests/test_constructors.mac");
 batch("tests/test_linalg.mac");
 batch("tests/test_elementwise.mac");
 batch("tests/test_signal.mac");
+batch("tests/test_fft2d.mac");
 batch("tests/test_slicing.mac");
 batch("tests/test_aggregation.mac");
 batch("tests/test_complex.mac");
