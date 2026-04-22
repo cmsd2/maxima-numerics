@@ -228,6 +228,8 @@ File: numerics.info,  Node: Conversion,  Prev: Definitions for numerics,  Up: Pa
 * Function np_extract mask a::
 * Function np_fft a::
 * Function np_ifft a::
+* Function np_fft2d a::
+* Function np_ifft2d a::
 * Function np_convolve a b::
 * Function np_convolve2d a kernel::
 * Loading the module::
@@ -1895,10 +1897,11 @@ Frequency analysis of a sine wave:
 (%i5) /* Magnitude spectrum */
       mag : np_abs(F)$
 
-See also: ‘np_ifft’, ‘np_abs’, ‘np_real’, ‘np_imag’, ‘np_angle’
+See also: ‘np_ifft’, ‘np_fft2d’, ‘np_abs’, ‘np_real’, ‘np_imag’,
+‘np_angle’
 
 
-File: numerics.info,  Node: Function np_ifft a,  Next: Function np_convolve a b,  Prev: Function np_fft a,  Up: Conversion
+File: numerics.info,  Node: Function np_ifft a,  Next: Function np_fft2d a,  Prev: Function np_fft a,  Up: Conversion
 
  -- Function: np_ifft (A)
      Compute the inverse discrete Fourier transform of a 1D ndarray.
@@ -1929,10 +1932,83 @@ File: numerics.info,  Node: Function np_ifft a,  Next: Function np_convolve a b,
       closeto(np_ref(y, 0), 0.0);
 (%o5)                         true
 
-See also: ‘np_fft’, ‘np_real’
+See also: ‘np_fft’, ‘np_ifft2d’, ‘np_real’
 
 
-File: numerics.info,  Node: Function np_convolve a b,  Next: Function np_convolve2d a kernel,  Prev: Function np_ifft a,  Up: Conversion
+File: numerics.info,  Node: Function np_fft2d a,  Next: Function np_ifft2d a,  Prev: Function np_ifft a,  Up: Conversion
+
+ -- Function: np_fft2d (A)
+     Compute the 2D discrete Fourier transform of a 2D ndarray.
+
+     *Scaling convention (matches NumPy's ‘fft2’):*
+
+     Y[k1,k2] = sum_n1 sum_n2 x[n1,n2] * exp(-2 * %pi * %i * (k1*n1/N1 + k2*n2/N2))
+
+     The forward transform does *not* include a 1/(N1*N2) factor.  Use
+     ‘np_ifft2d’ to invert.
+
+     The input ‘a’ must be a 2D ndarray (real or complex).  The result
+     is always a complex 2D ndarray of the same shape.  Internally uses
+     separable 1D FFTs along columns then rows.
+
+* Menu:
+
+     * Examples::
+
+1.3.1.52 Examples
+.................
+
+(%i1) A : ndarray(matrix([1, 2, 3], [4, 5, 6], [7, 8, 9]));
+(%o1)            ndarray([3, 3], DOUBLE-FLOAT)
+(%i2) F : np_fft2d(A);
+(%o2)            ndarray([3, 3], COMPLEX-DOUBLE-FLOAT)
+(%i3) /* DC component = sum of all elements */
+      realpart(np_ref(F, 0, 0));
+(%o3)                         45.0
+(%i4) /* Round-trip: ifft2d(fft2d(x)) = x */
+      B : np_ifft2d(F)$
+(%i5) realpart(np_ref(B, 0, 0));
+(%o5)                          1.0
+
+See also: ‘np_ifft2d’, ‘np_fft’
+
+
+File: numerics.info,  Node: Function np_ifft2d a,  Next: Function np_convolve a b,  Prev: Function np_fft2d a,  Up: Conversion
+
+ -- Function: np_ifft2d (A)
+     Compute the inverse 2D discrete Fourier transform of a 2D ndarray.
+
+     *Scaling convention (matches NumPy's ‘ifft2’):*
+
+     x[n1,n2] = (1/(N1*N2)) * sum_k1 sum_k2 Y[k1,k2] * exp(+2 * %pi * %i * (k1*n1/N1 + k2*n2/N2))
+
+     The inverse transform includes the 1/(N1*N2) normalization factor.
+
+     The input ‘a’ must be a 2D ndarray (real or complex).  The result
+     is always a complex 2D ndarray of the same shape.  For real-valued
+     data, use ‘np_real’ to extract the real part.
+
+* Menu:
+
+     * Examples::
+
+1.3.1.53 Examples
+.................
+
+(%i1) A : ndarray(matrix([1, 2], [3, 4]));
+(%o1)            ndarray([2, 2], DOUBLE-FLOAT)
+(%i2) F : np_fft2d(A)$
+(%i3) B : np_ifft2d(F)$
+(%i4) /* Recovered values match original */
+      realpart(np_ref(B, 0, 0));
+(%o4)                          1.0
+(%i5) realpart(np_ref(B, 1, 1));
+(%o5)                          4.0
+
+See also: ‘np_fft2d’, ‘np_ifft’, ‘np_real’
+
+
+File: numerics.info,  Node: Function np_convolve a b,  Next: Function np_convolve2d a kernel,  Prev: Function np_ifft2d a,  Up: Conversion
 
  -- Function: np_convolve (A, B)
      Compute the 1D discrete linear convolution of two real signals.
@@ -1945,7 +2021,7 @@ File: numerics.info,  Node: Function np_convolve a b,  Next: Function np_convolv
 
      * Examples::
 
-1.3.1.52 Examples
+1.3.1.54 Examples
 .................
 
 (%i1) /* Convolve with impulse: identity operation */
@@ -1985,7 +2061,7 @@ File: numerics.info,  Node: Function np_convolve2d a kernel,  Next: Loading the 
 
      * Examples::
 
-1.3.1.53 Examples
+1.3.1.55 Examples
 .................
 
 (%i1) /* Identity convolution with a 1x1 kernel */
@@ -3434,6 +3510,7 @@ Appendix A Function and variable index
 * np_eye:                                Function np_eye n / np_eye n m / np_eye n m dtype.
                                                                 (line 3)
 * np_fft:                                Function np_fft a.     (line 3)
+* np_fft2d:                              Function np_fft2d a.   (line 3)
 * np_flatten:                            Function np_flatten a. (line 3)
 * np_from_image:                         Function np_from_image img.
                                                                 (line 3)
@@ -3446,6 +3523,7 @@ Appendix A Function and variable index
 * np_hstack:                             Function np_hstack a b.
                                                                 (line 3)
 * np_ifft:                               Function np_ifft a.    (line 3)
+* np_ifft2d:                             Function np_ifft2d a.  (line 3)
 * np_imag:                               Function np_imag a.    (line 3)
 * np_imshow:                             Function np_imshow a.  (line 3)
 * np_inv:                                Function np_inv a.     (line 3)
@@ -3567,317 +3645,323 @@ Node: Definitions for numerics4515
 Ref: #definitions-for-numerics4705
 Node: Conversion4705
 Ref: #conversion4834
-Node: Function ndarray a / ndarray a complex8008
-Ref: #function-ndarray-a-ndarray-a-complex8173
-Node: Examples9486
-Ref: #examples9601
-Node: Function ndarray_p x10192
-Ref: #function-ndarray_p-x10368
-Ref: #examples-110554
-Node: Function np_to_matrix a10774
-Ref: #function-np_to_matrix-a10936
-Ref: #examples-211259
-Node: Function np_to_list a11635
-Ref: #function-np_to_list-a11821
-Ref: #examples-312315
-Node: Function np_zeros shape / np_zeros shape dtype12675
-Ref: #function-np_zeros-shape-np_zeros-shape-dtype12910
-Ref: #examples-413210
-Node: Function np_ones shape / np_ones shape dtype13632
-Ref: #function-np_ones-shape-np_ones-shape-dtype13893
-Ref: #examples-514180
-Node: Function np_eye n / np_eye n m / np_eye n m dtype14598
-Ref: #function-np_eye-n-np_eye-n-m-np_eye-n-m-dtype14844
-Ref: #examples-615412
-Node: Function np_rand shape15761
-Ref: #function-np_rand-shape15952
-Ref: #examples-716219
-Node: Function np_randn shape16492
-Ref: #function-np_randn-shape16709
-Ref: #examples-817023
-Node: Function np_arange stop / np_arange start stop / np_arange start stop step17195
-Ref: #function-np_arange-stop-np_arange-start-stop-np_arange-start-stop-step17491
-Ref: #examples-918055
-Node: Function np_linspace start stop n18410
-Ref: #function-np_linspace-start-stop-n18679
-Ref: #examples-1018979
-Node: Function np_full shape val / np_full shape val dtype19243
-Ref: #function-np_full-shape-val-np_full-shape-val-dtype19506
-Ref: #examples-1119806
-Node: Function np_empty shape / np_empty shape dtype20192
-Ref: #function-np_empty-shape-np_empty-shape-dtype20456
-Ref: #examples-1220831
-Node: Function np_diag list / np_diag list dtype21091
-Ref: #function-np_diag-list-np_diag-list-dtype21317
-Ref: #examples-1321671
-Node: Function np_copy a22056
-Ref: #function-np_copy-a22242
-Ref: #examples-1422474
-Node: Function np_logspace start stop n22853
-Ref: #function-np_logspace-start-stop-n23033
-Ref: #examples-1523338
-Node: Function np_ref a i23701
-Ref: #function-np_ref-a-i23873
-Ref: #examples-1624297
-Node: Function np_set a i j val24680
-Ref: #function-np_set-a-i-j-val24846
-Ref: #examples-1725344
-Node: Function np_row a i25775
-Ref: #function-np_row-a-i25933
-Ref: #examples-1826154
-Node: Function np_col a j26447
-Ref: #function-np_col-a-j26621
-Ref: #examples-1926851
-Node: Function np_slice a spec0 spec1 ... specN27140
-Ref: #function-np_slice-a-spec0-spec1-specn27347
-Ref: #examples-2028270
-Node: Function np_reshape a shape29546
-Ref: #function-np_reshape-a-shape29738
-Ref: #examples-2130021
-Node: Function np_flatten a30349
-Ref: #function-np_flatten-a30515
-Ref: #examples-2230705
-Node: Function np_hstack a b31001
-Ref: #function-np_hstack-a-b31164
-Ref: #examples-2331453
-Node: Function np_vstack a b31804
-Ref: #function-np_vstack-a-b31965
-Ref: #examples-2432249
-Node: Function np_shape a32596
-Ref: #function-np_shape-a32749
-Ref: #examples-2532974
-Node: Function np_size a33233
-Ref: #function-np_size-a33382
-Ref: #examples-2633504
-Node: Function np_dtype a33738
-Ref: #function-np_dtype-a33888
-Ref: #examples-2734118
-Node: Function np_add a b34430
-Ref: #function-np_add-a-b34582
-Ref: #examples-2834792
-Node: Function np_sub a b35161
-Ref: #function-np_sub-a-b35313
-Ref: #examples-2935512
-Node: Function np_mul a b35894
-Ref: #function-np_mul-a-b36046
-Ref: #examples-3036404
-Node: Function np_div a b36709
-Ref: #function-np_div-a-b36861
-Ref: #examples-3137057
-Node: Function np_pow a p37425
-Ref: #function-np_pow-a-p37576
-Ref: #examples-3237834
-Node: Function np_sqrt a38139
-Ref: #function-np_sqrt-a38286
-Ref: #examples-3338495
-Node: Function np_exp a38702
-Ref: #function-np_exp-a38846
-Ref: #examples-3439073
-Node: Function np_log a39403
-Ref: #function-np_log-a39546
-Ref: #examples-3539789
-Node: Function np_sin a39987
-Ref: #function-np_sin-a40130
-Ref: #examples-3640335
-Node: Function np_cos a40608
-Ref: #function-np_cos-a40751
-Ref: #examples-3740960
-Node: Function np_tan a41165
-Ref: #function-np_tan-a41308
-Ref: #examples-3841519
-Node: Function np_abs a41710
-Ref: #function-np_abs-a41853
-Ref: #examples-3942149
-Node: Function np_neg a42342
-Ref: #function-np_neg-a42492
-Ref: #examples-4042669
-Node: Function np_clip a lo hi42858
-Ref: #function-np_clip-a-lo-hi43025
-Ref: #examples-4143299
-Node: Function np_scale alpha a43515
-Ref: #function-np_scale-alpha-a43684
-Ref: #examples-4243891
-Node: Function np_map f a44183
-Ref: #function-np_map-f-a44344
-Ref: #examples-4345413
-Node: Function np_map2 f a b46153
-Ref: #function-np_map2-f-a-b46345
-Ref: #examples-4446852
-Node: Function np_where condition / np_where condition x y47238
-Ref: #function-np_where-condition-np_where-condition-x-y47466
-Ref: #examples-4548189
-Node: Function np_greater a b49110
-Ref: #function-np_greater-a-b49313
-Ref: #examples-4649650
-Node: Function np_greater_equal a b50052
-Ref: #function-np_greater_equal-a-b50229
-Node: Function np_less a b50405
-Ref: #function-np_less-a-b50576
-Node: Function np_less_equal a b50739
-Ref: #function-np_less_equal-a-b50908
-Node: Function np_equal a b51081
-Ref: #function-np_equal-a-b51250
-Node: Function np_not_equal a b51381
-Ref: #function-np_not_equal-a-b51555
-Node: Function np_logical_and a b51683
-Ref: #function-np_logical_and-a-b51864
-Ref: #examples-4752009
-Node: Function np_logical_or a b52307
-Ref: #function-np_logical_or-a-b52487
-Node: Function np_logical_not a52620
-Ref: #function-np_logical_not-a52791
-Node: Function np_test f a52920
-Ref: #function-np_test-f-a53087
-Ref: #examples-4853836
-Node: Function np_extract mask a54219
-Ref: #function-np_extract-mask-a54384
-Ref: #examples-4954805
-Node: Function np_fft a55533
-Ref: #function-np_fft-a55686
-Ref: #examples-5056153
-Node: Function np_ifft a56973
-Ref: #function-np_ifft-a57125
-Ref: #examples-5157668
-Node: Function np_convolve a b57984
-Ref: #function-np_convolve-a-b58157
-Ref: #examples-5258505
-Node: Function np_convolve2d a kernel59247
-Ref: #function-np_convolve2d-a-kernel59427
-Ref: #examples-5359969
-Node: Loading the module61135
-Ref: #loading-the-module61299
-Node: Image representation61354
-Ref: #image-representation61541
-Node: Function np_read_image path61835
-Ref: #function-np_read_image-path62014
-Ref: #examples-5462329
-Node: Function np_write_image a path62546
-Ref: #function-np_write_image-a-path62729
-Ref: #examples-5563031
-Node: Function np_imshow a63195
-Ref: #function-np_imshow-a63360
-Ref: #examples-5663686
-Node: Function np_mandrill63965
-Ref: #function-np_mandrill64123
-Ref: #examples-5764469
-Node: Function np_to_image a64786
-Ref: #function-np_to_image-a64951
-Ref: #examples-5865311
-Node: Function np_from_image img65443
-Ref: #function-np_from_image-img65609
-Ref: #examples-5965925
-Node: Function np_sum a66114
-Ref: #function-np_sum-a66267
-Ref: #examples-6066842
-Node: Function np_mean a67165
-Ref: #function-np_mean-a67326
-Ref: #examples-6167808
-Node: Function np_min a / np_min a axis68143
-Ref: #function-np_min-a-np_min-a-axis68338
-Ref: #examples-6268974
-Node: Function np_max a / np_max a axis69296
-Ref: #function-np_max-a-np_max-a-axis69512
-Ref: #examples-6370151
-Node: Function np_argmin a / np_argmin a axis70473
-Ref: #function-np_argmin-a-np_argmin-a-axis70701
-Ref: #examples-6471353
-Node: Function np_argmax a / np_argmax a axis71683
-Ref: #function-np_argmax-a-np_argmax-a-axis71911
-Ref: #examples-6572563
-Node: Function np_var a / np_var a axis72893
-Ref: #function-np_var-a-np_var-a-axis73109
-Ref: #examples-6673702
-Node: Function np_std a / np_std a axis74022
-Ref: #function-np_std-a-np_std-a-axis74219
-Ref: #examples-6774862
-Node: Function np_cumsum a75189
-Ref: #function-np_cumsum-a75356
-Ref: #examples-6875598
-Node: Function np_dot a b75847
-Ref: #function-np_dot-a-b76016
-Ref: #examples-6976229
-Node: Function np_sort a / np_sort a axis76515
-Ref: #function-np_sort-a-np_sort-a-axis76723
-Ref: #examples-7077423
-Node: Function np_argsort a / np_argsort a axis77887
-Ref: #function-np_argsort-a-np_argsort-a-axis78116
-Ref: #examples-7178806
-Node: Function np_trapz y / np_trapz y x79273
-Ref: #function-np_trapz-y-np_trapz-y-x79478
-Ref: #examples-7280004
-Node: Function np_diff a80475
-Ref: #function-np_diff-a80637
-Ref: #examples-7380904
-Node: Function np_cov a81244
-Ref: #function-np_cov-a81393
-Ref: #examples-7481742
-Node: Function np_corrcoef a82217
-Ref: #function-np_corrcoef-a82375
-Ref: #examples-7582755
-Node: Function np_matmul a b83274
-Ref: #function-np_matmul-a-b83433
-Ref: #examples-7683698
-Node: Function np_inv a84076
-Ref: #function-np_inv-a84224
-Ref: #examples-7784465
-Node: Function np_det a84858
-Ref: #function-np_det-a85005
-Ref: #examples-7885195
-Node: Function np_solve a b85437
-Ref: #function-np_solve-a-b85589
-Ref: #examples-7985898
-Node: Function np_svd a86261
-Ref: #function-np_svd-a86408
-Ref: #examples-8087095
-Node: Function np_eig a87676
-Ref: #function-np_eig-a87818
-Ref: #examples-8188413
-Node: Function np_qr a88892
-Ref: #function-np_qr-a89032
-Ref: #examples-8289499
-Node: Function np_lu a89808
-Ref: #function-np_lu-a89965
-Ref: #examples-8390398
-Node: Function np_norm a / np_norm a ord90785
-Ref: #function-np_norm-a-np_norm-a-ord90965
-Ref: #examples-8491836
-Node: Function np_rank a92402
-Ref: #function-np_rank-a92566
-Ref: #examples-8592851
-Node: Function np_trace a93099
-Ref: #function-np_trace-a93253
-Ref: #examples-8693476
-Node: Function np_transpose a93722
-Ref: #function-np_transpose-a93880
-Ref: #examples-8794117
-Node: Function np_conj a94448
-Ref: #function-np_conj-a94606
-Ref: #examples-8894987
-Node: Function np_ctranspose a95379
-Ref: #function-np_ctranspose-a95538
-Ref: #examples-8995813
-Node: Function np_real a96032
-Ref: #function-np_real-a96185
-Ref: #examples-9096432
-Node: Function np_imag a96658
-Ref: #function-np_imag-a96806
-Ref: #examples-9197045
-Node: Function np_angle a97271
-Ref: #function-np_angle-a97420
-Ref: #examples-9297712
-Node: Function np_expm a97955
-Ref: #function-np_expm-a98106
-Ref: #examples-9398766
-Node: Function np_lstsq a b99555
-Ref: #function-np_lstsq-a-b99709
-Ref: #examples-94100775
-Node: Function np_pinv a101333
-Ref: #function-np_pinv-a101486
-Ref: #examples-95102070
-Node: Function np_outer a b102657
-Ref: #function-np_outer-a-b102784
-Ref: #examples-96103007
-Node: Function and variable index103466
+Node: Function ndarray a / ndarray a complex8057
+Ref: #function-ndarray-a-ndarray-a-complex8222
+Node: Examples9535
+Ref: #examples9650
+Node: Function ndarray_p x10241
+Ref: #function-ndarray_p-x10417
+Ref: #examples-110603
+Node: Function np_to_matrix a10823
+Ref: #function-np_to_matrix-a10985
+Ref: #examples-211308
+Node: Function np_to_list a11684
+Ref: #function-np_to_list-a11870
+Ref: #examples-312364
+Node: Function np_zeros shape / np_zeros shape dtype12724
+Ref: #function-np_zeros-shape-np_zeros-shape-dtype12959
+Ref: #examples-413259
+Node: Function np_ones shape / np_ones shape dtype13681
+Ref: #function-np_ones-shape-np_ones-shape-dtype13942
+Ref: #examples-514229
+Node: Function np_eye n / np_eye n m / np_eye n m dtype14647
+Ref: #function-np_eye-n-np_eye-n-m-np_eye-n-m-dtype14893
+Ref: #examples-615461
+Node: Function np_rand shape15810
+Ref: #function-np_rand-shape16001
+Ref: #examples-716268
+Node: Function np_randn shape16541
+Ref: #function-np_randn-shape16758
+Ref: #examples-817072
+Node: Function np_arange stop / np_arange start stop / np_arange start stop step17244
+Ref: #function-np_arange-stop-np_arange-start-stop-np_arange-start-stop-step17540
+Ref: #examples-918104
+Node: Function np_linspace start stop n18459
+Ref: #function-np_linspace-start-stop-n18728
+Ref: #examples-1019028
+Node: Function np_full shape val / np_full shape val dtype19292
+Ref: #function-np_full-shape-val-np_full-shape-val-dtype19555
+Ref: #examples-1119855
+Node: Function np_empty shape / np_empty shape dtype20241
+Ref: #function-np_empty-shape-np_empty-shape-dtype20505
+Ref: #examples-1220880
+Node: Function np_diag list / np_diag list dtype21140
+Ref: #function-np_diag-list-np_diag-list-dtype21366
+Ref: #examples-1321720
+Node: Function np_copy a22105
+Ref: #function-np_copy-a22291
+Ref: #examples-1422523
+Node: Function np_logspace start stop n22902
+Ref: #function-np_logspace-start-stop-n23082
+Ref: #examples-1523387
+Node: Function np_ref a i23750
+Ref: #function-np_ref-a-i23922
+Ref: #examples-1624346
+Node: Function np_set a i j val24729
+Ref: #function-np_set-a-i-j-val24895
+Ref: #examples-1725393
+Node: Function np_row a i25824
+Ref: #function-np_row-a-i25982
+Ref: #examples-1826203
+Node: Function np_col a j26496
+Ref: #function-np_col-a-j26670
+Ref: #examples-1926900
+Node: Function np_slice a spec0 spec1 ... specN27189
+Ref: #function-np_slice-a-spec0-spec1-specn27396
+Ref: #examples-2028319
+Node: Function np_reshape a shape29595
+Ref: #function-np_reshape-a-shape29787
+Ref: #examples-2130070
+Node: Function np_flatten a30398
+Ref: #function-np_flatten-a30564
+Ref: #examples-2230754
+Node: Function np_hstack a b31050
+Ref: #function-np_hstack-a-b31213
+Ref: #examples-2331502
+Node: Function np_vstack a b31853
+Ref: #function-np_vstack-a-b32014
+Ref: #examples-2432298
+Node: Function np_shape a32645
+Ref: #function-np_shape-a32798
+Ref: #examples-2533023
+Node: Function np_size a33282
+Ref: #function-np_size-a33431
+Ref: #examples-2633553
+Node: Function np_dtype a33787
+Ref: #function-np_dtype-a33937
+Ref: #examples-2734167
+Node: Function np_add a b34479
+Ref: #function-np_add-a-b34631
+Ref: #examples-2834841
+Node: Function np_sub a b35210
+Ref: #function-np_sub-a-b35362
+Ref: #examples-2935561
+Node: Function np_mul a b35943
+Ref: #function-np_mul-a-b36095
+Ref: #examples-3036453
+Node: Function np_div a b36758
+Ref: #function-np_div-a-b36910
+Ref: #examples-3137106
+Node: Function np_pow a p37474
+Ref: #function-np_pow-a-p37625
+Ref: #examples-3237883
+Node: Function np_sqrt a38188
+Ref: #function-np_sqrt-a38335
+Ref: #examples-3338544
+Node: Function np_exp a38751
+Ref: #function-np_exp-a38895
+Ref: #examples-3439122
+Node: Function np_log a39452
+Ref: #function-np_log-a39595
+Ref: #examples-3539838
+Node: Function np_sin a40036
+Ref: #function-np_sin-a40179
+Ref: #examples-3640384
+Node: Function np_cos a40657
+Ref: #function-np_cos-a40800
+Ref: #examples-3741009
+Node: Function np_tan a41214
+Ref: #function-np_tan-a41357
+Ref: #examples-3841568
+Node: Function np_abs a41759
+Ref: #function-np_abs-a41902
+Ref: #examples-3942198
+Node: Function np_neg a42391
+Ref: #function-np_neg-a42541
+Ref: #examples-4042718
+Node: Function np_clip a lo hi42907
+Ref: #function-np_clip-a-lo-hi43074
+Ref: #examples-4143348
+Node: Function np_scale alpha a43564
+Ref: #function-np_scale-alpha-a43733
+Ref: #examples-4243940
+Node: Function np_map f a44232
+Ref: #function-np_map-f-a44393
+Ref: #examples-4345462
+Node: Function np_map2 f a b46202
+Ref: #function-np_map2-f-a-b46394
+Ref: #examples-4446901
+Node: Function np_where condition / np_where condition x y47287
+Ref: #function-np_where-condition-np_where-condition-x-y47515
+Ref: #examples-4548238
+Node: Function np_greater a b49159
+Ref: #function-np_greater-a-b49362
+Ref: #examples-4649699
+Node: Function np_greater_equal a b50101
+Ref: #function-np_greater_equal-a-b50278
+Node: Function np_less a b50454
+Ref: #function-np_less-a-b50625
+Node: Function np_less_equal a b50788
+Ref: #function-np_less_equal-a-b50957
+Node: Function np_equal a b51130
+Ref: #function-np_equal-a-b51299
+Node: Function np_not_equal a b51430
+Ref: #function-np_not_equal-a-b51604
+Node: Function np_logical_and a b51732
+Ref: #function-np_logical_and-a-b51913
+Ref: #examples-4752058
+Node: Function np_logical_or a b52356
+Ref: #function-np_logical_or-a-b52536
+Node: Function np_logical_not a52669
+Ref: #function-np_logical_not-a52840
+Node: Function np_test f a52969
+Ref: #function-np_test-f-a53136
+Ref: #examples-4853885
+Node: Function np_extract mask a54268
+Ref: #function-np_extract-mask-a54433
+Ref: #examples-4954854
+Node: Function np_fft a55582
+Ref: #function-np_fft-a55735
+Ref: #examples-5056202
+Node: Function np_ifft a57038
+Ref: #function-np_ifft-a57185
+Ref: #examples-5157728
+Node: Function np_fft2d a58061
+Ref: #function-np_fft2d-a58212
+Ref: #examples-5258784
+Node: Function np_ifft2d a59263
+Ref: #function-np_ifft2d-a59421
+Ref: #examples-5359992
+Node: Function np_convolve a b60366
+Ref: #function-np_convolve-a-b60541
+Ref: #examples-5460889
+Node: Function np_convolve2d a kernel61631
+Ref: #function-np_convolve2d-a-kernel61811
+Ref: #examples-5562353
+Node: Loading the module63519
+Ref: #loading-the-module63683
+Node: Image representation63738
+Ref: #image-representation63925
+Node: Function np_read_image path64219
+Ref: #function-np_read_image-path64398
+Ref: #examples-5664713
+Node: Function np_write_image a path64930
+Ref: #function-np_write_image-a-path65113
+Ref: #examples-5765415
+Node: Function np_imshow a65579
+Ref: #function-np_imshow-a65744
+Ref: #examples-5866070
+Node: Function np_mandrill66349
+Ref: #function-np_mandrill66507
+Ref: #examples-5966853
+Node: Function np_to_image a67170
+Ref: #function-np_to_image-a67335
+Ref: #examples-6067695
+Node: Function np_from_image img67827
+Ref: #function-np_from_image-img67993
+Ref: #examples-6168309
+Node: Function np_sum a68498
+Ref: #function-np_sum-a68651
+Ref: #examples-6269226
+Node: Function np_mean a69549
+Ref: #function-np_mean-a69710
+Ref: #examples-6370192
+Node: Function np_min a / np_min a axis70527
+Ref: #function-np_min-a-np_min-a-axis70722
+Ref: #examples-6471358
+Node: Function np_max a / np_max a axis71680
+Ref: #function-np_max-a-np_max-a-axis71896
+Ref: #examples-6572535
+Node: Function np_argmin a / np_argmin a axis72857
+Ref: #function-np_argmin-a-np_argmin-a-axis73085
+Ref: #examples-6673737
+Node: Function np_argmax a / np_argmax a axis74067
+Ref: #function-np_argmax-a-np_argmax-a-axis74295
+Ref: #examples-6774947
+Node: Function np_var a / np_var a axis75277
+Ref: #function-np_var-a-np_var-a-axis75493
+Ref: #examples-6876086
+Node: Function np_std a / np_std a axis76406
+Ref: #function-np_std-a-np_std-a-axis76603
+Ref: #examples-6977246
+Node: Function np_cumsum a77573
+Ref: #function-np_cumsum-a77740
+Ref: #examples-7077982
+Node: Function np_dot a b78231
+Ref: #function-np_dot-a-b78400
+Ref: #examples-7178613
+Node: Function np_sort a / np_sort a axis78899
+Ref: #function-np_sort-a-np_sort-a-axis79107
+Ref: #examples-7279807
+Node: Function np_argsort a / np_argsort a axis80271
+Ref: #function-np_argsort-a-np_argsort-a-axis80500
+Ref: #examples-7381190
+Node: Function np_trapz y / np_trapz y x81657
+Ref: #function-np_trapz-y-np_trapz-y-x81862
+Ref: #examples-7482388
+Node: Function np_diff a82859
+Ref: #function-np_diff-a83021
+Ref: #examples-7583288
+Node: Function np_cov a83628
+Ref: #function-np_cov-a83777
+Ref: #examples-7684126
+Node: Function np_corrcoef a84601
+Ref: #function-np_corrcoef-a84759
+Ref: #examples-7785139
+Node: Function np_matmul a b85658
+Ref: #function-np_matmul-a-b85817
+Ref: #examples-7886082
+Node: Function np_inv a86460
+Ref: #function-np_inv-a86608
+Ref: #examples-7986849
+Node: Function np_det a87242
+Ref: #function-np_det-a87389
+Ref: #examples-8087579
+Node: Function np_solve a b87821
+Ref: #function-np_solve-a-b87973
+Ref: #examples-8188282
+Node: Function np_svd a88645
+Ref: #function-np_svd-a88792
+Ref: #examples-8289479
+Node: Function np_eig a90060
+Ref: #function-np_eig-a90202
+Ref: #examples-8390797
+Node: Function np_qr a91276
+Ref: #function-np_qr-a91416
+Ref: #examples-8491883
+Node: Function np_lu a92192
+Ref: #function-np_lu-a92349
+Ref: #examples-8592782
+Node: Function np_norm a / np_norm a ord93169
+Ref: #function-np_norm-a-np_norm-a-ord93349
+Ref: #examples-8694220
+Node: Function np_rank a94786
+Ref: #function-np_rank-a94950
+Ref: #examples-8795235
+Node: Function np_trace a95483
+Ref: #function-np_trace-a95637
+Ref: #examples-8895860
+Node: Function np_transpose a96106
+Ref: #function-np_transpose-a96264
+Ref: #examples-8996501
+Node: Function np_conj a96832
+Ref: #function-np_conj-a96990
+Ref: #examples-9097371
+Node: Function np_ctranspose a97763
+Ref: #function-np_ctranspose-a97922
+Ref: #examples-9198197
+Node: Function np_real a98416
+Ref: #function-np_real-a98569
+Ref: #examples-9298816
+Node: Function np_imag a99042
+Ref: #function-np_imag-a99190
+Ref: #examples-9399429
+Node: Function np_angle a99655
+Ref: #function-np_angle-a99804
+Ref: #examples-94100096
+Node: Function np_expm a100339
+Ref: #function-np_expm-a100490
+Ref: #examples-95101150
+Node: Function np_lstsq a b101939
+Ref: #function-np_lstsq-a-b102093
+Ref: #examples-96103159
+Node: Function np_pinv a103717
+Ref: #function-np_pinv-a103870
+Ref: #examples-97104454
+Node: Function np_outer a b105041
+Ref: #function-np_outer-a-b105168
+Ref: #examples-98105391
+Node: Function and variable index105850
 
 End Tag Table
 

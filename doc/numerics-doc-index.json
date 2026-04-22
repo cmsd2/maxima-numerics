@@ -912,7 +912,7 @@
       "type": "Function",
       "signature": "np_fft(a)",
       "summary": "Compute the discrete Fourier transform of a 1D ndarray.",
-      "body_md": "Compute the discrete Fourier transform of a 1D ndarray.\n\n**Scaling convention (matches NumPy):**\n\n    Y[k] = sum(x[n] * exp(-2 * %pi * %i * k * n / N),  n, 0, N-1)\n\nThe forward transform does **not** include a 1/N factor. Use `np_ifft` to invert.\n\nThe input `a` must be a 1D ndarray (real or complex). The result is always a complex 1D ndarray of the same length.\n\n#### Examples\n\n```maxima\n(%i1) /* FFT of a real signal */\n      A : ndarray([1.0, 2.0, 3.0, 4.0]);\n(%o1)            ndarray([4], DOUBLE-FLOAT)\n(%i2) F : np_fft(A);\n(%o2)            ndarray([4], COMPLEX-DOUBLE-FLOAT)\n(%i3) np_to_list(F);\n(%o3)     [10.0, 2.0 %i - 2.0, - 2.0, - 2.0 %i - 2.0]\n(%i4) /* DC component = sum of signal */\n      np_ref(F, 0);\n(%o4)                         10.0\n(%i5) /* Round-trip: ifft(fft(x)) = x */\n      np_to_list(np_real(np_ifft(F)));\n(%o5)               [1.0, 2.0, 3.0, 4.0]\n```\n\nFrequency analysis of a sine wave:\n\n```maxima\n(%i1) N : 128$\n(%i2) t : np_linspace(0, 1, N)$\n(%i3) /* 10 Hz sine wave, sampled at 128 Hz */\n      x : np_sin(np_scale(2 * %pi * 10, t))$\n(%i4) F : np_fft(x)$\n(%i5) /* Magnitude spectrum */\n      mag : np_abs(F)$\n```\n\nSee also: `np_ifft`, `np_abs`, `np_real`, `np_imag`, `np_angle`",
+      "body_md": "Compute the discrete Fourier transform of a 1D ndarray.\n\n**Scaling convention (matches NumPy):**\n\n    Y[k] = sum(x[n] * exp(-2 * %pi * %i * k * n / N),  n, 0, N-1)\n\nThe forward transform does **not** include a 1/N factor. Use `np_ifft` to invert.\n\nThe input `a` must be a 1D ndarray (real or complex). The result is always a complex 1D ndarray of the same length.\n\n#### Examples\n\n```maxima\n(%i1) /* FFT of a real signal */\n      A : ndarray([1.0, 2.0, 3.0, 4.0]);\n(%o1)            ndarray([4], DOUBLE-FLOAT)\n(%i2) F : np_fft(A);\n(%o2)            ndarray([4], COMPLEX-DOUBLE-FLOAT)\n(%i3) np_to_list(F);\n(%o3)     [10.0, 2.0 %i - 2.0, - 2.0, - 2.0 %i - 2.0]\n(%i4) /* DC component = sum of signal */\n      np_ref(F, 0);\n(%o4)                         10.0\n(%i5) /* Round-trip: ifft(fft(x)) = x */\n      np_to_list(np_real(np_ifft(F)));\n(%o5)               [1.0, 2.0, 3.0, 4.0]\n```\n\nFrequency analysis of a sine wave:\n\n```maxima\n(%i1) N : 128$\n(%i2) t : np_linspace(0, 1, N)$\n(%i3) /* 10 Hz sine wave, sampled at 128 Hz */\n      x : np_sin(np_scale(2 * %pi * 10, t))$\n(%i4) F : np_fft(x)$\n(%i5) /* Magnitude spectrum */\n      mag : np_abs(F)$\n```\n\nSee also: `np_ifft`, `np_fft2d`, `np_abs`, `np_real`, `np_imag`, `np_angle`",
       "examples": [
         {
           "input": "/* FFT of a real signal */\n      A : ndarray([1.0, 2.0, 3.0, 4.0]);",
@@ -957,10 +957,44 @@
       ],
       "see_also": [
         "np_ifft",
+        "np_fft2d",
         "np_abs",
         "np_real",
         "np_imag",
         "np_angle"
+      ],
+      "section": "Signal Processing"
+    },
+    "np_fft2d": {
+      "type": "Function",
+      "signature": "np_fft2d(a)",
+      "summary": "Compute the 2D discrete Fourier transform of a 2D ndarray.",
+      "body_md": "Compute the 2D discrete Fourier transform of a 2D ndarray.\n\n**Scaling convention (matches NumPy's `fft2`):**\n\n    Y[k1,k2] = sum_n1 sum_n2 x[n1,n2] * exp(-2 * %pi * %i * (k1*n1/N1 + k2*n2/N2))\n\nThe forward transform does **not** include a 1/(N1*N2) factor. Use `np_ifft2d` to invert.\n\nThe input `a` must be a 2D ndarray (real or complex). The result is always a complex 2D ndarray of the same shape. Internally uses separable 1D FFTs along columns then rows.\n\n#### Examples\n\n```maxima\n(%i1) A : ndarray(matrix([1, 2, 3], [4, 5, 6], [7, 8, 9]));\n(%o1)            ndarray([3, 3], DOUBLE-FLOAT)\n(%i2) F : np_fft2d(A);\n(%o2)            ndarray([3, 3], COMPLEX-DOUBLE-FLOAT)\n(%i3) /* DC component = sum of all elements */\n      realpart(np_ref(F, 0, 0));\n(%o3)                         45.0\n(%i4) /* Round-trip: ifft2d(fft2d(x)) = x */\n      B : np_ifft2d(F)$\n(%i5) realpart(np_ref(B, 0, 0));\n(%o5)                          1.0\n```\n\nSee also: `np_ifft2d`, `np_fft`",
+      "examples": [
+        {
+          "input": "A : ndarray(matrix([1, 2, 3], [4, 5, 6], [7, 8, 9]));",
+          "output": "ndarray([3, 3], DOUBLE-FLOAT)"
+        },
+        {
+          "input": "F : np_fft2d(A);",
+          "output": "ndarray([3, 3], COMPLEX-DOUBLE-FLOAT)"
+        },
+        {
+          "input": "/* DC component = sum of all elements */\n      realpart(np_ref(F, 0, 0));",
+          "output": "45.0"
+        },
+        {
+          "input": "/* Round-trip: ifft2d(fft2d(x)) = x */\n      B : np_ifft2d(F)$",
+          "output": ""
+        },
+        {
+          "input": "realpart(np_ref(B, 0, 0));",
+          "output": "1.0"
+        }
+      ],
+      "see_also": [
+        "np_ifft2d",
+        "np_fft"
       ],
       "section": "Signal Processing"
     },
@@ -1120,7 +1154,7 @@
       "type": "Function",
       "signature": "np_ifft(a)",
       "summary": "Compute the inverse discrete Fourier transform of a 1D ndarray.",
-      "body_md": "Compute the inverse discrete Fourier transform of a 1D ndarray.\n\n**Scaling convention (matches NumPy):**\n\n    x[n] = (1/N) * sum(Y[k] * exp(+2 * %pi * %i * k * n / N),  k, 0, N-1)\n\nThe inverse transform includes the 1/N normalization factor.\n\nThe input `a` must be a 1D ndarray (real or complex). The result is always a complex 1D ndarray of the same length. For real-valued signals, use `np_real` to extract the real part of the result.\n\n#### Examples\n\n```maxima\n(%i1) /* Frequency-domain filtering */\n      x : np_arange(0, 64)$\n(%i2) F : np_fft(x)$\n(%i3) /* Zero out high-frequency components (low-pass) */\n(%i4) y : np_real(np_ifft(F))$\n(%i5) /* Verify round-trip */\n      closeto(np_ref(y, 0), 0.0);\n(%o5)                         true\n```\n\nSee also: `np_fft`, `np_real`",
+      "body_md": "Compute the inverse discrete Fourier transform of a 1D ndarray.\n\n**Scaling convention (matches NumPy):**\n\n    x[n] = (1/N) * sum(Y[k] * exp(+2 * %pi * %i * k * n / N),  k, 0, N-1)\n\nThe inverse transform includes the 1/N normalization factor.\n\nThe input `a` must be a 1D ndarray (real or complex). The result is always a complex 1D ndarray of the same length. For real-valued signals, use `np_real` to extract the real part of the result.\n\n#### Examples\n\n```maxima\n(%i1) /* Frequency-domain filtering */\n      x : np_arange(0, 64)$\n(%i2) F : np_fft(x)$\n(%i3) /* Zero out high-frequency components (low-pass) */\n(%i4) y : np_real(np_ifft(F))$\n(%i5) /* Verify round-trip */\n      closeto(np_ref(y, 0), 0.0);\n(%o5)                         true\n```\n\nSee also: `np_fft`, `np_ifft2d`, `np_real`",
       "examples": [
         {
           "input": "/* Frequency-domain filtering */\n      x : np_arange(0, 64)$",
@@ -1145,6 +1179,41 @@
       ],
       "see_also": [
         "np_fft",
+        "np_ifft2d",
+        "np_real"
+      ],
+      "section": "Signal Processing"
+    },
+    "np_ifft2d": {
+      "type": "Function",
+      "signature": "np_ifft2d(a)",
+      "summary": "Compute the inverse 2D discrete Fourier transform of a 2D ndarray.",
+      "body_md": "Compute the inverse 2D discrete Fourier transform of a 2D ndarray.\n\n**Scaling convention (matches NumPy's `ifft2`):**\n\n    x[n1,n2] = (1/(N1*N2)) * sum_k1 sum_k2 Y[k1,k2] * exp(+2 * %pi * %i * (k1*n1/N1 + k2*n2/N2))\n\nThe inverse transform includes the 1/(N1*N2) normalization factor.\n\nThe input `a` must be a 2D ndarray (real or complex). The result is always a complex 2D ndarray of the same shape. For real-valued data, use `np_real` to extract the real part.\n\n#### Examples\n\n```maxima\n(%i1) A : ndarray(matrix([1, 2], [3, 4]));\n(%o1)            ndarray([2, 2], DOUBLE-FLOAT)\n(%i2) F : np_fft2d(A)$\n(%i3) B : np_ifft2d(F)$\n(%i4) /* Recovered values match original */\n      realpart(np_ref(B, 0, 0));\n(%o4)                          1.0\n(%i5) realpart(np_ref(B, 1, 1));\n(%o5)                          4.0\n```\n\nSee also: `np_fft2d`, `np_ifft`, `np_real`",
+      "examples": [
+        {
+          "input": "A : ndarray(matrix([1, 2], [3, 4]));",
+          "output": "ndarray([2, 2], DOUBLE-FLOAT)"
+        },
+        {
+          "input": "F : np_fft2d(A)$",
+          "output": ""
+        },
+        {
+          "input": "B : np_ifft2d(F)$",
+          "output": ""
+        },
+        {
+          "input": "/* Recovered values match original */\n      realpart(np_ref(B, 0, 0));",
+          "output": "1.0"
+        },
+        {
+          "input": "realpart(np_ref(B, 1, 1));",
+          "output": "4.0"
+        }
+      ],
+      "see_also": [
+        "np_fft2d",
+        "np_ifft",
         "np_real"
       ],
       "section": "Signal Processing"
