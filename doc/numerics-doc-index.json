@@ -89,6 +89,28 @@
       ],
       "section": "Element-wise Operations"
     },
+    "np_acos": {
+      "type": "Function",
+      "signature": "np_acos(a)",
+      "summary": "Element-wise arccosine (inverse cosine).",
+      "body_md": "Element-wise arccosine (inverse cosine).\n\nReturns a new ndarray where each element is the arccosine of the corresponding element in `a`. Input values must be in [-1, 1]. Result is in radians, range [0, pi].\n\n#### Examples\n\n```maxima\n(%i1) A : ndarray([1.0, 0.5, 0], [3]);\n(%o1)            ndarray([3], DOUBLE-FLOAT)\n(%i2) np_to_list(np_acos(A));\n(%o2)       [0.0, 1.0471975511965976, 1.5707963267948966]\n```\n\nSee also: `np_asin`, `np_atan`, `np_cos`",
+      "examples": [
+        {
+          "input": "A : ndarray([1.0, 0.5, 0], [3]);",
+          "output": "ndarray([3], DOUBLE-FLOAT)"
+        },
+        {
+          "input": "np_to_list(np_acos(A));",
+          "output": "[0.0, 1.0471975511965976, 1.5707963267948966]"
+        }
+      ],
+      "see_also": [
+        "np_asin",
+        "np_atan",
+        "np_cos"
+      ],
+      "section": "Element-wise Operations"
+    },
     "np_add": {
       "type": "Function",
       "signature": "np_add(a, b)",
@@ -260,6 +282,77 @@
         "np_argmax"
       ],
       "section": "Aggregation"
+    },
+    "np_asin": {
+      "type": "Function",
+      "signature": "np_asin(a)",
+      "summary": "Element-wise arcsine (inverse sine).",
+      "body_md": "Element-wise arcsine (inverse sine).\n\nReturns a new ndarray where each element is the arcsine of the corresponding element in `a`. Input values must be in [-1, 1]. Result is in radians, range [-pi/2, pi/2].\n\n#### Examples\n\n```maxima\n(%i1) A : ndarray([0, 0.5, 1.0], [3]);\n(%o1)            ndarray([3], DOUBLE-FLOAT)\n(%i2) np_to_list(np_asin(A));\n(%o2)       [0.0, 0.5235987755982988, 1.5707963267948966]\n```\n\nSee also: `np_acos`, `np_atan`, `np_sin`",
+      "examples": [
+        {
+          "input": "A : ndarray([0, 0.5, 1.0], [3]);",
+          "output": "ndarray([3], DOUBLE-FLOAT)"
+        },
+        {
+          "input": "np_to_list(np_asin(A));",
+          "output": "[0.0, 0.5235987755982988, 1.5707963267948966]"
+        }
+      ],
+      "see_also": [
+        "np_acos",
+        "np_atan",
+        "np_sin"
+      ],
+      "section": "Element-wise Operations"
+    },
+    "np_atan": {
+      "type": "Function",
+      "signature": "np_atan(a)",
+      "summary": "Element-wise arctangent (inverse tangent).",
+      "body_md": "Element-wise arctangent (inverse tangent).\n\nReturns a new ndarray where each element is the arctangent of the corresponding element in `a`. Result is in radians, range (-pi/2, pi/2).\n\n#### Examples\n\n```maxima\n(%i1) A : ndarray([0, 1.0], [2]);\n(%o1)            ndarray([2], DOUBLE-FLOAT)\n(%i2) np_to_list(np_atan(A));\n(%o2)              [0.0, 0.7853981633974483]\n```\n\nSee also: `np_atan2`, `np_asin`, `np_acos`, `np_tan`",
+      "examples": [
+        {
+          "input": "A : ndarray([0, 1.0], [2]);",
+          "output": "ndarray([2], DOUBLE-FLOAT)"
+        },
+        {
+          "input": "np_to_list(np_atan(A));",
+          "output": "[0.0, 0.7853981633974483]"
+        }
+      ],
+      "see_also": [
+        "np_atan2",
+        "np_asin",
+        "np_acos",
+        "np_tan"
+      ],
+      "section": "Element-wise Operations"
+    },
+    "np_atan2": {
+      "type": "Function",
+      "signature": "np_atan2(y, x)",
+      "summary": "Element-wise two-argument arctangent.",
+      "body_md": "Element-wise two-argument arctangent.\n\nReturns the angle in radians between the positive x-axis and the point (x, y), with correct quadrant handling. Result is in radians, range (-pi, pi]. Both arguments must be real ndarrays or scalars with compatible shapes (broadcasting supported).\n\n#### Examples\n\n```maxima\n(%i1) Y : ndarray([1.0, -1.0, -1.0, 1.0], [4]);\n(%o1)            ndarray([4], DOUBLE-FLOAT)\n(%i2) X : ndarray([1.0, 1.0, -1.0, -1.0], [4]);\n(%o2)            ndarray([4], DOUBLE-FLOAT)\n(%i3) np_to_list(np_atan2(Y, X));\n(%o3)  [0.7853981633974483, -0.7853981633974483,\n        -2.356194490192345, 2.356194490192345]\n```\n\nSee also: `np_atan`, `np_asin`, `np_acos`",
+      "examples": [
+        {
+          "input": "Y : ndarray([1.0, -1.0, -1.0, 1.0], [4]);",
+          "output": "ndarray([4], DOUBLE-FLOAT)"
+        },
+        {
+          "input": "X : ndarray([1.0, 1.0, -1.0, -1.0], [4]);",
+          "output": "ndarray([4], DOUBLE-FLOAT)"
+        },
+        {
+          "input": "np_to_list(np_atan2(Y, X));",
+          "output": "[0.7853981633974483, -0.7853981633974483,\n        -2.356194490192345, 2.356194490192345]"
+        }
+      ],
+      "see_also": [
+        "np_atan",
+        "np_asin",
+        "np_acos"
+      ],
+      "section": "Element-wise Operations"
     },
     "np_clip": {
       "type": "Function",
@@ -1427,7 +1520,7 @@
       "type": "Function",
       "signature": "np_log(a)",
       "summary": "Element-wise natural logarithm.",
-      "body_md": "Element-wise natural logarithm.\n\nReturns a new ndarray where each element is the natural log of the corresponding element in `a`. Elements must be positive.\n\n#### Examples\n\n```maxima\n(%i1) A : ndarray(matrix([1, %e], [%e^2, %e^3]));\n(%o1)            ndarray([2, 2], DOUBLE-FLOAT)\n(%i2) np_to_matrix(np_log(A));\n(%o2)         matrix([0.0, 1.0], [2.0, 3.0])\n```\n\nSee also: `np_exp`",
+      "body_md": "Element-wise natural logarithm.\n\nReturns a new ndarray where each element is the natural log of the corresponding element in `a`. Elements must be positive.\n\n#### Examples\n\n```maxima\n(%i1) A : ndarray(matrix([1, %e], [%e^2, %e^3]));\n(%o1)            ndarray([2, 2], DOUBLE-FLOAT)\n(%i2) np_to_matrix(np_log(A));\n(%o2)         matrix([0.0, 1.0], [2.0, 3.0])\n```\n\nSee also: `np_exp`, `np_log2`, `np_log10`",
       "examples": [
         {
           "input": "A : ndarray(matrix([1, %e], [%e^2, %e^3]));",
@@ -1439,7 +1532,51 @@
         }
       ],
       "see_also": [
-        "np_exp"
+        "np_exp",
+        "np_log2",
+        "np_log10"
+      ],
+      "section": "Element-wise Operations"
+    },
+    "np_log10": {
+      "type": "Function",
+      "signature": "np_log10(a)",
+      "summary": "Element-wise base-10 logarithm.",
+      "body_md": "Element-wise base-10 logarithm.\n\nReturns a new ndarray where each element is the base-10 logarithm of the corresponding element in `a`. Elements must be positive.\n\n#### Examples\n\n```maxima\n(%i1) A : ndarray([1.0, 10.0, 100.0, 1000.0], [4]);\n(%o1)            ndarray([4], DOUBLE-FLOAT)\n(%i2) np_to_list(np_log10(A));\n(%o2)                [0.0, 1.0, 2.0, 3.0]\n```\n\nSee also: `np_log`, `np_log2`",
+      "examples": [
+        {
+          "input": "A : ndarray([1.0, 10.0, 100.0, 1000.0], [4]);",
+          "output": "ndarray([4], DOUBLE-FLOAT)"
+        },
+        {
+          "input": "np_to_list(np_log10(A));",
+          "output": "[0.0, 1.0, 2.0, 3.0]"
+        }
+      ],
+      "see_also": [
+        "np_log",
+        "np_log2"
+      ],
+      "section": "Element-wise Operations"
+    },
+    "np_log2": {
+      "type": "Function",
+      "signature": "np_log2(a)",
+      "summary": "Element-wise base-2 logarithm.",
+      "body_md": "Element-wise base-2 logarithm.\n\nReturns a new ndarray where each element is the base-2 logarithm of the corresponding element in `a`. Elements must be positive.\n\n#### Examples\n\n```maxima\n(%i1) A : ndarray([1.0, 2.0, 4.0, 8.0], [4]);\n(%o1)            ndarray([4], DOUBLE-FLOAT)\n(%i2) np_to_list(np_log2(A));\n(%o2)                [0.0, 1.0, 2.0, 3.0]\n```\n\nSee also: `np_log`, `np_log10`",
+      "examples": [
+        {
+          "input": "A : ndarray([1.0, 2.0, 4.0, 8.0], [4]);",
+          "output": "ndarray([4], DOUBLE-FLOAT)"
+        },
+        {
+          "input": "np_to_list(np_log2(A));",
+          "output": "[0.0, 1.0, 2.0, 3.0]"
+        }
+      ],
+      "see_also": [
+        "np_log",
+        "np_log10"
       ],
       "section": "Element-wise Operations"
     },
@@ -2583,6 +2720,26 @@
         "np_reshape"
       ],
       "section": "Slicing"
+    },
+    "np_sign": {
+      "type": "Function",
+      "signature": "np_sign(a)",
+      "summary": "Element-wise sign function.",
+      "body_md": "Element-wise sign function.\n\nReturns a new ndarray where each element is -1.0 (negative), 0.0 (zero), or 1.0 (positive).\n\n#### Examples\n\n```maxima\n(%i1) A : ndarray([-3.0, -0.5, 0.0, 0.5, 3.0], [5]);\n(%o1)            ndarray([5], DOUBLE-FLOAT)\n(%i2) np_to_list(np_sign(A));\n(%o2)            [-1.0, -1.0, 0.0, 1.0, 1.0]\n```\n\nSee also: `np_abs`",
+      "examples": [
+        {
+          "input": "A : ndarray([-3.0, -0.5, 0.0, 0.5, 3.0], [5]);",
+          "output": "ndarray([5], DOUBLE-FLOAT)"
+        },
+        {
+          "input": "np_to_list(np_sign(A));",
+          "output": "[-1.0, -1.0, 0.0, 1.0, 1.0]"
+        }
+      ],
+      "see_also": [
+        "np_abs"
+      ],
+      "section": "Element-wise Operations"
     },
     "np_sin": {
       "type": "Function",
