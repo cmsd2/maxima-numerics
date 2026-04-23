@@ -74,8 +74,14 @@ maxima-numerics/
 │   │   ├── signal.lisp              # FFT, IFFT, convolution (wraps fftpack5)
 │   │   └── aggregation.lisp         # sum, mean, min, max, std, etc.
 │   │
-│   ├── optimize/                    # numerics/optimize: L-BFGS wrapper
-│   │   └── optimize.lisp            # np_minimize (wraps Maxima's lbfgs)
+│   ├── optimize/                    # numerics/optimize: solvers
+│   │   ├── optimize.lisp            # np_minimize (wraps Maxima's lbfgs)
+│   │   ├── gradient.lisp            # np_compile_gradient (symbolic→numeric)
+│   │   ├── cobyla.lisp              # np_minimize_cobyla (wraps share/cobyla)
+│   │   └── minpack.lisp             # np_fsolve, np_lsq_nonlinear (wraps share/minpack)
+│   │
+│   ├── integrate/                   # numerics/integrate: ODE integration
+│   │   └── ode.lisp                 # np_odeint (wraps share/odepack DLSODE)
 │   │
 │   ├── image/                       # numerics/image: image I/O
 │   │   └── image.lisp               # np_read_image, np_mandrill (wraps opticl)
@@ -90,10 +96,12 @@ maxima-numerics/
 └── .github/workflows/               # CI
 ```
 
-Four ASDF systems are defined:
+Six ASDF systems are defined:
 - **`numerics/core`** — core ndarray + linear algebra + signal processing
   (depends on magicl, trivial-garbage, alexandria)
-- **`numerics/optimize`** — L-BFGS optimizer (wraps Maxima's `lbfgs` package)
+- **`numerics/optimize`** — optimization, root finding, nonlinear least squares
+  (wraps lbfgs, COBYLA, MINPACK)
+- **`numerics/integrate`** — ODE integration (wraps ODEPACK DLSODE)
 - **`numerics/image`** — image I/O (depends on opticl via Quicklisp)
 - **`numerics`** — full system including Arrow (adds cffi, static-vectors)
 
@@ -294,15 +302,32 @@ copy. `np_abs` is special-cased: for complex input it returns magnitudes as
 | `np_convolve2d(A, K)` | 2D convolution (direct) |
 | `np_trapz(A)` / `np_trapz(A, X)` | Trapezoidal integration |
 
-### Optimization
+### Optimization, root finding, and least squares
 
 | Function | Description |
 |---|---|
-| `np_minimize(f, grad, x0)` | Unconstrained minimization (wraps Maxima's L-BFGS) |
+| `np_minimize(expr, vars, x0)` | Unconstrained minimization — expression mode (gradient computed automatically) |
+| `np_minimize(f, grad, x0)` | Unconstrained minimization — function mode (wraps Maxima's L-BFGS) |
+| `np_compile_gradient(expr, vars)` | Compile symbolic expression + gradient into numeric functions |
+| `np_minimize_cobyla(f, vars, x0, constraints)` | Constrained optimization — derivative-free (wraps COBYLA) |
+| `np_fsolve(fcns, vars, x0)` | Solve nonlinear system of equations (wraps MINPACK HYBRD1/HYBRJ1) |
+| `np_lsq_nonlinear(fcns, vars, x0)` | Nonlinear least-squares fitting (wraps MINPACK LMDIF1/LMDER1) |
 
-`np_minimize` takes Maxima lambda functions for the objective and gradient,
-with ndarray arguments and return values. It manages the L-BFGS work arrays
-internally and returns `[x_opt, f_opt, converged]`.
+All solver functions support both expression mode (symbolic expressions compiled
+via `coerce-float-fun`) and function mode (user-provided Maxima functions
+called through the evaluator). Expression mode compiles both the system and its
+Jacobian/gradient into native Lisp closures, keeping the evaluator out of the
+hot loop. Function mode allows use of vectorized ndarray operations.
+
+### ODE integration
+
+| Function | Description |
+|---|---|
+| `np_odeint(f, vars, y0, tspan)` | Integrate ODE system — expression mode (wraps ODEPACK DLSODE) |
+| `np_odeint(f_func, y0, tspan)` | Integrate ODE system — function mode |
+
+Supports Adams (non-stiff) and BDF (stiff) methods with adaptive step control.
+Returns a 2D ndarray (rows = timesteps, columns = [t, y1, y2, ...]).
 
 ---
 
@@ -394,6 +419,10 @@ Test files are listed in `manifest.toml` for `mxpm test` discovery:
 | `test_aggregation.mac` | Sum, mean, min, max, std, var, sort, cumsum, dot |
 | `test_complex.mac` | Complex dtype across all function categories |
 | `test_crossval.mac` | Cross-validation: SVD reconstruction, QR orthogonality, etc. |
+| `test_optimize.mac` | np_minimize (expression + function modes), np_compile_gradient |
+| `test_cobyla.mac` | np_minimize_cobyla (inequality, equality, bound constraints) |
+| `test_minpack.mac` | np_fsolve, np_lsq_nonlinear (expression + function modes) |
+| `test_integrate.mac` | np_odeint (expression + function modes, Adams + BDF) |
 
 Run all tests: `maxima --very-quiet -b rtest_numerics.mac`
 
@@ -463,10 +492,37 @@ are implemented as separable 1D transforms (columns then rows).
 
 #### LBFGS (wrapped)
 
-`np_minimize` wraps Maxima's `lbfgs` package. It manages L-BFGS work arrays
-internally, shuttles data between ndarrays and the solver's raw CL arrays, and
-returns `[x_opt, f_opt, converged]`. The user provides Maxima lambda functions
-for the objective and gradient that operate on ndarrays.
+`np_minimize` wraps Maxima's `lbfgs` package. Supports two calling conventions:
+expression mode (symbolic expression + variable list, gradient computed
+automatically via `diff()` and compiled via `coerce-float-fun`) and function
+mode (user provides objective and gradient as Maxima functions operating on
+ndarrays). Returns `[x_opt, f_opt, converged]`.
+
+`np_compile_gradient` automates the expression-mode pattern as a standalone
+step: takes a symbolic loss expression, differentiates, and returns compiled
+numeric functions suitable for `np_minimize`.
+
+#### COBYLA (wrapped)
+
+`np_minimize_cobyla` wraps `share/cobyla/` for derivative-free constrained
+optimization. Constraints are written as natural Maxima expressions using
+`>=`, `<=`, or `=` (e.g., `[x1 >= 0, x1 + x2 = 1]`). Equality constraints
+are converted to pairs of inequality constraints internally. Returns
+`[x_opt, f_opt, n_evals, info]`.
+
+#### MINPACK (wrapped)
+
+`np_fsolve` wraps MINPACK's HYBRD1/HYBRJ1 for solving systems of nonlinear
+equations. `np_lsq_nonlinear` wraps LMDIF1/LMDER1 for nonlinear least-squares
+(Levenberg-Marquardt). Both support expression mode (symbolic Jacobian compiled
+via `coerce-float-fun`) and function mode (finite-difference Jacobian).
+
+#### ODEPACK (wrapped — DLSODE only)
+
+`np_odeint` wraps ODEPACK's DLSODE for ODE integration. Supports expression
+mode (RHS and Jacobian compiled via `coerce-float-fun`) and function mode.
+Adams method (`mf=10`) for non-stiff and BDF (`mf=22`) for stiff systems.
+Collects trajectory output as a 2D ndarray.
 
 #### LAPACK (superseded)
 
@@ -477,52 +533,11 @@ is `$dgemm`'s full `alpha*A*B + beta*C` interface — a niche use case.
 
 ### Unwrapped packages (roadmap candidates)
 
-#### ODEPACK — numeric ODE solver
+#### ODEPACK — additional solvers
 
-`share/odepack/` provides `dlsode`, an adaptive ODE solver with both stiff
-(BDF) and non-stiff (Adams) methods. The Maxima interface exposes:
-
-- `dlsode_init(f, vars, mf)` — initialize solver state. `mf` selects the
-  method: `10` (Adams, no Jacobian), `21` (BDF, user Jacobian), `22` (BDF,
-  internal Jacobian).
-- `dlsode_step(y, t, tout, rtol, atol, istate, state)` — step to `tout`.
-- `dlsode(f, vars, init_y, trange, rtol, atol, mf)` — batch integration.
-
-The solver compiles Maxima expressions via `coerce-float-fun` for the inner
-loop. The bottleneck is expression evaluation, not data format. An ndarray
-wrapper would collect trajectory output into a 2D ndarray (rows = timesteps,
-columns = state variables) for natural downstream use in plotting, spectral
-analysis, and parameter fitting.
-
-Note: ODEPACK also includes LSODA (automatic stiff/non-stiff switching) but
-only DLSODE is exposed in the Maxima interface.
-
-#### COBYLA — constrained optimization
-
-`share/cobyla/` provides `fmin_cobyla`, a derivative-free constrained optimizer
-using linear approximation. The Maxima interface:
-
-- `fmin_cobyla(f, vars, init, constraints, ...)` — minimize `f` subject to
-  constraints of the form `g1 >= g2`, `g1 <= g2`, or `g1 = g2`.
-- Returns `[solution, min_value, n_evals, return_code]`.
-
-This fills a major gap: `np_minimize` only handles unconstrained problems.
-COBYLA supports general nonlinear inequality and equality constraints without
-requiring gradients. The tradeoff is slower convergence than gradient-based
-methods for smooth problems.
-
-#### MINPACK — nonlinear equations and least squares
-
-`share/minpack/` provides two solvers:
-
-- `minpack_solve(fcns, vars, init)` — solve a system of n nonlinear equations
-  in n unknowns (wraps HYBRD1/HYBRJ1).
-- `minpack_lsquares(fcns, vars, init)` — nonlinear least squares (wraps
-  LMDIF1/LMDER1, Levenberg-Marquardt).
-
-Both can compute Jacobians automatically via symbolic differentiation or use
-finite differences. This is the Maxima equivalent of SciPy's `fsolve` and
-`least_squares`.
+DLSODE is wrapped (see above). The remaining ODEPACK solvers — DLSODA,
+DLSODAR, DLSODI, DLSODES, and others — are compiled to CL via f2cl but have
+no Maxima interface. See the roadmap (Tier 1) for wrapping plans.
 
 #### MNEWTON — Newton's method for nonlinear systems
 
@@ -574,100 +589,119 @@ evaluates symbolic expressions, the benefit is API convenience, not speed.
 
 ## Roadmap
 
-The following features are prioritized based on the gap analysis from the
-maxima-demos notebooks. The guiding constraint is to **wrap existing Maxima
-built-in packages and Quicklisp libraries** rather than implementing algorithms
-from scratch in Lisp.
+The guiding constraint is to **wrap existing Maxima built-in packages and
+Quicklisp libraries** rather than implementing algorithms from scratch in Lisp.
 
-### Tier 1: Wrap existing Maxima packages
+### Completed
 
-These follow the same wrapping pattern already established by `np_minimize`
-(wrapping `lbfgs`) and `np_fft` (wrapping `fftpack5`). The algorithms exist;
-the work is shuttling data between ndarrays and the solver interfaces.
+The following have been implemented and tested:
 
-#### 1. Numeric ODE solver — wrap ODEPACK
+- **ODEPACK DLSODE** → `np_odeint` (expression + function modes, Adams + BDF)
+- **COBYLA** → `np_minimize_cobyla` (derivative-free constrained optimization)
+- **MINPACK** → `np_fsolve` (nonlinear root finding) + `np_lsq_nonlinear`
+  (Levenberg-Marquardt least squares), both with expression + function modes
+- **Symbolic gradient bridge** → `np_compile_gradient` + expression-mode
+  `np_minimize` (symbolic `diff()` → compiled numeric closures)
+- **Dual-mode APIs** — all solver functions accept either symbolic expressions
+  (compiled via `coerce-float-fun`, Jacobian/gradient derived automatically) or
+  user-provided Maxima functions (called through the evaluator)
 
-Wrap `share/odepack/` as `np_odeint(f, y0, tspan)` or similar. DLSODE supports
-both stiff (BDF, `mf=22`) and non-stiff (Adams, `mf=10`) methods with adaptive
-step control.
+### Tier 1: Expand ODEPACK coverage
 
-**Motivation:** The demos currently rely on either `ode2()` (which only works
-when a closed-form solution exists) or manual matrix-exponential time-stepping
-(which only works for linear systems). A numeric integrator unlocks nonlinear
-dynamics, stiff systems, and removes the requirement that `ode2()` succeed
-symbolically. The inverse-problems and control-tuning notebooks would become
-dramatically simpler.
+ODEPACK ships **9 solvers** in `share/odepack/fortran/`, all compiled to Common
+Lisp via f2cl. Only DLSODE is currently exposed. The others are available as
+compiled CL code inside Maxima, requiring only a Maxima-level interface — the
+same wrapping pattern used by `np_odeint`.
 
-**Design considerations:**
-- Collect trajectory output as a 2D ndarray (rows = timesteps, columns = state
-  variables) for natural use in plotting and downstream analysis.
-- The user-supplied RHS function will be evaluated via `coerce-float-fun` in
-  the inner loop — expression evaluation is the bottleneck, not data format.
-- Consider whether to expose the step-level API (`dlsode_step`) for event
-  detection, or just the batch API (`dlsode`) for simplicity.
+#### 1. Event detection — wrap DLSODAR
 
-#### 2. Constrained optimization — wrap COBYLA
+DLSODAR extends DLSODA with **root-finding**: the user supplies constraint
+functions `g(t, y)` and the solver reports when any `g_i` crosses zero,
+returning which root was found via a `JROOT` array. This enables discontinuous
+dynamics (switches, collisions, threshold triggers) without polling.
 
-Wrap `share/cobyla/` as `np_minimize_cobyla(f, x0, constraints)`.
+**API sketch:**
 
-**Motivation:** `np_minimize` only handles unconstrained problems. Many
-practical engineering problems have bounds or constraints (e.g., "find optimal
-PID gains where Kp > 0"). COBYLA is derivative-free and supports general
-nonlinear inequality/equality constraints.
+```maxima
+np_odeint([-y], [t, y], [1.0], tspan,
+          events = [y - 0.5],          /* stop when y = 0.5 */
+          event_action = stop)         /* or: restart, record */
+```
 
-**Design considerations:**
-- Constraint format: accept Maxima expressions like `[x1 >= 0, x2 + x3 <= 10]`
-  and translate to COBYLA's internal representation.
-- Return format: match `np_minimize` conventions where possible.
-- COBYLA converges slower than gradient-based methods; document this tradeoff.
-
-#### 3. Root finding — wrap MINPACK
-
-Wrap `share/minpack/` as `np_fsolve(fcns, vars, x0)` for nonlinear systems of
-equations, and `np_lsq_nonlinear(fcns, vars, x0)` for nonlinear least squares
-(Levenberg-Marquardt).
-
-**Motivation:** Maxima has `solve()` for symbolic solutions and `find_root()`
-for scalar equations, but no numeric solver for systems of nonlinear equations
-where symbolic solving fails. MINPACK's HYBRD1 (root finding) and LMDER1
-(Levenberg-Marquardt) fill this gap — they are the same algorithms behind
-SciPy's `fsolve` and `least_squares`.
+**Motivation:** Simulink-style simulation requires event detection for hybrid
+systems (relays, switches, saturation). DLSODAR is the standard solution and
+is already compiled to CL in Maxima.
 
 **Design considerations:**
-- MINPACK can compute Jacobians via symbolic differentiation or fall back to
-  finite differences. Expose this as an option.
-- Levenberg-Marquardt is better than L-BFGS for nonlinear least-squares
-  problems (curve fitting, inverse problems) because it exploits the
-  sum-of-squares structure.
+- Could extend `np_odeint` with optional `events` argument, or provide a
+  separate `np_odeint_events` function.
+- Need to decide on event actions: stop integration, record event time and
+  continue, or call a user callback that modifies state.
+- DLSODAR also includes automatic stiff/nonstiff switching (DLSODA behaviour),
+  which would replace the manual `method = adams/bdf` choice.
+
+#### 2. Automatic stiff/nonstiff switching — wrap DLSODA
+
+DLSODA automatically switches between Adams (non-stiff) and BDF (stiff) methods
+based on the problem's behaviour during integration. This removes the burden of
+choosing a method from the user — important when stiffness varies over the
+integration interval.
+
+**Motivation:** Many practical systems (chemical kinetics, circuit transients)
+transition between stiff and non-stiff regimes. Choosing the wrong method
+either wastes compute (BDF on non-stiff) or fails (Adams on stiff).
+
+**Design considerations:**
+- Could be exposed as `method = auto` in the existing `np_odeint` interface.
+- DLSODAR (item 1) includes DLSODA behaviour, so wrapping DLSODAR may
+  subsume this item.
+
+#### 3. Implicit / DAE systems — wrap DLSODI
+
+DLSODI solves linearly implicit systems of the form `A(t,y) · dy/dt = g(t,y)`
+where the matrix `A` can be singular. This covers **index-1 DAEs** — the most
+common class arising from circuit simulation (KCL/KVL constraints), mechanism
+kinematics (holonomic constraints), and chemical equilibrium.
+
+**API sketch:**
+
+```maxima
+np_odeint_implicit(A_expr, g_expr, vars, y0, tspan)
+```
+
+**Motivation:** Many engineering systems have algebraic constraints alongside
+differential equations. Currently users must manually reduce to explicit ODE
+form (eliminating algebraic variables), which is error-prone and obscures the
+physical structure. DLSODI handles the implicit form directly.
+
+**Design considerations:**
+- DLSODI requires the user to supply both `A(t,y)` and `g(t,y)` as functions
+  or expressions, plus a routine to solve `A · x = b` (or the option to let
+  DLSODI factor `A` internally).
+- Only handles index-1 DAEs. Higher-index DAEs require index reduction
+  (a symbolic preprocessing step) or a specialised solver like SUNDIALS IDA.
+- Expression mode can compile both `A` and `g` via `coerce-float-fun`.
+
+#### 4. Sparse Jacobian support — wrap DLSODES
+
+DLSODES handles ODE systems with **sparse Jacobian structure**. For large
+systems (hundreds+ of state variables), most variables interact with only a few
+others. DLSODES exploits this sparsity for memory and performance.
+
+**Motivation:** Large coupled systems (discretised PDEs, multi-body dynamics,
+chemical reaction networks) produce sparse Jacobians. Dense Jacobian storage
+in DLSODE scales as O(n²), limiting practical system size.
+
+**Design considerations:**
+- Requires sparse structure specification (which variables appear in which
+  equations). Could infer this from symbolic expressions via `diff()`.
+- Lower priority than items 1-3 since most Maxima use cases involve
+  moderate-sized systems.
 
 ### Tier 2: Maxima-level features (no new Lisp algorithms)
 
 These can be implemented primarily in Maxima code using existing ndarray
-operations and Maxima built-ins, without writing new numerical algorithms in
-Lisp.
-
-#### 4. Symbolic-to-numeric gradient bridge
-
-Provide a convenience function that takes a symbolic loss expression,
-differentiates it with `diff()`, and produces numeric callback functions
-suitable for `np_minimize`. Something like:
-
-```maxima
-[f_num, grad_num] : np_compile_gradient(loss_expr, [w1, w2, w3]);
-result : np_minimize(f_num, grad_num, x0);
-```
-
-**Motivation:** The ML and optimization notebooks manually implement this
-pattern (symbolic `diff()` → hand-coded numeric gradient loop). Automating it
-leverages Maxima's unique symbolic strength — no other numeric tool can derive
-exact gradients this naturally. The control-tuning notebook currently resorts to
-finite-difference gradients because this bridge doesn't exist.
-
-**Design considerations:**
-- The compiled function needs to accept and return ndarrays.
-- Maxima's `compile()` or `coerce-float-fun` can convert symbolic expressions
-  to efficient Lisp closures.
-- This is mostly glue code, not algorithmic work.
+operations and Maxima built-ins.
 
 #### 5. Statistical hypothesis tests
 
@@ -701,9 +735,16 @@ fitting but has no general-purpose interpolation.
   adequate.
 - Could also wrap a Quicklisp spline library if one exists.
 
+#### 7. Vectorized distribution sampling
+
+Wrap `share/distrib/` random variate functions with ndarray output:
+`np_random_normal(mu, sigma, shape)`, `np_random_uniform(a, b, shape)`, etc.
+Currently `np_randn` provides standard normal only; parameterized distributions
+require element-wise post-processing.
+
 ### Tier 3: Longer-term / higher-effort
 
-#### 7. Sparse matrices
+#### 8. Sparse matrices
 
 No suitable Quicklisp library exists for sparse linear algebra. magicl focuses
 on dense BLAS/LAPACK. Options:
@@ -724,12 +765,23 @@ solvers are essential.
 (wrapping LAPACK's `dgbsv` via magicl or f2cl) as a targeted solution for FEM
 and spline problems.
 
-#### 8. Vectorized distribution sampling
+#### 9. Higher-index DAE support — SUNDIALS IDA
 
-Wrap `share/distrib/` random variate functions with ndarray output:
-`np_random_normal(mu, sigma, shape)`, `np_random_uniform(a, b, shape)`, etc.
-Currently `np_randn` provides standard normal only; parameterized distributions
-require element-wise post-processing.
+DLSODI (item 3) handles index-1 DAEs only. For higher-index systems (common
+in constrained multibody dynamics), a solver with built-in index reduction or
+constraint stabilisation is needed. SUNDIALS IDA is the standard choice.
+
+**Landscape:** No Common Lisp bindings to SUNDIALS exist. GSLL (GNU Scientific
+Library for Lisp, in Quicklisp) provides ODE steppers but no DAE support. The
+Quicklisp ecosystem has no DAE solver of any kind. Rust crates `sundials` /
+`sundials-sys` exist but don't help — calling Rust from CL adds an unnecessary
+FFI layer vs binding the C library directly.
+
+**Approach if needed:** Write CFFI bindings to SUNDIALS IDA (pure C library,
+well-documented API). Tools like `cl-autowrap` / `c2ffi` (both in Quicklisp)
+can auto-generate low-level CFFI definitions from C headers, though an
+idiomatic Lisp wrapper would still be needed. This is significant effort and
+should only be pursued if index-1 coverage via DLSODI proves insufficient.
 
 ### What we are not building
 
@@ -744,8 +796,15 @@ substantial algorithms from scratch or pulling in heavy external dependencies:
 - **Full sparse linear algebra**: no suitable library to wrap without
   SuiteSparse CFFI (see tier 3 discussion above).
 - **Automatic differentiation**: Maxima's symbolic `diff()` plus the
-  gradient bridge (tier 2, item 4) covers the primary use case. Tape-based
-  AD through numeric code is a different paradigm.
+  gradient bridge covers the primary use case. Tape-based AD through numeric
+  code is a different paradigm.
+- **Discrete-time / hybrid systems**: no solver infrastructure exists for
+  mixed continuous-discrete dynamics. Event detection (item 1) covers the
+  continuous side; discrete logic would be application-level Maxima code.
+- **Block diagram compiler**: translating a graphical block diagram into a
+  system of ODEs is a substantial software project (model compilation,
+  algebraic loop detection, signal routing). Users write their equations
+  directly — which Maxima's symbolic capabilities make relatively natural.
 
 ---
 
