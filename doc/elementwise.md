@@ -105,6 +105,52 @@ Raises each element of `a` to the power `p`. If `p` is an ndarray, the operation
 
 See also: `np_sqrt`, `np_exp`, `np_log`
 
+### Function: np_mod (a, b)
+
+Element-wise modulo (remainder after division).
+
+Returns a new ndarray where each element is `mod(a, b)`, with the sign of the divisor. Supports ndarray + ndarray, ndarray + scalar, and scalar + ndarray.
+
+Useful for angle wrapping (e.g., `np_mod(angle, 2*%pi)` maps to `[0, 2*pi)`).
+
+#### Examples
+
+```maxima
+(%i1) A : ndarray([7, 10, 13], [3]);
+(%o1)            ndarray([3], DOUBLE-FLOAT)
+(%i2) np_to_list(np_mod(A, 5));
+(%o2)                  [2.0, 0.0, 3.0]
+(%i3) /* Wrap angles to [0, 2*pi) */
+      angles : ndarray([0, 7.0, -1.0, 13.0], [4])$
+(%i4) np_to_list(np_mod(angles, 2*float(%pi)));
+(%o4)       [0.0, 0.7168..., 5.2831..., 0.4336...]
+```
+
+See also: `np_div`
+
+### Function: np_cross (a, b)
+
+3D cross product.
+
+Both `a` and `b` must be 1D ndarrays of length 3. Returns a 1D ndarray of length 3 perpendicular to both inputs. The result satisfies `np_dot(a, np_cross(a, b)) = 0`.
+
+Essential for orbital mechanics (angular momentum `L = r x v`), electromagnetic fields, and 3D geometry.
+
+#### Examples
+
+```maxima
+(%i1) A : ndarray([1.0, 0.0, 0.0], [3]);
+(%o1)            ndarray([3], DOUBLE-FLOAT)
+(%i2) B : ndarray([0.0, 1.0, 0.0], [3]);
+(%o2)            ndarray([3], DOUBLE-FLOAT)
+(%i3) np_to_list(np_cross(A, B));  /* i x j = k */
+(%o3)                  [0.0, 0.0, 1.0]
+(%i4) np_to_list(np_cross(B, A));  /* anti-commutative */
+(%o4)                 [0.0, 0.0, -1.0]
+```
+
+See also: `np_dot`, `np_matmul`
+
 ### Function: np_sqrt (a)
 
 Element-wise square root.

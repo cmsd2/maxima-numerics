@@ -541,3 +541,60 @@ true;
 (A : ndarray([-3.0, -0.5, 0.0, 0.5, 3.0], [5]),
  is(np_to_list(np_sign(A)) = [-1.0, -1.0, 0.0, 1.0, 1.0]));
 true;
+
+/* === Modulo === */
+
+/* np_mod: basic */
+(A : ndarray([7, 10, 13], [3]),
+ is(np_to_list(np_mod(A, 5)) = [2.0, 0.0, 3.0]));
+true;
+
+/* np_mod: ndarray mod ndarray */
+(A : ndarray([10, 20, 30], [3]),
+ B : ndarray([3, 7, 4], [3]),
+ is(np_to_list(np_mod(A, B)) = [1.0, 6.0, 2.0]));
+true;
+
+/* np_mod: angle wrapping to [0, 2*pi) */
+(angles : ndarray([0, 3.0, 7.0, -1.0, 13.0], [5]),
+ wrapped : np_mod(angles, float(2 * %pi)),
+ is(np_min(wrapped) >= 0.0) and closeto(np_ref(wrapped, 0), 0.0));
+true;
+
+/* === Cross product === */
+
+/* np_cross: basic i x j = k */
+(i_vec : ndarray([1.0, 0.0, 0.0], [3]),
+ j_vec : ndarray([0.0, 1.0, 0.0], [3]),
+ k_vec : np_cross(i_vec, j_vec),
+ is(np_to_list(k_vec) = [0.0, 0.0, 1.0]));
+true;
+
+/* np_cross: anti-commutativity */
+(A : ndarray([1.0, 2.0, 3.0], [3]),
+ B : ndarray([4.0, 5.0, 6.0], [3]),
+ C1 : np_cross(A, B),
+ C2 : np_cross(B, A),
+ list_closeto(np_to_list(C1), np_to_list(np_neg(C2))));
+true;
+
+/* np_cross: parallel vectors give zero */
+(A : ndarray([2.0, 4.0, 6.0], [3]),
+ B : ndarray([1.0, 2.0, 3.0], [3]),
+ C : np_cross(A, B),
+ is(np_to_list(C) = [0.0, 0.0, 0.0]));
+true;
+
+/* np_cross: known result */
+(A : ndarray([1.0, 2.0, 3.0], [3]),
+ B : ndarray([4.0, 5.0, 6.0], [3]),
+ C : np_cross(A, B),
+ is(np_to_list(C) = [-3.0, 6.0, -3.0]));
+true;
+
+/* np_cross: perpendicularity — a . (a x b) = 0 */
+(A : ndarray([3.0, -1.0, 2.0], [3]),
+ B : ndarray([1.0, 4.0, -2.0], [3]),
+ C : np_cross(A, B),
+ closeto(np_dot(A, C), 0.0) and closeto(np_dot(B, C), 0.0));
+true;

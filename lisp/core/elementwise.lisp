@@ -226,6 +226,34 @@
 
 ;;; Unary operations
 
+(defun $np_mod (a b)
+  "Element-wise modulo: np_mod(A, B)
+   Returns the remainder after division, with the sign of the divisor."
+  (numerics-binary-op a b #'cl:mod))
+
+(defun $np_cross (a b)
+  "3D cross product: np_cross(A, B)
+   Both A and B must be 1D ndarrays of length 3.
+   Returns a 1D ndarray of length 3."
+  (let* ((ha (numerics-unwrap a))
+         (hb (numerics-unwrap b))
+         (ta (numerics:ndarray-tensor ha))
+         (tb (numerics:ndarray-tensor hb))
+         (sa (magicl:shape ta))
+         (sb (magicl:shape tb)))
+    (unless (and (= (length sa) 1) (= (first sa) 3))
+      (merror "np_cross: first argument must be a 1D array of length 3, got shape ~A" sa))
+    (unless (and (= (length sb) 1) (= (first sb) 3))
+      (merror "np_cross: second argument must be a 1D array of length 3, got shape ~A" sb))
+    (let* ((a0 (magicl:tref ta 0)) (a1 (magicl:tref ta 1)) (a2 (magicl:tref ta 2))
+           (b0 (magicl:tref tb 0)) (b1 (magicl:tref tb 1)) (b2 (magicl:tref tb 2))
+           (result (magicl:from-list
+                    (list (- (* a1 b2) (* a2 b1))
+                          (- (* a2 b0) (* a0 b2))
+                          (- (* a0 b1) (* a1 b0)))
+                    '(3) :type 'double-float)))
+      (numerics-wrap (numerics:make-ndarray result)))))
+
 (defun $np_sqrt (a)
   "Element-wise square root: np_sqrt(A)"
   (numerics-unary-op a #'cl:sqrt))
