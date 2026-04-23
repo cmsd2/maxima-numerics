@@ -696,3 +696,110 @@ This is the equivalent of NumPy's `A[mask]`.
 ```
 
 See also: `np_where`, `np_greater`, `np_test`
+
+---
+
+### Function: np_tanh (a)
+
+Element-wise hyperbolic tangent.
+
+**Parameters:** `a` — ndarray
+
+**Returns:** ndarray with `tanh(x)` applied element-wise
+
+#### Examples
+
+```maxima
+(%i1) np_to_list(np_tanh(ndarray([0, 1, -1], [3])));
+(%o1)         [0.0, 0.7615941559557649, -0.7615941559557649]
+```
+
+See also: `np_sinh`, `np_cosh`, `np_atan`
+
+### Function: np_sinh (a)
+
+Element-wise hyperbolic sine.
+
+**Parameters:** `a` — ndarray
+
+**Returns:** ndarray with `sinh(x)` applied element-wise
+
+#### Examples
+
+```maxima
+(%i1) np_to_list(np_sinh(ndarray([0, 1], [2])));
+(%o1)                    [0.0, 1.1752011936438014]
+```
+
+See also: `np_tanh`, `np_cosh`
+
+### Function: np_cosh (a)
+
+Element-wise hyperbolic cosine.
+
+**Parameters:** `a` — ndarray
+
+**Returns:** ndarray with `cosh(x)` applied element-wise
+
+#### Examples
+
+```maxima
+(%i1) np_to_list(np_cosh(ndarray([0, 1], [2])));
+(%o1)                    [1.0, 1.5430806348152437]
+```
+
+See also: `np_tanh`, `np_sinh`
+
+### Function: np_sigmoid (a)
+
+Element-wise logistic sigmoid: `1 / (1 + exp(-x))`.
+
+**Parameters:** `a` — ndarray
+
+**Returns:** ndarray with values in (0, 1)
+
+#### Examples
+
+```maxima
+(%i1) np_to_list(np_sigmoid(ndarray([0, 10, -10], [3])));
+(%o1)       [0.5, 0.9999546021312976, 4.5397868702434395e-5]
+```
+
+See also: `np_tanh`, `np_softmax`, `np_relu`
+
+### Function: np_relu (a)
+
+Element-wise rectified linear unit: `max(0, x)`. Real ndarrays only.
+
+**Parameters:** `a` — ndarray (real)
+
+**Returns:** ndarray with negative values replaced by zero
+
+#### Examples
+
+```maxima
+(%i1) np_to_list(np_relu(ndarray([-2, -0.5, 0, 0.5, 3], [5])));
+(%o1)                    [0.0, 0.0, 0.0, 0.5, 3.0]
+```
+
+See also: `np_sigmoid`, `np_softmax`, `np_clip`
+
+### Function: np_softmax (a)
+
+Softmax of a 1D ndarray: `exp(a - max(a)) / sum(exp(a - max(a)))`. Numerically stable (subtracts maximum before exponentiating).
+
+**Parameters:** `a` — 1D ndarray (real)
+
+**Returns:** 1D ndarray with values in (0, 1) summing to 1
+
+#### Examples
+
+```maxima
+(%i1) S : np_softmax(ndarray([1, 2, 3], [3]))$
+(%i2) np_sum(S);
+(%o2)                          1.0
+(%i3) np_to_list(np_softmax(np_full([4], 1.0)));
+(%o3)                    [0.25, 0.25, 0.25, 0.25]
+```
+
+See also: `np_sigmoid`, `np_exp`

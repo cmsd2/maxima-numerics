@@ -157,3 +157,68 @@
          (dtype (numerics:ndarray-dtype handle)))
     (numerics-wrap
      (numerics:make-ndarray (magicl:deep-copy-tensor tensor) :dtype dtype))))
+
+;;; --- Random utilities ---
+
+(defun $np_seed (n)
+  "Set the random seed for reproducibility: np_seed(42).
+   Affects np_rand, np_randn, np_randint, np_choice, np_shuffle."
+  #+sbcl (setf *random-state* (sb-ext:seed-random-state (truncate n)))
+  #-sbcl (merror "np_seed: only supported on SBCL")
+  '$done)
+
+(defun $np_randint (lo hi shape)
+  "Create an ndarray of random integers in [lo, hi): np_randint(0, 10, [3,3]).
+   Values are stored as double-float."
+  (let* ((lo-int (truncate lo))
+         (hi-int (truncate hi))
+         (range (- hi-int lo-int))
+         (dims (maxima-shape-to-list shape))
+         (total (reduce #'* dims))
+         (vals (loop repeat total
+                     collect (coerce (+ lo-int (random range)) 'double-float))))
+    (when (<= range 0)
+      (merror "np_randint: hi (~D) must be greater than lo (~D)" hi-int lo-int))
+    (numerics-wrap
+     (numerics:make-ndarray
+      (magicl:from-list vals dims :type 'double-float :layout :column-major)))))
+
+(defun $np_choice (a n &optional replace-arg)
+  "Sample n elements from a 1D ndarray.
+   np_choice(a, 5)        — 5 samples with replacement (default)
+   np_choice(a, 5, true)  — 5 samples with replacement
+   np_choice(a, 5, false) — 5 samples without replacement"
+  (let* ((handle (numerics-unwrap a))
+         (tensor (numerics:ndarray-tensor handle))
+         (flat (numerics-flat-array tensor))
+         (m (length flat))
+         (k (truncate n))
+         (with-replacement (or (null replace-arg)
+                               (eq replace-arg t)
+                               (and (numberp replace-arg) (not (zerop replace-arg))))))
+    (when (and (not with-replacement) (> k m))
+      (merror "np_choice: cannot sample ~D from array of size ~D without replacement" k m))
+    (let ((vals (if with-replacement
+                    (loop repeat k collect (aref flat (random m)))
+                    ;; Fisher-Yates partial shuffle on index copy
+                    (let ((idx (make-array m :element-type 'fixnum)))
+                      (dotimes (i m) (setf (aref idx i) i))
+                      (loop for i from 0 below k
+                            for j = (+ i (random (- m i)))
+                            do (rotatef (aref idx i) (aref idx j))
+                            collect (aref flat (aref idx i)))))))
+      (numerics-wrap
+       (numerics:make-ndarray
+        (magicl:from-list vals (list k) :type 'double-float :layout :column-major))))))
+
+(defun $np_shuffle (a)
+  "In-place Fisher-Yates shuffle of a 1D ndarray: np_shuffle(A).
+   Modifies A in place and returns it."
+  (let* ((handle (numerics-unwrap a))
+         (tensor (numerics:ndarray-tensor handle))
+         (storage (numerics-tensor-storage tensor))
+         (n (length storage)))
+    (loop for i from (1- n) downto 1
+          for j = (random (1+ i))
+          do (rotatef (aref storage i) (aref storage j)))
+    a))

@@ -158,3 +158,60 @@ true;
 /* Size check */
 (np_size(np_logspace(0, 1, 50)));
 50;
+
+/* ===== np_seed: reproducibility ===== */
+
+/* Same seed gives same result */
+(np_seed(42),
+ A : np_rand([5]),
+ np_seed(42),
+ B : np_rand([5]),
+ is(np_max(np_abs(np_sub(A, B))) = 0.0));
+true;
+
+/* Same seed gives same randn */
+(np_seed(123),
+ A : np_randn([100]),
+ np_seed(123),
+ B : np_randn([100]),
+ is(np_max(np_abs(np_sub(A, B))) = 0.0));
+true;
+
+/* ===== np_randint ===== */
+
+/* Shape matches */
+(A : np_randint(0, 10, [3, 4]),
+ is(np_shape(A) = [3, 4]));
+true;
+
+/* All values in [0, 10) */
+(np_seed(42),
+ A : np_randint(0, 10, [1000]),
+ is(np_min(A) >= 0.0 and np_max(A) <= 9.0));
+true;
+
+/* ===== np_choice ===== */
+
+/* With replacement: correct size */
+(A : ndarray([10.0, 20.0, 30.0], [3]),
+ B : np_choice(A, 5),
+ is(np_size(B) = 5));
+true;
+
+/* Without replacement: all unique, correct size */
+(np_seed(42),
+ A : np_linspace(1, 10, 10),
+ B : np_choice(A, 5, false),
+ L : sort(np_to_list(B), "<"),
+ is(np_size(B) = 5 and L = unique(L)));
+true;
+
+/* ===== np_shuffle ===== */
+
+/* Shuffle preserves elements (sorted match) */
+(np_seed(42),
+ A : np_linspace(1, 5, 5),
+ B : np_copy(A),
+ np_shuffle(B),
+ list_closeto(sort(np_to_list(B), "<"), np_to_list(A)));
+true;

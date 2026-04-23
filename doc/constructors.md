@@ -257,3 +257,88 @@ Both endpoints are included. If `n` is 1, returns a single-element array contain
 ```
 
 See also: `np_linspace`, `np_arange`
+
+---
+
+### Function: np_seed (n)
+
+Set the random seed for reproducibility. Affects `np_rand`, `np_randn`, `np_randint`, `np_choice`, and `np_shuffle`.
+
+**Parameters:** `n` — integer seed value
+
+#### Examples
+
+```maxima
+(%i1) np_seed(42)$
+(%i2) A : np_rand([3])$
+(%i3) np_seed(42)$
+(%i4) B : np_rand([3])$
+(%i5) is(np_max(np_abs(np_sub(A, B))) = 0.0);
+(%o5)                          true
+```
+
+See also: `np_rand`, `np_randn`
+
+### Function: np_randint (lo, hi, shape)
+
+Create an ndarray of random integers in [lo, hi). Values are stored as `double-float`.
+
+**Parameters:**
+- `lo` — lower bound (inclusive)
+- `hi` — upper bound (exclusive)
+- `shape` — integer or list of dimensions
+
+#### Examples
+
+```maxima
+(%i1) np_seed(42)$
+(%i2) A : np_randint(0, 10, [2, 3]);
+(%o2)            ndarray([2, 3], DOUBLE-FLOAT)
+(%i3) is(np_min(A) >= 0 and np_max(A) <= 9);
+(%o3)                          true
+```
+
+See also: `np_rand`, `np_seed`
+
+### Function: np_choice (a, n) / np_choice (a, n, replace)
+
+Sample `n` elements from a 1D ndarray. By default samples with replacement.
+
+**Parameters:**
+- `a` — 1D ndarray to sample from
+- `n` — number of samples
+- `replace` — (optional) `true` for with replacement (default), `false` for without replacement
+
+#### Examples
+
+```maxima
+(%i1) np_seed(42)$
+(%i2) A : np_linspace(1, 5, 5)$
+(%i3) np_to_list(np_choice(A, 3));
+(%o3)                    [4.0, 2.0, 1.0]
+(%i4) B : np_choice(A, 3, false)$
+(%i5) np_size(B);
+(%o5)                          3
+```
+
+See also: `np_shuffle`, `np_seed`, `np_rand`
+
+### Function: np_shuffle (a)
+
+In-place Fisher-Yates shuffle of a 1D ndarray. Modifies `a` in place and returns it.
+
+**Parameters:** `a` — 1D ndarray
+
+**Returns:** `a` (shuffled in place)
+
+#### Examples
+
+```maxima
+(%i1) np_seed(42)$
+(%i2) A : np_linspace(1, 5, 5)$
+(%i3) np_shuffle(A)$
+(%i4) np_to_list(A);
+(%o4)               [4.0, 1.0, 2.0, 5.0, 3.0]
+```
+
+See also: `np_choice`, `np_seed`

@@ -942,3 +942,49 @@ For complex input, returns the magnitude as a double-float ndarray."
               (setf (magicl:tref result i j)
                     (phase (magicl:tref tensor i j)))))))
     (numerics-wrap (numerics:make-ndarray result))))
+
+;;; --- Hyperbolic functions ---
+
+(defun $np_tanh (a)
+  "Element-wise hyperbolic tangent: np_tanh(A)"
+  (numerics-unary-op a #'cl:tanh))
+
+(defun $np_sinh (a)
+  "Element-wise hyperbolic sine: np_sinh(A)"
+  (numerics-unary-op a #'cl:sinh))
+
+(defun $np_cosh (a)
+  "Element-wise hyperbolic cosine: np_cosh(A)"
+  (numerics-unary-op a #'cl:cosh))
+
+;;; --- Activation functions ---
+
+(defun $np_sigmoid (a)
+  "Element-wise logistic sigmoid: np_sigmoid(A) = 1/(1+exp(-x))"
+  (numerics-unary-op a (lambda (x) (/ 1.0d0 (+ 1.0d0 (exp (- x)))))))
+
+(defun $np_relu (a)
+  "Element-wise rectified linear unit: np_relu(A) = max(0, x)"
+  (numerics-require-real a "np_relu")
+  (numerics-unary-op a (lambda (x) (max 0.0d0 x))))
+
+(defun $np_softmax (a)
+  "Softmax of a 1D ndarray: np_softmax(A).
+   Returns exp(a - max(a)) / sum(exp(a - max(a))), numerically stable."
+  (numerics-require-real a "np_softmax")
+  (let* ((handle (numerics-unwrap a))
+         (tensor (numerics:ndarray-tensor handle))
+         (shape (magicl:shape tensor))
+         (n (first shape)))
+    (unless (= (length shape) 1)
+      (merror "np_softmax: only 1D arrays supported, got shape ~A" shape))
+    (let* ((flat (numerics-flat-array tensor))
+           (max-val (reduce #'max flat))
+           (result (magicl:empty (list n) :type 'double-float :layout :column-major))
+           (sum-exp 0.0d0))
+      (dotimes (i n)
+        (let ((e (exp (- (aref flat i) max-val))))
+          (setf (magicl:tref result i) e)
+          (incf sum-exp e)))
+      (magicl:map! (lambda (x) (/ x sum-exp)) result)
+      (numerics-wrap (numerics:make-ndarray result)))))

@@ -598,3 +598,75 @@ true;
  C : np_cross(A, B),
  closeto(np_dot(A, C), 0.0) and closeto(np_dot(B, C), 0.0));
 true;
+
+/* ===== Hyperbolic functions ===== */
+
+/* np_tanh: known values */
+(A : ndarray([0.0, 1.0, -1.0], [3]),
+ L : np_to_list(np_tanh(A)),
+ closeto(L[1], 0.0) and closeto(L[2], float(tanh(1))) and closeto(L[3], float(tanh(-1))));
+true;
+
+/* np_tanh: identity tanh^2 + sech^2 = 1 */
+(A : np_linspace(-3.0, 3.0, 50),
+ T_ : np_tanh(A),
+ S_ : np_pow(np_cosh(A), -1),
+ lhs : np_add(np_mul(T_, T_), np_mul(S_, S_)),
+ is(np_max(np_abs(np_sub(lhs, np_ones(50)))) < 1e-12));
+true;
+
+/* np_sinh: known values */
+(A : ndarray([0.0, 1.0], [2]),
+ L : np_to_list(np_sinh(A)),
+ closeto(L[1], 0.0) and closeto(L[2], float(sinh(1))));
+true;
+
+/* np_cosh: known values and cosh(0) = 1 */
+(A : ndarray([0.0, 1.0], [2]),
+ L : np_to_list(np_cosh(A)),
+ closeto(L[1], 1.0) and closeto(L[2], float(cosh(1))));
+true;
+
+/* ===== Activation functions ===== */
+
+/* np_sigmoid: known values */
+(A : ndarray([0.0, 100.0, -100.0], [3]),
+ L : np_to_list(np_sigmoid(A)),
+ closeto(L[1], 0.5) and closeto(L[2], 1.0) and closeto(L[3], 0.0));
+true;
+
+/* np_sigmoid: symmetry sigmoid(-x) = 1 - sigmoid(x) */
+(A : np_linspace(-5.0, 5.0, 50),
+ lhs : np_sigmoid(np_scale(-1.0, A)),
+ rhs : np_sub(1.0, np_sigmoid(A)),
+ is(np_max(np_abs(np_sub(lhs, rhs))) < 1e-14));
+true;
+
+/* np_relu: known values */
+(A : ndarray([-2.0, -0.5, 0.0, 0.5, 3.0], [5]),
+ L : np_to_list(np_relu(A)),
+ is(L = [0.0, 0.0, 0.0, 0.5, 3.0]));
+true;
+
+/* np_relu: positive values unchanged */
+(A : np_linspace(0.0, 10.0, 20),
+ is(np_max(np_abs(np_sub(np_relu(A), A))) < 1e-15));
+true;
+
+/* np_softmax: sums to 1 */
+(A : ndarray([1.0, 2.0, 3.0, 4.0], [4]),
+ S : np_softmax(A),
+ closeto(np_sum(S), 1.0));
+true;
+
+/* np_softmax: all non-negative */
+(A : ndarray([-10.0, 0.0, 10.0], [3]),
+ S : np_softmax(A),
+ is(np_min(S) >= 0.0));
+true;
+
+/* np_softmax: uniform input gives uniform output */
+(A : np_full([5], 3.14),
+ S : np_softmax(A),
+ is(np_max(np_abs(np_sub(S, np_full([5], 0.2)))) < 1e-14));
+true;

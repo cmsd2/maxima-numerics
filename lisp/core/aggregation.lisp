@@ -377,6 +377,21 @@
               (- (magicl:tref tensor (1+ i)) (magicl:tref tensor i))))
       (numerics-wrap (numerics:make-ndarray result :dtype dtype)))))
 
+(defun $np_discount (rewards gamma)
+  "Discounted cumulative returns (1D): np_discount(rewards, gamma).
+   G[i] = r[i] + gamma*G[i+1] (reverse cumsum with decay).
+   Used in reinforcement learning for computing returns from a reward sequence."
+  (let* ((handle (numerics-unwrap rewards))
+         (tensor (numerics:ndarray-tensor handle))
+         (n (magicl:size tensor))
+         (g (coerce ($float gamma) 'double-float))
+         (result (magicl:empty (list n) :type 'double-float :layout :column-major))
+         (acc 0.0d0))
+    (loop for i from (1- n) downto 0
+          do (setf acc (+ (magicl:tref tensor i) (* g acc)))
+             (setf (magicl:tref result i) acc))
+    (numerics-wrap (numerics:make-ndarray result))))
+
 (defun compute-cov-tensor (tensor)
   "Internal: compute sample covariance matrix from a 2D magicl tensor.
    Returns the raw p x p magicl tensor (no ndarray wrapping)."

@@ -405,3 +405,29 @@ Treats each column as a variable and each row as an observation. Returns a p-by-
 ```
 
 See also: `np_cov`, `np_var`, `np_std`
+
+---
+
+### Function: np_discount (rewards, gamma)
+
+Discounted cumulative returns from a 1D reward sequence. Computes `G[i] = r[i] + gamma * G[i+1]` via a single reverse pass. Used in reinforcement learning for computing returns.
+
+**Parameters:**
+- `rewards` — 1D ndarray of reward values
+- `gamma` — discount factor (scalar, typically 0.9-0.999)
+
+**Returns:** 1D ndarray of discounted returns (same length as input)
+
+#### Examples
+
+```maxima
+(%i1) R : ndarray([1.0, 2.0, 3.0], [3])$
+(%i2) np_to_list(np_discount(R, 0));
+(%o2)                    [1.0, 2.0, 3.0]
+(%i3) np_to_list(np_discount(R, 1));
+(%o3)                    [6.0, 5.0, 3.0]
+(%i4) np_to_list(np_discount(R, 0.9));
+(%o4)                 [5.23, 4.7, 3.0]
+```
+
+See also: `np_cumsum`

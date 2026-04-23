@@ -193,6 +193,10 @@ Helper functions in `util.lisp` handle all dtype logic:
 | `np_diag(list)` | Diagonal matrix (optional dtype) |
 | `np_rand(shape)` | Uniform random [0,1) — always real |
 | `np_randn(shape)` | Standard normal — always real |
+| `np_randint(lo, hi, shape)` | Random integers in [lo, hi) |
+| `np_seed(n)` | Set random seed for reproducibility |
+| `np_choice(A, n)` | Sample from 1D array (with/without replacement) |
+| `np_shuffle(A)` | In-place Fisher-Yates shuffle |
 | `np_arange(n)` | 0..n-1 as 1D — always real |
 | `np_linspace(a,b,n)` | Evenly spaced points — always real |
 | `np_copy(A)` | Deep copy (preserves dtype) |
@@ -252,6 +256,9 @@ the function or requires an extension with additional native dependencies:
 | `np_sin`, `np_cos`, `np_tan` | Trigonometric |
 | `np_asin`, `np_acos`, `np_atan` | Inverse trigonometric |
 | `np_atan2(Y, X)` | Two-argument arctangent |
+| `np_tanh`, `np_sinh`, `np_cosh` | Hyperbolic |
+| `np_sigmoid`, `np_relu` | Activation functions |
+| `np_softmax(A)` | Softmax (1D, numerically stable) |
 | `np_sign` | Sign function (-1, 0, +1) |
 | `np_abs`, `np_neg` | Absolute value, negation |
 | `np_scale(alpha, A)` | Scalar multiplication |
@@ -293,6 +300,7 @@ copy. `np_abs` is special-cased: for complex input it returns magnitudes as
 | `np_argmin(A)` / `np_argmax(A)` | Index of min/max (real only) |
 | `np_std(A)` / `np_var(A)` | Standard deviation / variance (result always real) |
 | `np_cumsum(A)` | Cumulative sum |
+| `np_discount(rewards, gamma)` | Discounted cumulative returns (RL) |
 | `np_dot(a, b)` | Dot product (1D vectors) |
 | `np_sort(A)` / `np_argsort(A)` | Sort / sort indices (real only) |
 
