@@ -1,0 +1,64 @@
+/* Tests for np_minimize_cobyla (COBYLA constrained optimization) */
+
+(load("numerics-optimize"), load("tests/test_helpers"), true);
+true;
+
+/* === 1. Minimize u1*u2 on unit circle: u1^2+u2^2 <= 1 === */
+/* Optimum: u1 = 1/sqrt(2), u2 = -1/sqrt(2), f = -0.5 */
+
+(
+  cob_res1 : np_minimize_cobyla(u1*u2, [u1, u2], [1, 1],
+                            [1 - u1^2 - u2^2 >= 0]),
+  cob_xopt : cob_res1[1],
+  cob_fopt : cob_res1[2],
+  closeto(cob_fopt, -0.5, 1e-4)
+);
+true;
+
+/* x_opt is an ndarray */
+is(ndarray_p(cob_res1[1]));
+true;
+
+/* info = 0 (success) */
+is(cob_res1[4] = 0);
+true;
+
+/* === 2. Minimize (u1-3)^2 with u1 >= 0 (bound constraint) === */
+/* Optimum at u1 = 3 */
+
+(
+  cob_res2 : np_minimize_cobyla((u1-3)^2, [u1], [0.5], [u1 >= 0]),
+  closeto(np_ref(cob_res2[1], 0), 3.0, 1e-4)
+);
+true;
+
+/* === 3. Minimize u1^2+u2^2 with equality u1+u2 = 1 === */
+/* Optimum: u1 = u2 = 0.5, f = 0.5 */
+
+(
+  cob_res3 : np_minimize_cobyla(u1^2 + u2^2, [u1, u2], [0.8, 0.2],
+                            [u1 + u2 = 1]),
+  closeto(np_ref(cob_res3[1], 0), 0.5, 1e-4) and
+  closeto(np_ref(cob_res3[1], 1), 0.5, 1e-4)
+);
+true;
+
+/* === 4. Accept ndarray x0 === */
+
+(
+  cob_x0nd : ndarray([1.0, 1.0]),
+  cob_res4 : np_minimize_cobyla(u1*u2, [u1, u2], cob_x0nd,
+                            [1 - u1^2 - u2^2 >= 0]),
+  closeto(cob_res4[2], -0.5, 1e-4)
+);
+true;
+
+/* === 5. Error: mismatched x0 length === */
+
+errcatch(np_minimize_cobyla(u1^2, [u1], [1, 2], [u1 >= 0]));
+[];
+
+/* === 6. Error: invalid constraint operator === */
+
+errcatch(np_minimize_cobyla(u1^2, [u1], [1], [u1 # 0]));
+[];

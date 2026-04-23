@@ -20,4 +20,8 @@ files = [
     "tests/test_aggregation.mac",
     "tests/test_complex.mac",
     "tests/test_crossval.mac",
+    "tests/test_optimize.mac",
+    "tests/test_cobyla.mac",
+    "tests/test_minpack.mac",
+    "tests/test_integrate.mac",
 ]

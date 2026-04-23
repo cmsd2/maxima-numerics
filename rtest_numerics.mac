@@ -25,6 +25,14 @@ batch("tests/test_complex.mac");
 true;
 
 batch("tests/test_optimize.mac");
+batch("tests/test_cobyla.mac");
+batch("tests/test_minpack.mac");
+
+/* Integration tests require numerics-integrate */
+(load("numerics-integrate"), true);
+true;
+
+batch("tests/test_integrate.mac");
 
 /* Cross-validation tests require lapack */
 (load("lapack"), true);

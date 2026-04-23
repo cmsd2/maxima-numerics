@@ -1,5 +1,8 @@
 /* Tests for np_minimize (L-BFGS optimization) */
 
+(load("numerics-optimize"), load("tests/test_helpers"), true);
+true;
+
 /* === 1. Simple quadratic: f(x) = x1^2 + x2^2, minimum at origin === */
 
 (
@@ -87,5 +90,83 @@ true;
     lambda([x], np_scale(2.0, x)),
     ndarray([5.0, 5.0])),
   result6[3]
+);
+true;
+
+/* === np_compile_gradient tests === */
+
+/* === 7. Gradient bridge: simple quadratic w1^2 + w2^2 === */
+
+(
+  [f7, g7] : np_compile_gradient(w1^2 + w2^2, [w1, w2]),
+  result7 : np_minimize(f7, g7, ndarray([3.0, 4.0])),
+  xopt7 : result7[1],
+  result7[3]
+);
+true;
+
+/* Solution near origin */
+is(abs(np_ref(xopt7, 0)) < 1e-4);
+true;
+
+is(abs(np_ref(xopt7, 1)) < 1e-4);
+true;
+
+/* === 8. Gradient bridge: Rosenbrock (1-x)^2 + 100*(y-x^2)^2 === */
+
+(
+  [f8, g8] : np_compile_gradient((1-x)^2 + 100*(y-x^2)^2, [x, y]),
+  result8 : np_minimize(f8, g8, ndarray([-1.0, 1.0]), 1e-10, 500),
+  x8 : result8[1],
+  closeto(np_ref(x8, 0), 1.0) and closeto(np_ref(x8, 1), 1.0)
+);
+true;
+
+/* === 9. Gradient bridge: call f_func and grad_func independently === */
+
+(
+  [f9, g9] : np_compile_gradient(3*a^2 + 2*b^2, [a, b]),
+  pt : ndarray([1.0, 2.0]),
+  /* f(1,2) = 3*1 + 2*4 = 11 */
+  closeto(f9(pt), 11.0)
+);
+true;
+
+/* grad(1,2) = [6*a, 4*b] = [6, 8] */
+(
+  gv : g9(pt),
+  closeto(np_ref(gv, 0), 6.0) and closeto(np_ref(gv, 1), 8.0)
+);
+true;
+
+/* === np_minimize expression mode tests === */
+
+/* === 10. Expression mode: simple quadratic w1^2 + w2^2 === */
+
+(
+  res10 : np_minimize(w1^2 + w2^2, [w1, w2], ndarray([3.0, 4.0])),
+  res10[3]
+);
+true;
+
+is(res10[2] < 1e-10);
+true;
+
+/* === 11. Expression mode: Rosenbrock === */
+
+(
+  res11 : np_minimize((1-x)^2 + 100*(y-x^2)^2, [x, y],
+                       ndarray([-1.0, 1.0]), 1e-10, 500),
+  x11 : res11[1],
+  closeto(np_ref(x11, 0), 1.0) and closeto(np_ref(x11, 1), 1.0)
+);
+true;
+
+/* === 12. Expression mode: shifted quadratic 3*(a-2)^2 + (b-5)^2 === */
+
+(
+  res12 : np_minimize(3*(a-2)^2 + (b-5)^2, [a, b], ndarray([0.0, 0.0])),
+  x12 : res12[1],
+  closeto(np_ref(x12, 0), 2.0, 1e-6) and closeto(np_ref(x12, 1), 5.0, 1e-6)
 );
 true;

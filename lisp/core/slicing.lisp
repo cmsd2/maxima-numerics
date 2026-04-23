@@ -88,7 +88,7 @@
 (defun nd-slice-copy (src dst src-shape src-strides dst-shape dst-strides parsed)
   "Copy elements from SRC to DST flat arrays according to PARSED specs.
    PARSED is a simple-vector of (:range start end) or (:index idx)."
-  (declare (type (simple-array double-float (*)) src dst))
+  (declare (type simple-array src dst))
   (let* ((src-ndim (length src-shape))
          (out-ndim (length dst-shape))
          (fixed-offset 0)

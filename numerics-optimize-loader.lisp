@@ -24,5 +24,13 @@
             (muffle-warning w)))))
     ($load "lbfgs")))
 
+;; Load COBYLA (Constrained Optimization BY Linear Approximation)
+(unless (find-package :cobyla)
+  ($load "fmin_cobyla"))
+
+;; Load MINPACK (nonlinear equations and least squares)
+(unless (find-package :minpack)
+  ($load "minpack"))
+
 ;; Load the optimize system via Quicklisp
 (funcall (intern "QUICKLOAD" :ql) "numerics/optimize" :silent t)

@@ -1,0 +1,157 @@
+/* Tests for np_fsolve and np_lsq_nonlinear (MINPACK wrappers) */
+
+(load("numerics-optimize"), load("tests/test_helpers"), true);
+true;
+
+/* ======================== np_fsolve ======================== */
+
+/* === 1. Solve q1^2 - 2 = 0 → q1 = sqrt(2) === */
+
+(
+  fs_res1 : np_fsolve([q1^2 - 2], [q1], [1.0]),
+  closeto(np_ref(fs_res1[1], 0), sqrt(2.0), 1e-8)
+);
+true;
+
+/* x_opt is an ndarray */
+is(ndarray_p(fs_res1[1]));
+true;
+
+/* info = 1 (converged) */
+is(fs_res1[3] = 1);
+true;
+
+/* === 2. 2D system: q1^2+q2^2 = 4, q1 = q2 → (sqrt(2), sqrt(2)) === */
+
+(
+  fs_res2 : np_fsolve([q1^2 + q2^2 - 4, q1 - q2], [q1, q2], [1.0, 1.0]),
+  closeto(np_ref(fs_res2[1], 0), sqrt(2.0), 1e-6) and
+  closeto(np_ref(fs_res2[1], 1), sqrt(2.0), 1e-6)
+);
+true;
+
+/* === 3. Without Jacobian (finite differences) === */
+
+(
+  fs_res3 : np_fsolve([q1^2 - 2], [q1], [1.0], false),
+  closeto(np_ref(fs_res3[1], 0), sqrt(2.0), 1e-8)
+);
+true;
+
+/* === 4. Accept ndarray x0 === */
+
+(
+  fs_x0nd : ndarray([1.0]),
+  fs_res4 : np_fsolve([q1^2 - 2], [q1], fs_x0nd),
+  closeto(np_ref(fs_res4[1], 0), sqrt(2.0), 1e-8)
+);
+true;
+
+/* ======================== np_lsq_nonlinear ======================== */
+
+/* === 5. Overdetermined: fit line y = a1*x to points (1,2), (2,3.9), (3,6.1) === */
+/* Residuals: a1*xi - yi. Best a1 ≈ 2. */
+
+(
+  lsq_res1 : np_lsq_nonlinear([a1*1 - 2, a1*2 - 3.9, a1*3 - 6.1], [a1], [1.0]),
+  closeto(np_ref(lsq_res1[1], 0), 2.0, 0.05)
+);
+true;
+
+/* info between 1-3 means converged */
+is(lsq_res1[3] >= 1 and lsq_res1[3] <= 3);
+true;
+
+/* === 6. 2-param least squares: fit a1*exp(b1*t) to data === */
+/* Data: t=0→1, t=1→2.7, t=2→7.4 (approx e^t) → a1≈1, b1≈1 */
+
+(
+  lsq_res2 : np_lsq_nonlinear(
+    [a1*exp(b1*0) - 1, a1*exp(b1*1) - 2.7, a1*exp(b1*2) - 7.4],
+    [a1, b1], [0.5, 0.5]),
+  closeto(np_ref(lsq_res2[1], 0), 1.0, 0.1) and
+  closeto(np_ref(lsq_res2[1], 1), 1.0, 0.1)
+);
+true;
+
+/* === 7. Without Jacobian (finite differences) === */
+
+(
+  lsq_res3 : np_lsq_nonlinear([a1*1 - 2, a1*2 - 3.9, a1*3 - 6.1], [a1], [1.0], false),
+  closeto(np_ref(lsq_res3[1], 0), 2.0, 0.05)
+);
+true;
+
+/* === 8. ndarray x0 for lsq_nonlinear === */
+
+(
+  lsq_x0nd : ndarray([1.0]),
+  lsq_res4 : np_lsq_nonlinear([a1*1 - 2, a1*2 - 3.9, a1*3 - 6.1], [a1], lsq_x0nd),
+  closeto(np_ref(lsq_res4[1], 0), 2.0, 0.05)
+);
+true;
+
+/* === 9. Error: mismatched dimensions for fsolve === */
+
+errcatch(np_fsolve([q1^2, q2^2], [q1], [1.0]));
+[];
+
+/* === 10. Error: m < n for lsq_nonlinear === */
+
+errcatch(np_lsq_nonlinear([a1^2], [a1, b1], [1.0, 1.0]));
+[];
+
+/* ======================== Function mode tests ======================== */
+
+/* === 11. np_fsolve function mode: solve x^2 - 2 = 0 === */
+
+(
+  fs_fn(fs_x) := [np_ref(fs_x, 0)^2 - 2],
+  fs_res11 : np_fsolve(fs_fn, [1.0]),
+  closeto(np_ref(fs_res11[1], 0), sqrt(2.0), 1e-8)
+);
+true;
+
+is(fs_res11[3] = 1);
+true;
+
+/* === 12. np_fsolve function mode: 2D system === */
+
+(
+  fs_fn2(fs_x) := [np_ref(fs_x, 0)^2 + np_ref(fs_x, 1)^2 - 4,
+                    np_ref(fs_x, 0) - np_ref(fs_x, 1)],
+  fs_res12 : np_fsolve(fs_fn2, [1.0, 1.0]),
+  closeto(np_ref(fs_res12[1], 0), sqrt(2.0), 1e-6) and
+  closeto(np_ref(fs_res12[1], 1), sqrt(2.0), 1e-6)
+);
+true;
+
+/* === 13. np_fsolve function mode: lambda === */
+
+(
+  fs_res13 : np_fsolve(lambda([fs_x], [np_ref(fs_x, 0)^2 - 2]), [1.0]),
+  closeto(np_ref(fs_res13[1], 0), sqrt(2.0), 1e-8)
+);
+true;
+
+/* === 14. np_lsq_nonlinear function mode: fit line === */
+
+(
+  lsq_fn(lsq_x) := block([lsq_a],
+    lsq_a : np_ref(lsq_x, 0),
+    [lsq_a*1 - 2, lsq_a*2 - 3.9, lsq_a*3 - 6.1]),
+  lsq_res14 : np_lsq_nonlinear(lsq_fn, [1.0]),
+  closeto(np_ref(lsq_res14[1], 0), 2.0, 0.05)
+);
+true;
+
+/* === 15. np_lsq_nonlinear function mode: lambda === */
+
+(
+  lsq_res15 : np_lsq_nonlinear(
+    lambda([lsq_x], block([lsq_a], lsq_a : np_ref(lsq_x, 0),
+                           [lsq_a*1 - 2, lsq_a*2 - 3.9, lsq_a*3 - 6.1])),
+    [1.0]),
+  closeto(np_ref(lsq_res15[1], 0), 2.0, 0.05)
+);
+true;

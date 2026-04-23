@@ -103,6 +103,11 @@
           (add (realpart v) (mul '$%i (imagpart v))))
       v))
 
+(defun numerics-callable-p (f)
+  "True if F is a Maxima function name (symbol) or lambda expression.
+   Used to distinguish callable arguments from symbolic expressions."
+  (or (symbolp f) (numerics-lambda-p f)))
+
 (defun numerics-require-real (a op-name)
   "Signal an error if the ndarray is complex. Used by comparison/sort/min/max."
   (when (and ($ndarray_p a)

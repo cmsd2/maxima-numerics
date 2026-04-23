@@ -1,0 +1,122 @@
+/* Tests for np_odeint (ODE integration via ODEPACK) */
+
+(load("numerics-integrate"), load("tests/test_helpers"), true);
+true;
+
+/* === 1. Exponential decay: dy/dt = -y, y(0) = 1 === */
+/* Exact solution: y(t) = exp(-t) */
+
+(
+  ode_tspan : [0.0, 0.5, 1.0, 1.5, 2.0],
+  ode_res : np_odeint([-y1], [tt, y1], [1.0], ode_tspan),
+  true
+);
+true;
+
+/* Output shape: [5, 2] (5 time points, 1 time col + 1 state col) */
+np_shape(ode_res);
+[5, 2];
+
+/* Time column matches tspan */
+closeto(np_ref(ode_res, 0, 0), 0.0);
+true;
+
+closeto(np_ref(ode_res, 2, 0), 1.0);
+true;
+
+/* y(1.0) ≈ exp(-1) ≈ 0.3679 (ODE solver tol = 1e-8) */
+closeto(np_ref(ode_res, 2, 1), float(%e^(-1)), 1e-6);
+true;
+
+/* y(2.0) ≈ exp(-2) ≈ 0.1353 */
+closeto(np_ref(ode_res, 4, 1), float(%e^(-2)), 1e-6);
+true;
+
+/* === 2. Harmonic oscillator: dx/dt = v, dv/dt = -x === */
+/* x(0) = 1, v(0) = 0 → x(t) = cos(t), v(t) = -sin(t) */
+
+(
+  ode_tspan2 : makelist(i*0.1, i, 0, 40),
+  ode_res2 : np_odeint([ov, -op], [tt, op, ov], [1.0, 0.0], ode_tspan2),
+  ode_idx : 31, /* t = 3.1 ≈ pi, index 31 (0-indexed) */
+  ode_tval : np_ref(ode_res2, ode_idx, 0),
+  ode_xval : np_ref(ode_res2, ode_idx, 1),
+  is(abs(ode_xval - cos(ode_tval)) < 1e-4)
+);
+true;
+
+/* Shape: [41, 3] (41 time points, 1 time + 2 state) */
+np_shape(ode_res2);
+[41, 3];
+
+/* === 3. Accept ndarray inputs for y0 and tspan === */
+
+(
+  ode_y0nd : ndarray([1.0]),
+  ode_tsnd : np_linspace(0.0, 1.0, 5),
+  ode_res3 : np_odeint([-y1], [tt, y1], ode_y0nd, ode_tsnd),
+  closeto(np_ref(ode_res3, 4, 1), float(%e^(-1)), 1e-6)
+);
+true;
+
+/* === 4. Stiff system with BDF method === */
+/* dy/dt = -50*y, y(0) = 1 — stiff due to large decay rate */
+
+(
+  ode_tspan4 : [0.0, 0.1, 0.5, 1.0],
+  ode_res4 : np_odeint([-50*y1], [tt, y1], [1.0], ode_tspan4, 1e-8, 1e-8, bdf),
+  closeto(np_ref(ode_res4, 3, 1), float(%e^(-50)), 1e-6)
+);
+true;
+
+/* === 5. Error: wrong y0 dimension === */
+
+errcatch(np_odeint([-y1, -y2], [tt, y1, y2], [1.0], [0.0, 1.0]));
+[];
+
+/* === 6. Error: invalid method === */
+
+errcatch(np_odeint([-y1], [tt, y1], [1.0], [0.0, 1.0], 1e-8, 1e-8, rk45));
+[];
+
+/* === np_odeint function mode tests === */
+
+/* === 7. Function mode: exponential decay f(t,y) = [-y1] === */
+
+(
+  ode_fn(ode_t, ode_y) := [-np_ref(ode_y, 0)],
+  ode_res7 : np_odeint(ode_fn, [1.0], [0.0, 0.5, 1.0, 1.5, 2.0]),
+  closeto(np_ref(ode_res7, 2, 1), float(%e^(-1)), 1e-6)
+);
+true;
+
+np_shape(ode_res7);
+[5, 2];
+
+/* === 8. Function mode: harmonic oscillator === */
+
+(
+  ode_osc(ode_t, ode_y) := [np_ref(ode_y, 1), -np_ref(ode_y, 0)],
+  ode_res8 : np_odeint(ode_osc, [1.0, 0.0], makelist(i*0.1, i, 0, 40)),
+  ode_t8 : np_ref(ode_res8, 31, 0),
+  ode_x8 : np_ref(ode_res8, 31, 1),
+  is(abs(ode_x8 - cos(ode_t8)) < 1e-4)
+);
+true;
+
+/* === 9. Function mode: lambda === */
+
+(
+  ode_res9 : np_odeint(lambda([ode_t, ode_y], [-np_ref(ode_y, 0)]),
+                        [1.0], [0.0, 1.0]),
+  closeto(np_ref(ode_res9, 1, 1), float(%e^(-1)), 1e-6)
+);
+true;
+
+/* === 10. Function mode: with BDF method === */
+
+(
+  ode_res10 : np_odeint(ode_fn, [1.0], [0.0, 0.1, 0.5, 1.0], 1e-8, 1e-8, bdf),
+  closeto(np_ref(ode_res10, 3, 1), float(%e^(-1)), 1e-6)
+);
+true;

@@ -64,7 +64,23 @@
   ((:module "optimize"
     :serial t
     :components
-    ((:file "optimize")))))
+    ((:file "optimize")
+     (:file "gradient")
+     (:file "cobyla")
+     (:file "minpack")))))
+
+;; Integration system (core + ODEPACK)
+(defsystem "numerics/integrate"
+  :description "ODE integration for numerics ndarrays"
+  :version "0.1.0"
+  :license "MIT"
+  :depends-on ("numerics/core")
+  :serial t
+  :components
+  ((:module "integrate"
+    :serial t
+    :components
+    ((:file "ode")))))
 
 ;; Image I/O system (core + opticl)
 (defsystem "numerics/image"

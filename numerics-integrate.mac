@@ -1,0 +1,7 @@
+/* numerics-integrate — ODE integration for Maxima ndarrays */
+/* Requires numerics to be loaded first: load("numerics")$ */
+
+if not fboundp('np_zeros) then
+  error("numerics-integrate requires numerics. Load it first: load(\"numerics\")$")$
+
+load("numerics-integrate-loader.lisp")$

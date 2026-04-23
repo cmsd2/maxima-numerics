@@ -62,7 +62,7 @@ maxima-numerics/
 │   ├── packages.lisp                # #:numerics package
 │   ├── numerics.asd                 # ASDF system definitions
 │   │
-│   ├── core/                        # Layer 1: magicl wrapper
+│   ├── core/                        # numerics/core: magicl wrapper
 │   │   ├── util.lisp                # Dtype helpers, number conversion
 │   │   ├── handle.lisp              # ndarray struct + GC finalizers
 │   │   ├── display.lisp             # Custom Maxima display (console + TeX)
@@ -71,7 +71,14 @@ maxima-numerics/
 │   │   ├── linalg.lisp              # inv, det, svd, eig, solve, etc.
 │   │   ├── elementwise.lisp         # +, -, *, /, exp, log, sin, etc.
 │   │   ├── slicing.lisp             # Indexing, slicing, reshaping
+│   │   ├── signal.lisp              # FFT, IFFT, convolution (wraps fftpack5)
 │   │   └── aggregation.lisp         # sum, mean, min, max, std, etc.
+│   │
+│   ├── optimize/                    # numerics/optimize: L-BFGS wrapper
+│   │   └── optimize.lisp            # np_minimize (wraps Maxima's lbfgs)
+│   │
+│   ├── image/                       # numerics/image: image I/O
+│   │   └── image.lisp               # np_read_image, np_mandrill (wraps opticl)
 │   │
 │   └── arrow/                       # Layer 2: Arrow integration
 │       ├── schema.lisp              # ArrowSchema CFFI struct
@@ -83,12 +90,15 @@ maxima-numerics/
 └── .github/workflows/               # CI
 ```
 
-Two ASDF systems are defined:
-- **`numerics/core`** — core ndarray operations only (depends on magicl,
-  trivial-garbage, alexandria)
+Four ASDF systems are defined:
+- **`numerics/core`** — core ndarray + linear algebra + signal processing
+  (depends on magicl, trivial-garbage, alexandria)
+- **`numerics/optimize`** — L-BFGS optimizer (wraps Maxima's `lbfgs` package)
+- **`numerics/image`** — image I/O (depends on opticl via Quicklisp)
 - **`numerics`** — full system including Arrow (adds cffi, static-vectors)
 
-`numerics.mac` loads `numerics/core` by default. The full system can be loaded
+`numerics.mac` loads `numerics/core` by default. `numerics/optimize` is loaded
+separately via `numerics-optimize-loader.lisp`. The full system can be loaded
 explicitly via `:lisp (asdf:load-system "numerics")`.
 
 ---
@@ -272,6 +282,28 @@ copy. `np_abs` is special-cased: for complex input it returns magnitudes as
 | `np_dot(a, b)` | Dot product (1D vectors) |
 | `np_sort(A)` / `np_argsort(A)` | Sort / sort indices (real only) |
 
+### Signal processing
+
+| Function | Description |
+|---|---|
+| `np_fft(A)` | Complex FFT (wraps fftpack5) |
+| `np_ifft(A)` | Inverse complex FFT |
+| `np_fft2d(A)` | 2D FFT (separable: columns then rows) |
+| `np_ifft2d(A)` | Inverse 2D FFT |
+| `np_convolve(A, B)` | 1D convolution (direct, O(n·k)) |
+| `np_convolve2d(A, K)` | 2D convolution (direct) |
+| `np_trapz(A)` / `np_trapz(A, X)` | Trapezoidal integration |
+
+### Optimization
+
+| Function | Description |
+|---|---|
+| `np_minimize(f, grad, x0)` | Unconstrained minimization (wraps Maxima's L-BFGS) |
+
+`np_minimize` takes Maxima lambda functions for the objective and gradient,
+with ndarray arguments and return values. It manages the L-BFGS work arrays
+internally and returns `[x_opt, f_opt, converged]`.
+
 ---
 
 ## Layer 2: Arrow Integration
@@ -394,58 +426,6 @@ data flow: Maxima expression → `coerce-float-fun` / `$float` → Lisp
 paid on every call. The ndarray handle sits naturally at the "Lisp double-float
 arrays" stage, so interop can bypass marshalling in both directions.
 
-### FFTPACK5 — best candidate
-
-FFTPACK5 (`share/fftpack5/`) uses `(simple-array (complex double-float) (*))`
-internally — exactly our complex ndarray storage format. The lower-level
-functions (`fftpack5:cfft`, `fftpack5:inverse-cfft`, `fftpack5:rfft`,
-`fftpack5:inverse-rfft`) are exported and accept raw CL arrays directly. An
-`np_fft` / `np_ifft` pair can extract `magicl:storage` from the ndarray, call
-these functions, and wrap the result — no modification to `share/fftpack5/`
-required.
-
-This enables natural workflows like windowing, spectral analysis, and filtering
-entirely in ndarray space, eliminating two marshalling steps per call.
-
-### LAPACK — already superseded
-
-Our magicl wrapper calls the same BLAS/LAPACK routines that `share/lapack/`
-wraps via f2cl, but without per-call marshalling. There is no need to interop;
-our API replaces theirs. The one feature `share/lapack/` exposes that we don't
-is `$dgemm`'s full `alpha*A*B + beta*C` interface — a niche use case.
-
-### DISTRIB — vectorization opportunity
-
-`share/distrib/` operates on scalars: `pdf_normal(x, mu, sigma)` returns a
-single float, and `random_normal(0, 1, 100)` returns a Maxima list. Vectorized
-versions (`np_random_normal(mu, sigma, shape)` returning an ndarray, or
-element-wise PDF/CDF evaluation over ndarrays) would be valuable but don't
-require deep interop — they'd be new functions reusing the same underlying RNG
-and distribution math.
-
-### ODEPACK — trajectory output
-
-`share/odepack/` returns ODE solutions step-by-step as Maxima lists. Wrapping
-the output as a 2D ndarray (rows = timesteps, columns = state variables) would
-make downstream computation (plotting, spectral analysis, parameter fitting)
-more natural. The solver's inner loop compiles Maxima expressions via
-`coerce-float-fun`, so the bottleneck is expression evaluation, not data format.
-
-### NUMERICALIO — direct file loading
-
-`share/numericalio/` reads CSV and binary files into Maxima matrices. Binary
-format uses IEEE 754 `double-float` — the same storage as ndarray — so direct
-loading via `read-sequence` into ndarray storage is possible with zero parsing
-overhead. CSV loading could similarly bypass Maxima matrix construction.
-
-### MINPACK / COBYLA / LBFGS — limited benefit
-
-The optimization packages (`share/minpack/`, `share/cobyla/`, `share/lbfgs/`)
-pass scalar objectives and small parameter vectors. Their bottleneck is
-evaluating Maxima expressions in the inner loop, not data format conversion.
-Accepting ndarray initial guesses or returning ndarray solutions would be a
-minor convenience but not a performance win.
-
 ### Integration approach
 
 The bundled packages live in Maxima's `share/` tree and are maintained upstream.
@@ -459,16 +439,112 @@ the right level:
 
 - **FFTPACK5**: Exports `cfft`, `inverse-cfft`, `rfft`, `inverse-rfft` which
   accept raw CL arrays. We call these directly with `magicl:storage`.
+- **ODEPACK**: Exposes `dlsode_init` / `dlsode_step` for stepping and `dlsode`
+  for batch integration. We collect step outputs into ndarrays.
+- **COBYLA**: Exposes `fmin_cobyla` which accepts Maxima expressions and
+  constraint lists. We convert ndarray initial guesses at the boundary.
+- **MINPACK**: Exposes `minpack_solve` (root finding) and `minpack_lsquares`
+  (nonlinear least squares). Both accept Maxima expressions and initial guesses.
+- **LBFGS**: Already wrapped by `np_minimize`.
 - **DISTRIB**: The RNG and distribution functions are callable from Lisp. We
   write new vectorized wrappers that loop internally.
 - **NUMERICALIO**: We implement our own file I/O rather than wrapping theirs.
   Binary `double-float` I/O is trivial; CSV parsing is independent.
-- **ODEPACK**: We call `dlsode_step` at the Maxima level and collect results
-  into an ndarray. The per-step output is a small Maxima list (one per state
-  variable), so the marshalling cost is negligible.
-- **MINPACK / COBYLA / LBFGS**: We convert ndarray initial guesses to Maxima
-  lists at the boundary, call the existing Maxima functions, and convert back.
-  Parameter vectors are small, so this is not a bottleneck.
+
+### Wrapped packages
+
+#### FFTPACK5 (wrapped)
+
+FFTPACK5 (`share/fftpack5/`) uses `(simple-array (complex double-float) (*))`
+internally — exactly our complex ndarray storage format. `np_fft` / `np_ifft`
+extract `magicl:storage` from the ndarray, call the fftpack5 functions, and
+wrap the result — no modification to `share/fftpack5/` required. 2D transforms
+are implemented as separable 1D transforms (columns then rows).
+
+#### LBFGS (wrapped)
+
+`np_minimize` wraps Maxima's `lbfgs` package. It manages L-BFGS work arrays
+internally, shuttles data between ndarrays and the solver's raw CL arrays, and
+returns `[x_opt, f_opt, converged]`. The user provides Maxima lambda functions
+for the objective and gradient that operate on ndarrays.
+
+#### LAPACK (superseded)
+
+Our magicl wrapper calls the same BLAS/LAPACK routines that `share/lapack/`
+wraps via f2cl, but without per-call marshalling. There is no need to interop;
+our API replaces theirs. The one feature `share/lapack/` exposes that we don't
+is `$dgemm`'s full `alpha*A*B + beta*C` interface — a niche use case.
+
+### Unwrapped packages (roadmap candidates)
+
+#### ODEPACK — numeric ODE solver
+
+`share/odepack/` provides `dlsode`, an adaptive ODE solver with both stiff
+(BDF) and non-stiff (Adams) methods. The Maxima interface exposes:
+
+- `dlsode_init(f, vars, mf)` — initialize solver state. `mf` selects the
+  method: `10` (Adams, no Jacobian), `21` (BDF, user Jacobian), `22` (BDF,
+  internal Jacobian).
+- `dlsode_step(y, t, tout, rtol, atol, istate, state)` — step to `tout`.
+- `dlsode(f, vars, init_y, trange, rtol, atol, mf)` — batch integration.
+
+The solver compiles Maxima expressions via `coerce-float-fun` for the inner
+loop. The bottleneck is expression evaluation, not data format. An ndarray
+wrapper would collect trajectory output into a 2D ndarray (rows = timesteps,
+columns = state variables) for natural downstream use in plotting, spectral
+analysis, and parameter fitting.
+
+Note: ODEPACK also includes LSODA (automatic stiff/non-stiff switching) but
+only DLSODE is exposed in the Maxima interface.
+
+#### COBYLA — constrained optimization
+
+`share/cobyla/` provides `fmin_cobyla`, a derivative-free constrained optimizer
+using linear approximation. The Maxima interface:
+
+- `fmin_cobyla(f, vars, init, constraints, ...)` — minimize `f` subject to
+  constraints of the form `g1 >= g2`, `g1 <= g2`, or `g1 = g2`.
+- Returns `[solution, min_value, n_evals, return_code]`.
+
+This fills a major gap: `np_minimize` only handles unconstrained problems.
+COBYLA supports general nonlinear inequality and equality constraints without
+requiring gradients. The tradeoff is slower convergence than gradient-based
+methods for smooth problems.
+
+#### MINPACK — nonlinear equations and least squares
+
+`share/minpack/` provides two solvers:
+
+- `minpack_solve(fcns, vars, init)` — solve a system of n nonlinear equations
+  in n unknowns (wraps HYBRD1/HYBRJ1).
+- `minpack_lsquares(fcns, vars, init)` — nonlinear least squares (wraps
+  LMDIF1/LMDER1, Levenberg-Marquardt).
+
+Both can compute Jacobians automatically via symbolic differentiation or use
+finite differences. This is the Maxima equivalent of SciPy's `fsolve` and
+`least_squares`.
+
+#### MNEWTON — Newton's method for nonlinear systems
+
+`share/mnewton/` provides `mnewton(fcns, vars, guess)` — a pure-Maxima
+implementation of Newton's method for nonlinear systems. Automatically computes
+the Jacobian via symbolic differentiation. Simpler than MINPACK but less robust
+(no trust region, no fallback to finite differences on Jacobian failure).
+
+#### DISTRIB — probability distributions
+
+`share/distrib/` provides scalar PDF, CDF, quantile, random variate, and MLE
+functions for ~20 distributions (normal, t, chi-squared, F, exponential, gamma,
+beta, Poisson, binomial, etc.). Vectorized ndarray versions would be valuable
+for Monte Carlo workflows — `np_random_normal(mu, sigma, shape)` returning an
+ndarray, or element-wise PDF/CDF evaluation over ndarrays.
+
+#### NUMERICALIO — direct file loading
+
+`share/numericalio/` reads CSV and binary files into Maxima matrices. Binary
+format uses IEEE 754 `double-float` — the same storage as ndarray — so direct
+loading via `read-sequence` into ndarray storage is possible with zero parsing
+overhead. CSV loading could similarly bypass Maxima matrix construction.
 
 ### Performance expectations
 
@@ -496,6 +572,183 @@ evaluates symbolic expressions, the benefit is API convenience, not speed.
 
 ---
 
+## Roadmap
+
+The following features are prioritized based on the gap analysis from the
+maxima-demos notebooks. The guiding constraint is to **wrap existing Maxima
+built-in packages and Quicklisp libraries** rather than implementing algorithms
+from scratch in Lisp.
+
+### Tier 1: Wrap existing Maxima packages
+
+These follow the same wrapping pattern already established by `np_minimize`
+(wrapping `lbfgs`) and `np_fft` (wrapping `fftpack5`). The algorithms exist;
+the work is shuttling data between ndarrays and the solver interfaces.
+
+#### 1. Numeric ODE solver — wrap ODEPACK
+
+Wrap `share/odepack/` as `np_odeint(f, y0, tspan)` or similar. DLSODE supports
+both stiff (BDF, `mf=22`) and non-stiff (Adams, `mf=10`) methods with adaptive
+step control.
+
+**Motivation:** The demos currently rely on either `ode2()` (which only works
+when a closed-form solution exists) or manual matrix-exponential time-stepping
+(which only works for linear systems). A numeric integrator unlocks nonlinear
+dynamics, stiff systems, and removes the requirement that `ode2()` succeed
+symbolically. The inverse-problems and control-tuning notebooks would become
+dramatically simpler.
+
+**Design considerations:**
+- Collect trajectory output as a 2D ndarray (rows = timesteps, columns = state
+  variables) for natural use in plotting and downstream analysis.
+- The user-supplied RHS function will be evaluated via `coerce-float-fun` in
+  the inner loop — expression evaluation is the bottleneck, not data format.
+- Consider whether to expose the step-level API (`dlsode_step`) for event
+  detection, or just the batch API (`dlsode`) for simplicity.
+
+#### 2. Constrained optimization — wrap COBYLA
+
+Wrap `share/cobyla/` as `np_minimize_cobyla(f, x0, constraints)`.
+
+**Motivation:** `np_minimize` only handles unconstrained problems. Many
+practical engineering problems have bounds or constraints (e.g., "find optimal
+PID gains where Kp > 0"). COBYLA is derivative-free and supports general
+nonlinear inequality/equality constraints.
+
+**Design considerations:**
+- Constraint format: accept Maxima expressions like `[x1 >= 0, x2 + x3 <= 10]`
+  and translate to COBYLA's internal representation.
+- Return format: match `np_minimize` conventions where possible.
+- COBYLA converges slower than gradient-based methods; document this tradeoff.
+
+#### 3. Root finding — wrap MINPACK
+
+Wrap `share/minpack/` as `np_fsolve(fcns, vars, x0)` for nonlinear systems of
+equations, and `np_lsq_nonlinear(fcns, vars, x0)` for nonlinear least squares
+(Levenberg-Marquardt).
+
+**Motivation:** Maxima has `solve()` for symbolic solutions and `find_root()`
+for scalar equations, but no numeric solver for systems of nonlinear equations
+where symbolic solving fails. MINPACK's HYBRD1 (root finding) and LMDER1
+(Levenberg-Marquardt) fill this gap — they are the same algorithms behind
+SciPy's `fsolve` and `least_squares`.
+
+**Design considerations:**
+- MINPACK can compute Jacobians via symbolic differentiation or fall back to
+  finite differences. Expose this as an option.
+- Levenberg-Marquardt is better than L-BFGS for nonlinear least-squares
+  problems (curve fitting, inverse problems) because it exploits the
+  sum-of-squares structure.
+
+### Tier 2: Maxima-level features (no new Lisp algorithms)
+
+These can be implemented primarily in Maxima code using existing ndarray
+operations and Maxima built-ins, without writing new numerical algorithms in
+Lisp.
+
+#### 4. Symbolic-to-numeric gradient bridge
+
+Provide a convenience function that takes a symbolic loss expression,
+differentiates it with `diff()`, and produces numeric callback functions
+suitable for `np_minimize`. Something like:
+
+```maxima
+[f_num, grad_num] : np_compile_gradient(loss_expr, [w1, w2, w3]);
+result : np_minimize(f_num, grad_num, x0);
+```
+
+**Motivation:** The ML and optimization notebooks manually implement this
+pattern (symbolic `diff()` → hand-coded numeric gradient loop). Automating it
+leverages Maxima's unique symbolic strength — no other numeric tool can derive
+exact gradients this naturally. The control-tuning notebook currently resorts to
+finite-difference gradients because this bridge doesn't exist.
+
+**Design considerations:**
+- The compiled function needs to accept and return ndarrays.
+- Maxima's `compile()` or `coerce-float-fun` can convert symbolic expressions
+  to efficient Lisp closures.
+- This is mostly glue code, not algorithmic work.
+
+#### 5. Statistical hypothesis tests
+
+Build t-test, chi-squared test, and ANOVA on top of Maxima's existing `distrib`
+package (which provides all the required CDF/quantile functions).
+
+**Motivation:** The statistics notebooks cover PCA, Monte Carlo, and
+correlation, but have no hypothesis testing. These tests are arithmetic on top
+of existing distribution functions — computing test statistics and looking up
+p-values via `cdf_student_t`, `cdf_chi2`, etc.
+
+**Design considerations:**
+- Can be implemented entirely in Maxima (.mac) using `distrib` functions.
+- Return an inference-result-style object with test statistic, p-value,
+  confidence interval, and degrees of freedom.
+
+#### 6. Interpolation and splines
+
+Maxima does not ship an interpolation package. However, cubic spline
+interpolation is a tridiagonal linear system — solvable with existing `np_solve`
+and pure Maxima coefficient setup. Linear interpolation is trivial.
+
+**Motivation:** SciPy's `interp1d` and `CubicSpline` are used constantly in
+practice. The least-squares notebook uses Vandermonde matrices for polynomial
+fitting but has no general-purpose interpolation.
+
+**Design considerations:**
+- Cubic spline: set up the tridiagonal system in Maxima, solve with `np_solve`.
+- For large N, this motivates sparse/banded solvers — but for typical
+  interpolation sizes (hundreds to low thousands of points), dense solvers are
+  adequate.
+- Could also wrap a Quicklisp spline library if one exists.
+
+### Tier 3: Longer-term / higher-effort
+
+#### 7. Sparse matrices
+
+No suitable Quicklisp library exists for sparse linear algebra. magicl focuses
+on dense BLAS/LAPACK. Options:
+
+- **CFFI bindings to SuiteSparse**: high performance but significant build
+  dependency and wrapping effort.
+- **Pure Lisp CSR/COO**: feasible for moderate sizes but defeats the purpose of
+  avoiding algorithm implementation.
+- **Banded solvers only**: a practical middle ground — tridiagonal and banded
+  systems cover FEM and spline use cases without full sparse support. LAPACK's
+  `dgbsv` (banded solver) is available via f2cl.
+
+**Motivation:** The beam-deflection FEM notebook constructs a tridiagonal system
+as a full dense matrix. For practical FEM beyond ~1000 DOF, sparse or banded
+solvers are essential.
+
+**Current recommendation:** Defer full sparse support. Consider banded solvers
+(wrapping LAPACK's `dgbsv` via magicl or f2cl) as a targeted solution for FEM
+and spline problems.
+
+#### 8. Vectorized distribution sampling
+
+Wrap `share/distrib/` random variate functions with ndarray output:
+`np_random_normal(mu, sigma, shape)`, `np_random_uniform(a, b, shape)`, etc.
+Currently `np_randn` provides standard normal only; parameterized distributions
+require element-wise post-processing.
+
+### What we are not building
+
+The following are explicitly out of scope — they would require implementing
+substantial algorithms from scratch or pulling in heavy external dependencies:
+
+- **Deep learning / neural networks**: fundamentally different compute model
+  (GPU, autograd, large-scale SGD). Use PyTorch/JAX.
+- **Advanced image processing**: morphological operations, feature detection,
+  ML-based denoising. Use OpenCV.
+- **Wavelet transforms**: no existing Maxima or Quicklisp library.
+- **Full sparse linear algebra**: no suitable library to wrap without
+  SuiteSparse CFFI (see tier 3 discussion above).
+- **Automatic differentiation**: Maxima's symbolic `diff()` plus the
+  gradient bridge (tier 2, item 4) covers the primary use case. Tape-based
+  AD through numeric code is a different paradigm.
+
+---
+
 ## Reference: Key Maxima Files
 
 These files in the Maxima source tree informed the design patterns used here:
@@ -506,4 +759,7 @@ These files in the Maxima source tree informed the design patterns used here:
 | `share/stats/inference_result.lisp` | Custom type display via `displa-def` |
 | `share/amatrix/amatrix.lisp` | Struct-based matrix with custom display |
 | `share/fftpack5/fftpack5-interface.lisp` | Converter-factory pattern |
+| `share/cobyla/cobyla-interface.lisp` | Constrained optimizer wrapping pattern |
+| `share/minpack/minpack-interface.lisp` | Nonlinear solver wrapping pattern |
+| `share/odepack/dlsode-interface.lisp` | ODE solver wrapping pattern |
 | `src/numerical/f2cl-lib.lisp` | Column-major indexing conventions |
