@@ -132,8 +132,6 @@ Compile a symbolic expression and its gradient into numeric functions compatible
 
 Both functions are compatible with `np_minimize` — pass them directly as `f` and `grad`.
 
-#### Examples
-
 Compile and minimize a quadratic:
 
 ```maxima
