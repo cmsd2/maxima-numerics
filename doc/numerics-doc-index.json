@@ -308,6 +308,50 @@
       ],
       "section": "Slicing"
     },
+    "np_compile_gradient": {
+      "type": "Function",
+      "signature": "np_compile_gradient(expr, vars)",
+      "summary": "Compile a symbolic expression and its gradient into numeric functions compatible with np_minimize. This automates the \"symbolic differentiation then numeric evaluation\" pattern — you write the loss expression symbolically, and np_compile_gradient handles diff(), compilation, and ndarray bridging.",
+      "body_md": "Compile a symbolic expression and its gradient into numeric functions compatible with `np_minimize`. This automates the \"symbolic differentiation then numeric evaluation\" pattern — you write the loss expression symbolically, and `np_compile_gradient` handles `diff()`, compilation, and ndarray bridging.\n\n**Arguments:**\n- `expr` — a scalar symbolic expression (the objective/loss function)\n- `vars` — `[x1, x2, ...]` list of variables\n\n**Returns:** a list `[f_func, grad_func]` where:\n- `f_func` — a function taking an ndarray, returning a scalar\n- `grad_func` — a function taking an ndarray, returning a 1D ndarray\n\nBoth functions are compatible with `np_minimize` — pass them directly as `f` and `grad`.\n\nCompile and minimize a quadratic:\n\n```maxima\n(%i1) [f, g] : np_compile_gradient(w1^2 + w2^2, [w1, w2]);\n(%o1)       [np_compiled_f1, np_compiled_g1]\n(%i2) [x_opt, f_opt, ok] : np_minimize(f, g, ndarray([3.0, 4.0]));\n(%o2)       [ndarray([2], DOUBLE-FLOAT), 1.97e-30, true]\n```\n\nRosenbrock function — one line instead of hand-coded derivatives:\n\n```maxima\n(%i1) [f, g] : np_compile_gradient((1-x)^2 + 100*(y-x^2)^2, [x, y]);\n(%o1)       [np_compiled_f2, np_compiled_g2]\n(%i2) [x_opt, f_opt, ok] : np_minimize(f, g, ndarray([-1.0, 1.0]), 1e-10, 500);\n(%o2)       [ndarray([2], DOUBLE-FLOAT), 0.0, true]\n(%i3) np_to_list(x_opt);\n(%o3)       [1.0, 1.0]\n```\n\nCall `f_func` and `grad_func` independently:\n\n```maxima\n(%i1) [f, g] : np_compile_gradient(3*a^2 + 2*b^2, [a, b]);\n(%o1)       [np_compiled_f3, np_compiled_g3]\n(%i2) f(ndarray([1.0, 2.0]));\n(%o2)                         11.0\n(%i3) np_to_list(g(ndarray([1.0, 2.0])));\n(%o3)                      [6.0, 8.0]\n```\n\nSee also: `np_minimize`",
+      "examples": [
+        {
+          "input": "[f, g] : np_compile_gradient(w1^2 + w2^2, [w1, w2]);",
+          "output": "[np_compiled_f1, np_compiled_g1]"
+        },
+        {
+          "input": "[x_opt, f_opt, ok] : np_minimize(f, g, ndarray([3.0, 4.0]));",
+          "output": "[ndarray([2], DOUBLE-FLOAT), 1.97e-30, true]"
+        },
+        {
+          "input": "[f, g] : np_compile_gradient((1-x)^2 + 100*(y-x^2)^2, [x, y]);",
+          "output": "[np_compiled_f2, np_compiled_g2]"
+        },
+        {
+          "input": "[x_opt, f_opt, ok] : np_minimize(f, g, ndarray([-1.0, 1.0]), 1e-10, 500);",
+          "output": "[ndarray([2], DOUBLE-FLOAT), 0.0, true]"
+        },
+        {
+          "input": "np_to_list(x_opt);",
+          "output": "[1.0, 1.0]"
+        },
+        {
+          "input": "[f, g] : np_compile_gradient(3*a^2 + 2*b^2, [a, b]);",
+          "output": "[np_compiled_f3, np_compiled_g3]"
+        },
+        {
+          "input": "f(ndarray([1.0, 2.0]));",
+          "output": "11.0"
+        },
+        {
+          "input": "np_to_list(g(ndarray([1.0, 2.0])));",
+          "output": "[6.0, 8.0]"
+        }
+      ],
+      "see_also": [
+        "np_minimize"
+      ],
+      "section": "Optimization and Root Finding"
+    },
     "np_conj": {
       "type": "Function",
       "signature": "np_conj(a)",
@@ -1051,6 +1095,38 @@
       ],
       "section": "Image Processing"
     },
+    "np_fsolve": {
+      "type": "Function",
+      "signature": "np_fsolve(f, x0, tolerance)",
+      "summary": "Solve a system of n nonlinear equations in n unknowns using MINPACK. Finds a point where all expressions/function values are simultaneously zero.",
+      "body_md": "Solve a system of `n` nonlinear equations in `n` unknowns using MINPACK. Finds a point where all expressions/function values are simultaneously zero.\n\n**Expression mode:**\n- `fcns` — `[f1, f2, ...]` list of expressions (implicitly set equal to zero)\n- `vars` — `[x1, x2, ...]` list of unknowns (must be same length as `fcns`)\n- `x0` — initial guess (ndarray or Maxima list)\n- `jacobian` — `true` (compute symbolic Jacobian, default) or `false` (finite differences)\n- `tolerance` — solution tolerance (default: `sqrt(machine_epsilon)`)\n\n**Function mode:**\n- `f` — function taking a 1D ndarray, returning a Maxima list of `n` values\n- `x0` — initial guess (ndarray or Maxima list)\n- `tolerance` — solution tolerance (default: `sqrt(machine_epsilon)`)\n\nFunction mode always uses finite differences (HYBRD1). Expression mode uses symbolic Jacobian by default (HYBRJ1) for better convergence.\n\n**Returns:** a list `[x_opt, residual_norm, info]` where:\n- `x_opt` — solution as a 1D ndarray\n- `residual_norm` — Euclidean norm of the residual at the solution\n- `info` — `1` = converged, `0` = improper input, other values indicate issues\n\n#### Examples\n\nExpression mode:\n\n```maxima\n(%i1) [x_opt, rnorm, info] : np_fsolve([x^2 - 2], [x], [1.0]);\n(%o1)       [ndarray([1], DOUBLE-FLOAT), 0.0, 1]\n(%i2) np_ref(x_opt, 0);\n(%o2)                   1.414213562373095\n```\n\n2D system:\n\n```maxima\n(%i1) [x_opt, rnorm, info] : np_fsolve(\n        [x^2 + y^2 - 4, x - y], [x, y], [1.0, 1.0]);\n(%o1)       [ndarray([2], DOUBLE-FLOAT), 0.0, 1]\n```\n\nFunction mode:\n\n```maxima\n(%i1) f(x) := [np_ref(x, 0)^2 - 2]$\n(%i2) [x_opt, rnorm, info] : np_fsolve(f, [1.0]);\n(%o2)       [ndarray([1], DOUBLE-FLOAT), 0.0, 1]\n```\n\n**Performance notes:**\nExpression mode compiles both the system and its symbolic Jacobian into native Lisp closures (via `coerce-float-fun`) and uses HYBRJ1 (analytic Jacobian). The solver hot loop calls these closures directly with no Maxima evaluator involvement. Function mode calls `f` through the Maxima evaluator on every solver iteration and uses HYBRD1 (finite-difference Jacobian), which requires additional function evaluations per step to approximate the Jacobian numerically.\n\nSee also: `np_lsq_nonlinear` (overdetermined systems)",
+      "examples": [
+        {
+          "input": "[x_opt, rnorm, info] : np_fsolve([x^2 - 2], [x], [1.0]);",
+          "output": "[ndarray([1], DOUBLE-FLOAT), 0.0, 1]"
+        },
+        {
+          "input": "np_ref(x_opt, 0);",
+          "output": "1.414213562373095"
+        },
+        {
+          "input": "[x_opt, rnorm, info] : np_fsolve(\n        [x^2 + y^2 - 4, x - y], [x, y], [1.0, 1.0]);",
+          "output": "[ndarray([2], DOUBLE-FLOAT), 0.0, 1]"
+        },
+        {
+          "input": "f(x) := [np_ref(x, 0)^2 - 2]$",
+          "output": ""
+        },
+        {
+          "input": "[x_opt, rnorm, info] : np_fsolve(f, [1.0]);",
+          "output": "[ndarray([1], DOUBLE-FLOAT), 0.0, 1]"
+        }
+      ],
+      "see_also": [
+        "np_lsq_nonlinear"
+      ],
+      "section": "Optimization and Root Finding"
+    },
     "np_full": {
       "type": "Function",
       "signature": "np_full(shape, val) / np_full (shape, val, dtype)",
@@ -1441,6 +1517,35 @@
       ],
       "section": "Constructors"
     },
+    "np_lsq_nonlinear": {
+      "type": "Function",
+      "signature": "np_lsq_nonlinear(f, x0, tolerance)",
+      "summary": "Nonlinear least-squares fitting: minimize sum(fi^2) for m residual functions in n unknowns (m >= n). Uses MINPACK.",
+      "body_md": "Nonlinear least-squares fitting: minimize `sum(fi^2)` for `m` residual functions in `n` unknowns (`m >= n`). Uses MINPACK.\n\n**Expression mode:**\n- `fcns` — `[f1, f2, ...]` list of residual expressions (`m >= n`)\n- `vars` — `[x1, x2, ...]` list of unknowns\n- `x0` — initial guess (ndarray or Maxima list)\n- `jacobian` — `true` (compute symbolic Jacobian, default) or `false` (finite differences)\n- `tolerance` — solution tolerance (default: `sqrt(machine_epsilon)`)\n\n**Function mode:**\n- `f` — function taking a 1D ndarray, returning a Maxima list of `m` residuals\n- `x0` — initial guess (ndarray or Maxima list)\n- `tolerance` — solution tolerance (default: `sqrt(machine_epsilon)`)\n\nFunction mode always uses finite differences (LMDIF1). Expression mode uses symbolic Jacobian by default (LMDER1).\n\n**Returns:** a list `[x_opt, residual_norm, info]` where:\n- `x_opt` — solution as a 1D ndarray\n- `residual_norm` — Euclidean norm of the residual vector at the solution\n- `info` — `1`-`3` = converged, `0` = improper input, other values indicate issues\n\n#### Examples\n\nExpression mode:\n\n```maxima\n(%i1) [x_opt, rnorm, info] : np_lsq_nonlinear(\n        [a*1 - 2, a*2 - 3.9, a*3 - 6.1], [a], [1.0]);\n(%o1)       [ndarray([1], DOUBLE-FLOAT), 0.1, 1]\n(%i2) np_ref(x_opt, 0);\n(%o2)                          2.0\n```\n\nFunction mode:\n\n```maxima\n(%i1) f(x) := block([a], a : np_ref(x, 0),\n        [a*1 - 2, a*2 - 3.9, a*3 - 6.1])$\n(%i2) [x_opt, rnorm, info] : np_lsq_nonlinear(f, [1.0]);\n(%o2)       [ndarray([1], DOUBLE-FLOAT), 0.1, 1]\n```\n\n**Performance notes:**\nSame tradeoff as `np_fsolve`: expression mode compiles residuals and their symbolic Jacobian into native Lisp closures (LMDER1, analytic Jacobian), keeping the Maxima evaluator out of the hot loop. Function mode calls `f` through the Maxima evaluator on every iteration and uses LMDIF1 (finite-difference Jacobian), adding extra function evaluations per step.\n\nSee also: `np_fsolve` (square systems), `np_lstsq` (linear least-squares)",
+      "examples": [
+        {
+          "input": "[x_opt, rnorm, info] : np_lsq_nonlinear(\n        [a*1 - 2, a*2 - 3.9, a*3 - 6.1], [a], [1.0]);",
+          "output": "[ndarray([1], DOUBLE-FLOAT), 0.1, 1]"
+        },
+        {
+          "input": "np_ref(x_opt, 0);",
+          "output": "2.0"
+        },
+        {
+          "input": "f(x) := block([a], a : np_ref(x, 0),\n        [a*1 - 2, a*2 - 3.9, a*3 - 6.1])$",
+          "output": ""
+        },
+        {
+          "input": "[x_opt, rnorm, info] : np_lsq_nonlinear(f, [1.0]);",
+          "output": "[ndarray([1], DOUBLE-FLOAT), 0.1, 1]"
+        }
+      ],
+      "see_also": [
+        "np_fsolve",
+        "np_lstsq"
+      ],
+      "section": "Optimization and Root Finding"
+    },
     "np_lstsq": {
       "type": "Function",
       "signature": "np_lstsq(a, b)",
@@ -1747,9 +1852,21 @@
     "np_minimize": {
       "type": "Function",
       "signature": "np_minimize(f, grad, x0, tolerance, max_iter)",
-      "summary": "Minimize a scalar-valued function using gradient-based L-BFGS optimization.",
-      "body_md": "Minimize a scalar-valued function using gradient-based L-BFGS optimization.\n\n**Arguments:**\n- `f` — objective function taking an ndarray, returning a scalar\n- `grad` — gradient function taking an ndarray, returning an ndarray of the same shape\n- `x0` — initial point (real ndarray, any shape)\n- `tolerance` — convergence tolerance (default: `1e-8`)\n- `max_iter` — maximum number of iterations (default: `200`)\n\n**Returns:** a list `[x_opt, f_opt, converged]` where:\n- `x_opt` — the optimized ndarray (same shape as `x0`)\n- `f_opt` — the final objective value\n- `converged` — `true` if L-BFGS converged, `false` otherwise\n\nBoth `f` and `grad` can be named functions or lambda expressions. The shape of `x0` is preserved in the output — if you pass a `[p, 1]` column vector, you get a `[p, 1]` result.\n\n#### Examples\n\nSimple quadratic:\n\n```maxima\n(%i1) f(x) := np_sum(np_pow(x, 2))$\n(%i2) grad(x) := np_scale(2.0, x)$\n(%i3) [x_opt, f_opt, ok] : np_minimize(f, grad, ndarray([3.0, 4.0]));\n(%o3)       [ndarray([2], DOUBLE-FLOAT), 1.97e-30, true]\n(%i4) np_to_list(x_opt);\n(%o4)       [2.80e-16, 3.55e-16]\n```\n\nRosenbrock function (classic optimization benchmark):\n\n```maxima\n(%i1) f_rosen(x) := block([x1, x2],\n        x1 : np_ref(x, 0), x2 : np_ref(x, 1),\n        (1 - x1)^2 + 100 * (x2 - x1^2)^2)$\n(%i2) g_rosen(x) := block([x1, x2],\n        x1 : np_ref(x, 0), x2 : np_ref(x, 1),\n        ndarray([-2*(1 - x1) - 400*x1*(x2 - x1^2),\n                 200*(x2 - x1^2)]))$\n(%i3) [x_opt, f_opt, ok] : np_minimize(f_rosen, g_rosen,\n                              ndarray([-1.0, 1.0]), 1e-10, 500);\n(%o3)       [ndarray([2], DOUBLE-FLOAT), 0.0, true]\n(%i4) np_to_list(x_opt);\n(%o4)       [1.0, 1.0]\n```\n\nLinear regression (symbolic-numeric bridge):\n\n```maxima\n(%i1) /* Derive gradient symbolically */\n      L_i(a, b, x_i, y_i) := (1/2) * (y_i - a - b*x_i)^2$\n(%i2) diff(L_i(a, b, x[i], y[i]), a);\n(%o2)       -(y_i - b*x_i - a)\n(%i3) /* Implement as ndarray functions */\n      cost(w) := block([pred, res],\n        pred : np_matmul(X, w),\n        res : np_sub(pred, y),\n        np_sum(np_pow(res, 2)) / (2*n))$\n(%i4) grad(w) := np_scale(1.0/n,\n        np_matmul(np_transpose(X), np_sub(np_matmul(X, w), y)))$\n(%i5) [w_opt, loss, ok] : np_minimize(cost, grad, np_zeros([2, 1]))$\n```\n\nWith lambda expressions:\n\n```maxima\n(%i1) [x_opt, _, ok] : np_minimize(\n        lambda([x], np_sum(np_pow(x, 2))),\n        lambda([x], np_scale(2.0, x)),\n        ndarray([5.0, 5.0]));\n(%o1)       [ndarray([2], DOUBLE-FLOAT), 1.42e-29, true]\n```\n\nSee also: `np_lstsq` (for linear least-squares problems)",
+      "summary": "Minimize a scalar-valued function using gradient-based L-BFGS optimization. Supports two calling conventions:",
+      "body_md": "Minimize a scalar-valued function using gradient-based L-BFGS optimization. Supports two calling conventions:\n\n**Expression mode** (gradient computed automatically):\n- `expr` — a symbolic scalar expression\n- `vars` — `[x1, x2, ...]` list of variables\n- `x0` — initial point (real ndarray)\n\n**Function mode** (user provides gradient):\n- `f` — objective function taking an ndarray, returning a scalar\n- `grad` — gradient function taking an ndarray, returning an ndarray of the same shape\n- `x0` — initial point (real ndarray, any shape)\n\n**Common optional arguments:**\n- `tolerance` — convergence tolerance (default: `1e-8`)\n- `max_iter` — maximum number of iterations (default: `200`)\n\n**Returns:** a list `[x_opt, f_opt, converged]` where:\n- `x_opt` — the optimized ndarray (same shape as `x0`)\n- `f_opt` — the final objective value\n- `converged` — `true` if L-BFGS converged, `false` otherwise\n\nIn function mode, `f` and `grad` can be named functions or lambda expressions. The shape of `x0` is preserved in the output. In expression mode, the gradient is computed via `diff()` and compiled automatically.\n\n#### Examples\n\nExpression mode -- just write the math:\n\n```maxima\n(%i1) [x_opt, f_opt, ok] : np_minimize(x1^2 + x2^2, [x1, x2],\n                              ndarray([3.0, 4.0]));\n(%o1)       [ndarray([2], DOUBLE-FLOAT), 1.97e-30, true]\n```\n\nRosenbrock via expression mode:\n\n```maxima\n(%i1) [x_opt, f_opt, ok] : np_minimize(\n        (1-x)^2 + 100*(y-x^2)^2, [x, y],\n        ndarray([-1.0, 1.0]), 1e-10, 500);\n(%o1)       [ndarray([2], DOUBLE-FLOAT), 0.0, true]\n(%i2) np_to_list(x_opt);\n(%o2)       [1.0, 1.0]\n```\n\nFunction mode -- for procedural or high-dimensional objectives:\n\n```maxima\n(%i1) f(x) := np_sum(np_pow(x, 2))$\n(%i2) grad(x) := np_scale(2.0, x)$\n(%i3) [x_opt, f_opt, ok] : np_minimize(f, grad, ndarray([3.0, 4.0]));\n(%o3)       [ndarray([2], DOUBLE-FLOAT), 1.97e-30, true]\n(%i4) np_to_list(x_opt);\n(%o4)       [2.80e-16, 3.55e-16]\n```\n\nRosenbrock function (classic optimization benchmark):\n\n```maxima\n(%i1) f_rosen(x) := block([x1, x2],\n        x1 : np_ref(x, 0), x2 : np_ref(x, 1),\n        (1 - x1)^2 + 100 * (x2 - x1^2)^2)$\n(%i2) g_rosen(x) := block([x1, x2],\n        x1 : np_ref(x, 0), x2 : np_ref(x, 1),\n        ndarray([-2*(1 - x1) - 400*x1*(x2 - x1^2),\n                 200*(x2 - x1^2)]))$\n(%i3) [x_opt, f_opt, ok] : np_minimize(f_rosen, g_rosen,\n                              ndarray([-1.0, 1.0]), 1e-10, 500);\n(%o3)       [ndarray([2], DOUBLE-FLOAT), 0.0, true]\n(%i4) np_to_list(x_opt);\n(%o4)       [1.0, 1.0]\n```\n\nLinear regression (symbolic-numeric bridge):\n\n```maxima\n(%i1) /* Derive gradient symbolically */\n      L_i(a, b, x_i, y_i) := (1/2) * (y_i - a - b*x_i)^2$\n(%i2) diff(L_i(a, b, x[i], y[i]), a);\n(%o2)       -(y_i - b*x_i - a)\n(%i3) /* Implement as ndarray functions */\n      cost(w) := block([pred, res],\n        pred : np_matmul(X, w),\n        res : np_sub(pred, y),\n        np_sum(np_pow(res, 2)) / (2*n))$\n(%i4) grad(w) := np_scale(1.0/n,\n        np_matmul(np_transpose(X), np_sub(np_matmul(X, w), y)))$\n(%i5) [w_opt, loss, ok] : np_minimize(cost, grad, np_zeros([2, 1]))$\n```\n\nWith lambda expressions:\n\n```maxima\n(%i1) [x_opt, _, ok] : np_minimize(\n        lambda([x], np_sum(np_pow(x, 2))),\n        lambda([x], np_scale(2.0, x)),\n        ndarray([5.0, 5.0]));\n(%o1)       [ndarray([2], DOUBLE-FLOAT), 1.42e-29, true]\n```\n\n**Performance notes:**\nExpression mode compiles the objective and gradient into native Lisp closures (via `coerce-float-fun`) that are called directly by L-BFGS with no Maxima evaluator involvement in the hot loop. Function mode calls `f` and `grad` through the Maxima evaluator on every L-BFGS iteration. The function-mode path does allow use of vectorized ndarray operations (`np_matmul`, `np_dot`, etc.) backed by BLAS/LAPACK, which expression mode cannot leverage.\n\nSee also: `np_compile_gradient`, `np_lstsq` (for linear least-squares problems)",
       "examples": [
+        {
+          "input": "[x_opt, f_opt, ok] : np_minimize(x1^2 + x2^2, [x1, x2],\n                              ndarray([3.0, 4.0]));",
+          "output": "[ndarray([2], DOUBLE-FLOAT), 1.97e-30, true]"
+        },
+        {
+          "input": "[x_opt, f_opt, ok] : np_minimize(\n        (1-x)^2 + 100*(y-x^2)^2, [x, y],\n        ndarray([-1.0, 1.0]), 1e-10, 500);",
+          "output": "[ndarray([2], DOUBLE-FLOAT), 0.0, true]"
+        },
+        {
+          "input": "np_to_list(x_opt);",
+          "output": "[1.0, 1.0]"
+        },
         {
           "input": "f(x) := np_sum(np_pow(x, 2))$",
           "output": ""
@@ -1808,9 +1925,42 @@
         }
       ],
       "see_also": [
+        "np_compile_gradient",
         "np_lstsq"
       ],
-      "section": "Optimization"
+      "section": "Optimization and Root Finding"
+    },
+    "np_minimize_cobyla": {
+      "type": "Function",
+      "signature": "np_minimize_cobyla(f, vars, x0, constraints, rhobeg, rhoend, maxfun)",
+      "summary": "Minimize a function subject to constraints using COBYLA (Constrained Optimization BY Linear Approximation). This is a derivative-free method — no gradient is required.",
+      "body_md": "Minimize a function subject to constraints using COBYLA (Constrained Optimization BY Linear Approximation). This is a derivative-free method — no gradient is required.\n\n**Arguments:**\n- `f` — objective expression in `vars`\n- `vars` — `[x1, x2, ...]` list of variables\n- `x0` — initial guess (ndarray or Maxima list)\n- `constraints` — list of constraints using `>=`, `<=`, or `=`\n- `rhobeg` — initial trust region radius (default: `1.0`)\n- `rhoend` — final accuracy (default: `1e-6`)\n- `maxfun` — maximum function evaluations (default: `1000`)\n\n**Returns:** a list `[x_opt, f_opt, n_evals, info]` where:\n- `x_opt` — optimized point as a 1D ndarray\n- `f_opt` — final objective value\n- `n_evals` — number of function evaluations used\n- `info` — `0` = success, `1` = maxfun reached, `2` = rounding errors, `-1` = constraints violated\n\nConstraints are written naturally using `>=`, `<=`, or `=`. Equality constraints are converted internally to a pair of inequality constraints.\n\n#### Examples\n\nMinimize on the unit circle:\n\n```maxima\n(%i1) [x_opt, f_opt, nev, info] : np_minimize_cobyla(\n        x1*x2, [x1, x2], [1, 1], [1 - x1^2 - x2^2 >= 0]);\n(%o1)       [ndarray([2], DOUBLE-FLOAT), -0.5, 52, 0]\n```\n\nBound constraint:\n\n```maxima\n(%i1) [x_opt, f_opt, nev, info] : np_minimize_cobyla(\n        (x1 - 3)^2, [x1], [0.5], [x1 >= 0]);\n(%o1)       [ndarray([1], DOUBLE-FLOAT), 0.0, 32, 0]\n(%i2) np_ref(x_opt, 0);\n(%o2)                          3.0\n```\n\nEquality constraint (minimize `x1^2 + x2^2` subject to `x1 + x2 = 1`):\n\n```maxima\n(%i1) [x_opt, f_opt, nev, info] : np_minimize_cobyla(\n        x1^2 + x2^2, [x1, x2], [0.8, 0.2], [x1 + x2 = 1]);\n(%o1)       [ndarray([2], DOUBLE-FLOAT), 0.5, 42, 0]\n(%i2) np_to_list(x_opt);\n(%o2)                    [0.5, 0.5]\n```\n\nSee also: `np_minimize` (unconstrained, gradient-based)",
+      "examples": [
+        {
+          "input": "[x_opt, f_opt, nev, info] : np_minimize_cobyla(\n        x1*x2, [x1, x2], [1, 1], [1 - x1^2 - x2^2 >= 0]);",
+          "output": "[ndarray([2], DOUBLE-FLOAT), -0.5, 52, 0]"
+        },
+        {
+          "input": "[x_opt, f_opt, nev, info] : np_minimize_cobyla(\n        (x1 - 3)^2, [x1], [0.5], [x1 >= 0]);",
+          "output": "[ndarray([1], DOUBLE-FLOAT), 0.0, 32, 0]"
+        },
+        {
+          "input": "np_ref(x_opt, 0);",
+          "output": "3.0"
+        },
+        {
+          "input": "[x_opt, f_opt, nev, info] : np_minimize_cobyla(\n        x1^2 + x2^2, [x1, x2], [0.8, 0.2], [x1 + x2 = 1]);",
+          "output": "[ndarray([2], DOUBLE-FLOAT), 0.5, 42, 0]"
+        },
+        {
+          "input": "np_to_list(x_opt);",
+          "output": "[0.5, 0.5]"
+        }
+      ],
+      "see_also": [
+        "np_minimize"
+      ],
+      "section": "Optimization and Root Finding"
     },
     "np_mul": {
       "type": "Function",
@@ -1914,6 +2064,83 @@
         "np_equal"
       ],
       "section": "Element-wise Operations"
+    },
+    "np_odeint": {
+      "type": "Function",
+      "signature": "np_odeint(f_func, y0, tspan, rtol, atol, method)",
+      "summary": "Integrate a system of ODEs dy/dt = f(t, y) and collect the trajectory at specified output times. Supports two calling conventions:",
+      "body_md": "Integrate a system of ODEs `dy/dt = f(t, y)` and collect the trajectory at specified output times. Supports two calling conventions:\n\n**Expression mode:**\n- `f` — `[f1, f2, ...]` list of right-hand-side expressions for each equation\n- `vars` — `[t, y1, y2, ...]` the independent variable (time) first, then state variables\n- `y0` — initial conditions (ndarray or Maxima list)\n- `tspan` — output times (ndarray or Maxima list)\n\n**Function mode:**\n- `f_func` — function `f(t, y)` taking scalar `t` and 1D ndarray `y`, returning a Maxima list of derivatives\n- `y0` — initial conditions (ndarray or Maxima list; length determines `neq`)\n- `tspan` — output times (ndarray or Maxima list)\n\n**Common optional arguments:**\n- `rtol` — relative tolerance (default: `1e-8`)\n- `atol` — absolute tolerance (default: `1e-8`)\n- `method` — `adams` (default, non-stiff) or `bdf` (stiff systems)\n\n**Returns:** a 2D ndarray of shape `[n_times, 1 + neq]` where:\n- Column 0 contains the time values\n- Columns 1 through `neq` contain the corresponding state variables\n\nThe first row corresponds to the initial conditions at `tspan[0]`.\n\n#### Examples\n\nExponential decay `dy/dt = -y`, `y(0) = 1` (exact solution: `y(t) = exp(-t)`):\n\n```maxima\n(%i1) tspan : [0.0, 0.5, 1.0, 1.5, 2.0]$\n(%i2) result : np_odeint([-y], [t, y], [1.0], tspan);\n(%o2)            ndarray([5, 2], DOUBLE-FLOAT)\n(%i3) np_ref(result, 2, 0);  /* t = 1.0 */\n(%o3)                          1.0\n(%i4) np_ref(result, 2, 1);  /* y(1.0) ≈ exp(-1) */\n(%o4)                   0.36787944117144233\n```\n\nHarmonic oscillator `dx/dt = v`, `dv/dt = -x`:\n\n```maxima\n(%i1) tspan : makelist(i * 0.1, i, 0, 40)$\n(%i2) result : np_odeint([v, -x], [t, x, v], [1.0, 0.0], tspan);\n(%o2)            ndarray([41, 3], DOUBLE-FLOAT)\n(%i3) /* x(pi) ≈ cos(pi) = -1 */\n      np_ref(result, 31, 1);\n(%o3)                  -0.9999923780697327\n```\n\nStiff system with BDF method (`dy/dt = -50*y`, fast decay):\n\n```maxima\n(%i1) result : np_odeint([-50*y], [t, y], [1.0],\n                          [0.0, 0.1, 0.5, 1.0], 1e-8, 1e-8, bdf);\n(%o1)            ndarray([4, 2], DOUBLE-FLOAT)\n(%i2) np_ref(result, 3, 1);  /* y(1.0) ≈ exp(-50) */\n(%o2)                   1.9287498479639178e-22\n```\n\nUsing ndarrays for `y0` and `tspan`:\n\n```maxima\n(%i1) y0 : ndarray([1.0])$\n(%i2) tspan : np_linspace(0.0, 1.0, 5)$\n(%i3) result : np_odeint([-y], [t, y], y0, tspan);\n(%o3)            ndarray([5, 2], DOUBLE-FLOAT)\n```\n\nFunction mode -- for procedural or conditional RHS:\n\n```maxima\n(%i1) f(t, y) := [-np_ref(y, 0)]$\n(%i2) result : np_odeint(f, [1.0], [0.0, 0.5, 1.0, 1.5, 2.0]);\n(%o2)            ndarray([5, 2], DOUBLE-FLOAT)\n(%i3) np_ref(result, 2, 1);  /* y(1.0) ≈ exp(-1) */\n(%o3)                   0.36787944117144233\n```\n\nFunction mode with lambda:\n\n```maxima\n(%i1) result : np_odeint(\n        lambda([t, y], [np_ref(y, 1), -np_ref(y, 0)]),\n        [1.0, 0.0], makelist(i * 0.1, i, 0, 40));\n(%o1)            ndarray([41, 3], DOUBLE-FLOAT)\n```\n\n**Performance notes:**\nExpression mode compiles the RHS (and Jacobian, for BDF) into native Lisp closures via `coerce-float-fun`. DLSODE calls these closures directly with no Maxima evaluator involvement — the RHS may be called thousands of times during integration. Function mode routes each RHS call through the Maxima evaluator and copies data in/out of a callback ndarray on every step. The function-mode path does allow use of vectorized ndarray operations backed by BLAS/LAPACK, which expression mode cannot leverage.\n\nSee also: `np_minimize` (optimization), `np_fsolve` (root finding)",
+      "examples": [
+        {
+          "input": "tspan : [0.0, 0.5, 1.0, 1.5, 2.0]$",
+          "output": ""
+        },
+        {
+          "input": "result : np_odeint([-y], [t, y], [1.0], tspan);",
+          "output": "ndarray([5, 2], DOUBLE-FLOAT)"
+        },
+        {
+          "input": "np_ref(result, 2, 0);  /* t = 1.0 */",
+          "output": "1.0"
+        },
+        {
+          "input": "np_ref(result, 2, 1);  /* y(1.0) ≈ exp(-1) */",
+          "output": "0.36787944117144233"
+        },
+        {
+          "input": "tspan : makelist(i * 0.1, i, 0, 40)$",
+          "output": ""
+        },
+        {
+          "input": "result : np_odeint([v, -x], [t, x, v], [1.0, 0.0], tspan);",
+          "output": "ndarray([41, 3], DOUBLE-FLOAT)"
+        },
+        {
+          "input": "/* x(pi) ≈ cos(pi) = -1 */\n      np_ref(result, 31, 1);",
+          "output": "-0.9999923780697327"
+        },
+        {
+          "input": "result : np_odeint([-50*y], [t, y], [1.0],\n                          [0.0, 0.1, 0.5, 1.0], 1e-8, 1e-8, bdf);",
+          "output": "ndarray([4, 2], DOUBLE-FLOAT)"
+        },
+        {
+          "input": "np_ref(result, 3, 1);  /* y(1.0) ≈ exp(-50) */",
+          "output": "1.9287498479639178e-22"
+        },
+        {
+          "input": "y0 : ndarray([1.0])$",
+          "output": ""
+        },
+        {
+          "input": "tspan : np_linspace(0.0, 1.0, 5)$",
+          "output": ""
+        },
+        {
+          "input": "result : np_odeint([-y], [t, y], y0, tspan);",
+          "output": "ndarray([5, 2], DOUBLE-FLOAT)"
+        },
+        {
+          "input": "f(t, y) := [-np_ref(y, 0)]$",
+          "output": ""
+        },
+        {
+          "input": "result : np_odeint(f, [1.0], [0.0, 0.5, 1.0, 1.5, 2.0]);",
+          "output": "ndarray([5, 2], DOUBLE-FLOAT)"
+        },
+        {
+          "input": "np_ref(result, 2, 1);  /* y(1.0) ≈ exp(-1) */",
+          "output": "0.36787944117144233"
+        },
+        {
+          "input": "result : np_odeint(\n        lambda([t, y], [np_ref(y, 1), -np_ref(y, 0)]),\n        [1.0, 0.0], makelist(i * 0.1, i, 0, 40));",
+          "output": "ndarray([41, 3], DOUBLE-FLOAT)"
+        }
+      ],
+      "see_also": [
+        "np_minimize",
+        "np_fsolve"
+      ],
+      "section": "ODE Integration"
     },
     "np_ones": {
       "type": "Function",
@@ -3085,8 +3312,12 @@
           "body_md": ""
         },
         {
-          "title": "Optimization",
-          "body_md": "Numerical optimization using the L-BFGS (Limited-memory Broyden-Fletcher-Goldfarb-Shanno) algorithm. Wraps Maxima's built-in L-BFGS implementation to work directly with ndarrays.\n\nThe optimization functions are in a separate sub-module (loaded separately from the core `numerics` package):\n\n```maxima\n(%i1) load(\"numerics\")$\n(%i2) load(\"numerics-optimize\")$\n```"
+          "title": "Optimization and Root Finding",
+          "body_md": "Numerical optimization, constrained optimization, root finding, and nonlinear least squares. Wraps L-BFGS, COBYLA, and MINPACK to work directly with ndarrays.\n\nThe optimization functions are in a separate sub-module (loaded separately from the core `numerics` package):\n\n```maxima\n(%i1) load(\"numerics\")$\n(%i2) load(\"numerics-optimize\")$\n```"
+        },
+        {
+          "title": "ODE Integration",
+          "body_md": "Numerical integration of ordinary differential equations using ODEPACK/DLSODE. Supports both non-stiff (Adams) and stiff (BDF) systems.\n\nThe integration functions are in a separate sub-module (loaded separately from the core `numerics` package):\n\n```maxima\n(%i1) load(\"numerics\")$\n(%i2) load(\"numerics-integrate\")$\n```"
         },
         {
           "title": "Linear Algebra",
