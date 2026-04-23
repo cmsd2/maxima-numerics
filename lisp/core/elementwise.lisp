@@ -250,6 +250,40 @@
   "Element-wise tangent: np_tan(A)"
   (numerics-unary-op a #'cl:tan))
 
+(defun $np_asin (a)
+  "Element-wise arcsine: np_asin(A)"
+  (numerics-unary-op a #'cl:asin))
+
+(defun $np_acos (a)
+  "Element-wise arccosine: np_acos(A)"
+  (numerics-unary-op a #'cl:acos))
+
+(defun $np_atan (a)
+  "Element-wise arctangent: np_atan(A)"
+  (numerics-unary-op a #'cl:atan))
+
+(defun $np_atan2 (y x)
+  "Element-wise two-argument arctangent: np_atan2(Y, X)
+   Returns the angle in radians between the positive x-axis
+   and the point (X, Y)."
+  (numerics-binary-op y x #'cl:atan))
+
+(defun $np_log2 (a)
+  "Element-wise base-2 logarithm: np_log2(A)"
+  (numerics-unary-op a (lambda (x) (cl:log x 2.0d0))))
+
+(defun $np_log10 (a)
+  "Element-wise base-10 logarithm: np_log10(A)"
+  (numerics-unary-op a (lambda (x) (cl:log x 10.0d0))))
+
+(defun $np_sign (a)
+  "Element-wise sign function: np_sign(A)
+   Returns -1.0, 0.0, or 1.0."
+  (numerics-unary-op a (lambda (x)
+                          (cond ((plusp x) 1.0d0)
+                                ((minusp x) -1.0d0)
+                                (t 0.0d0)))))
+
 (defun $np_abs (a)
   "Element-wise absolute value: np_abs(A)
 For complex input, returns the magnitude as a double-float ndarray."

@@ -246,7 +246,11 @@ the function or requires an extension with additional native dependencies:
 |---|---|
 | `np_add`, `np_sub`, `np_mul`, `np_div` | Arithmetic (ndarray or scalar) |
 | `np_pow`, `np_sqrt`, `np_exp`, `np_log` | Power/exponential |
+| `np_log2`, `np_log10` | Base-2 and base-10 logarithm |
 | `np_sin`, `np_cos`, `np_tan` | Trigonometric |
+| `np_asin`, `np_acos`, `np_atan` | Inverse trigonometric |
+| `np_atan2(Y, X)` | Two-argument arctangent |
+| `np_sign` | Sign function (-1, 0, +1) |
 | `np_abs`, `np_neg` | Absolute value, negation |
 | `np_scale(alpha, A)` | Scalar multiplication |
 | `np_greater`, `np_less`, etc. | Comparisons (real only) |

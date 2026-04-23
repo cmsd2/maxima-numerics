@@ -158,7 +158,7 @@ Returns a new ndarray where each element is the natural log of the corresponding
 (%o2)         matrix([0.0, 1.0], [2.0, 3.0])
 ```
 
-See also: `np_exp`
+See also: `np_exp`, `np_log2`, `np_log10`
 
 ### Function: np_sin (a)
 
@@ -212,6 +212,128 @@ Returns a new ndarray where each element is the tangent of the corresponding ele
 ```
 
 See also: `np_sin`, `np_cos`
+
+### Function: np_asin (a)
+
+Element-wise arcsine (inverse sine).
+
+Returns a new ndarray where each element is the arcsine of the corresponding element in `a`. Input values must be in [-1, 1]. Result is in radians, range [-pi/2, pi/2].
+
+#### Examples
+
+```maxima
+(%i1) A : ndarray([0, 0.5, 1.0], [3]);
+(%o1)            ndarray([3], DOUBLE-FLOAT)
+(%i2) np_to_list(np_asin(A));
+(%o2)       [0.0, 0.5235987755982988, 1.5707963267948966]
+```
+
+See also: `np_acos`, `np_atan`, `np_sin`
+
+### Function: np_acos (a)
+
+Element-wise arccosine (inverse cosine).
+
+Returns a new ndarray where each element is the arccosine of the corresponding element in `a`. Input values must be in [-1, 1]. Result is in radians, range [0, pi].
+
+#### Examples
+
+```maxima
+(%i1) A : ndarray([1.0, 0.5, 0], [3]);
+(%o1)            ndarray([3], DOUBLE-FLOAT)
+(%i2) np_to_list(np_acos(A));
+(%o2)       [0.0, 1.0471975511965976, 1.5707963267948966]
+```
+
+See also: `np_asin`, `np_atan`, `np_cos`
+
+### Function: np_atan (a)
+
+Element-wise arctangent (inverse tangent).
+
+Returns a new ndarray where each element is the arctangent of the corresponding element in `a`. Result is in radians, range (-pi/2, pi/2).
+
+#### Examples
+
+```maxima
+(%i1) A : ndarray([0, 1.0], [2]);
+(%o1)            ndarray([2], DOUBLE-FLOAT)
+(%i2) np_to_list(np_atan(A));
+(%o2)              [0.0, 0.7853981633974483]
+```
+
+See also: `np_atan2`, `np_asin`, `np_acos`, `np_tan`
+
+### Function: np_atan2 (y, x)
+
+Element-wise two-argument arctangent.
+
+Returns the angle in radians between the positive x-axis and the point (x, y), with correct quadrant handling. Result is in radians, range (-pi, pi]. Both arguments must be real ndarrays or scalars with compatible shapes (broadcasting supported).
+
+#### Examples
+
+```maxima
+(%i1) Y : ndarray([1.0, -1.0, -1.0, 1.0], [4]);
+(%o1)            ndarray([4], DOUBLE-FLOAT)
+(%i2) X : ndarray([1.0, 1.0, -1.0, -1.0], [4]);
+(%o2)            ndarray([4], DOUBLE-FLOAT)
+(%i3) np_to_list(np_atan2(Y, X));
+(%o3)  [0.7853981633974483, -0.7853981633974483,
+        -2.356194490192345, 2.356194490192345]
+```
+
+See also: `np_atan`, `np_asin`, `np_acos`
+
+### Function: np_log2 (a)
+
+Element-wise base-2 logarithm.
+
+Returns a new ndarray where each element is the base-2 logarithm of the corresponding element in `a`. Elements must be positive.
+
+#### Examples
+
+```maxima
+(%i1) A : ndarray([1.0, 2.0, 4.0, 8.0], [4]);
+(%o1)            ndarray([4], DOUBLE-FLOAT)
+(%i2) np_to_list(np_log2(A));
+(%o2)                [0.0, 1.0, 2.0, 3.0]
+```
+
+See also: `np_log`, `np_log10`
+
+### Function: np_log10 (a)
+
+Element-wise base-10 logarithm.
+
+Returns a new ndarray where each element is the base-10 logarithm of the corresponding element in `a`. Elements must be positive.
+
+#### Examples
+
+```maxima
+(%i1) A : ndarray([1.0, 10.0, 100.0, 1000.0], [4]);
+(%o1)            ndarray([4], DOUBLE-FLOAT)
+(%i2) np_to_list(np_log10(A));
+(%o2)                [0.0, 1.0, 2.0, 3.0]
+```
+
+See also: `np_log`, `np_log2`
+
+### Function: np_sign (a)
+
+Element-wise sign function.
+
+Returns a new ndarray where each element is -1.0 (negative), 0.0 (zero), or 1.0 (positive).
+
+#### Examples
+
+```maxima
+(%i1) A : ndarray([-3.0, -0.5, 0.0, 0.5, 3.0], [5]);
+(%o1)            ndarray([5], DOUBLE-FLOAT)
+(%i2) np_to_list(np_sign(A));
+(%o2)            [-1.0, -1.0, 0.0, 1.0, 1.0]
+```
+
+See also: `np_abs`
 
 ### Function: np_abs (a)
 
