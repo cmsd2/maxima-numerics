@@ -202,6 +202,8 @@ File: numerics.info,  Node: Conversion,  Prev: Definitions for numerics,  Up: Pa
 * Function np_mul a b::
 * Function np_div a b::
 * Function np_pow a p::
+* Function np_mod a b::
+* Function np_cross a b::
 * Function np_sqrt a::
 * Function np_exp a::
 * Function np_log a::
@@ -426,6 +428,8 @@ See also: ‘np_to_matrix’, ‘np_to_list’, ‘ndarray_p’
 * Examples 61::
 * Examples 62::
 * Examples 63::
+* Examples 64::
+* Examples 65::
 
 
 File: numerics.info,  Node: Function ndarray_p x,  Next: Function np_to_matrix a,  Prev: Function ndarray a / ndarray a complex,  Up: Conversion
@@ -1436,7 +1440,7 @@ File: numerics.info,  Node: Examples 32,  Next: Examples 33,  Prev: Examples 31,
 See also: ‘np_mul’
 
 
-File: numerics.info,  Node: Function np_pow a p,  Next: Function np_sqrt a,  Prev: Function np_div a b,  Up: Conversion
+File: numerics.info,  Node: Function np_pow a p,  Next: Function np_mod a b,  Prev: Function np_div a b,  Up: Conversion
 
  -- Function: np_pow (A, P)
      Element-wise exponentiation.
@@ -1464,13 +1468,17 @@ File: numerics.info,  Node: Examples 33,  Next: Examples 34,  Prev: Examples 32,
 See also: ‘np_sqrt’, ‘np_exp’, ‘np_log’
 
 
-File: numerics.info,  Node: Function np_sqrt a,  Next: Function np_exp a,  Prev: Function np_pow a p,  Up: Conversion
+File: numerics.info,  Node: Function np_mod a b,  Next: Function np_cross a b,  Prev: Function np_pow a p,  Up: Conversion
 
- -- Function: np_sqrt (A)
-     Element-wise square root.
+ -- Function: np_mod (A, B)
+     Element-wise modulo (remainder after division).
 
-     Returns a new ndarray where each element is the square root of the
-     corresponding element in ‘a’.
+     Returns a new ndarray where each element is ‘mod(a, b)’, with the
+     sign of the divisor.  Supports ndarray + ndarray, ndarray + scalar,
+     and scalar + ndarray.
+
+     Useful for angle wrapping (e.g., ‘np_mod(angle, 2*%pi)’ maps to
+     ‘[0, 2*pi)’).
 
 * Menu:
 
@@ -1480,6 +1488,70 @@ File: numerics.info,  Node: Function np_sqrt a,  Next: Function np_exp a,  Prev:
 File: numerics.info,  Node: Examples 34,  Next: Examples 35,  Prev: Examples 33,  Up: Examples
 
 1.3.1.33 Examples
+.................
+
+(%i1) A : ndarray([7, 10, 13], [3]);
+(%o1)            ndarray([3], DOUBLE-FLOAT)
+(%i2) np_to_list(np_mod(A, 5));
+(%o2)                  [2.0, 0.0, 3.0]
+(%i3) /* Wrap angles to [0, 2*pi) */
+      angles : ndarray([0, 7.0, -1.0, 13.0], [4])$
+(%i4) np_to_list(np_mod(angles, 2*float(%pi)));
+(%o4)       [0.0, 0.7168..., 5.2831..., 0.4336...]
+
+See also: ‘np_div’
+
+
+File: numerics.info,  Node: Function np_cross a b,  Next: Function np_sqrt a,  Prev: Function np_mod a b,  Up: Conversion
+
+ -- Function: np_cross (A, B)
+     3D cross product.
+
+     Both ‘a’ and ‘b’ must be 1D ndarrays of length 3.  Returns a 1D
+     ndarray of length 3 perpendicular to both inputs.  The result
+     satisfies ‘np_dot(a, np_cross(a, b)) = 0’.
+
+     Essential for orbital mechanics (angular momentum ‘L = r x v’),
+     electromagnetic fields, and 3D geometry.
+
+* Menu:
+
+     * Examples: Examples 35.
+
+
+File: numerics.info,  Node: Examples 35,  Next: Examples 36,  Prev: Examples 34,  Up: Examples
+
+1.3.1.34 Examples
+.................
+
+(%i1) A : ndarray([1.0, 0.0, 0.0], [3]);
+(%o1)            ndarray([3], DOUBLE-FLOAT)
+(%i2) B : ndarray([0.0, 1.0, 0.0], [3]);
+(%o2)            ndarray([3], DOUBLE-FLOAT)
+(%i3) np_to_list(np_cross(A, B));  /* i x j = k */
+(%o3)                  [0.0, 0.0, 1.0]
+(%i4) np_to_list(np_cross(B, A));  /* anti-commutative */
+(%o4)                 [0.0, 0.0, -1.0]
+
+See also: ‘np_dot’, ‘np_matmul’
+
+
+File: numerics.info,  Node: Function np_sqrt a,  Next: Function np_exp a,  Prev: Function np_cross a b,  Up: Conversion
+
+ -- Function: np_sqrt (A)
+     Element-wise square root.
+
+     Returns a new ndarray where each element is the square root of the
+     corresponding element in ‘a’.
+
+* Menu:
+
+     * Examples: Examples 36.
+
+
+File: numerics.info,  Node: Examples 36,  Next: Examples 37,  Prev: Examples 35,  Up: Examples
+
+1.3.1.35 Examples
 .................
 
 (%i1) A : ndarray(matrix([1, 4], [9, 16]));
@@ -1500,12 +1572,12 @@ File: numerics.info,  Node: Function np_exp a,  Next: Function np_log a,  Prev: 
 
 * Menu:
 
-     * Examples: Examples 35.
+     * Examples: Examples 37.
 
 
-File: numerics.info,  Node: Examples 35,  Next: Examples 36,  Prev: Examples 34,  Up: Examples
+File: numerics.info,  Node: Examples 37,  Next: Examples 38,  Prev: Examples 36,  Up: Examples
 
-1.3.1.34 Examples
+1.3.1.36 Examples
 .................
 
 (%i1) A : ndarray(matrix([0, 1], [2, 3]));
@@ -1530,12 +1602,12 @@ File: numerics.info,  Node: Function np_log a,  Next: Function np_sin a,  Prev: 
 
 * Menu:
 
-     * Examples: Examples 36.
+     * Examples: Examples 38.
 
 
-File: numerics.info,  Node: Examples 36,  Next: Examples 37,  Prev: Examples 35,  Up: Examples
+File: numerics.info,  Node: Examples 38,  Next: Examples 39,  Prev: Examples 37,  Up: Examples
 
-1.3.1.35 Examples
+1.3.1.37 Examples
 .................
 
 (%i1) A : ndarray(matrix([1, %e], [%e^2, %e^3]));
@@ -1556,12 +1628,12 @@ File: numerics.info,  Node: Function np_sin a,  Next: Function np_cos a,  Prev: 
 
 * Menu:
 
-     * Examples: Examples 37.
+     * Examples: Examples 39.
 
 
-File: numerics.info,  Node: Examples 37,  Next: Examples 38,  Prev: Examples 36,  Up: Examples
+File: numerics.info,  Node: Examples 39,  Next: Examples 40,  Prev: Examples 38,  Up: Examples
 
-1.3.1.36 Examples
+1.3.1.38 Examples
 .................
 
 (%i1) A : ndarray(matrix([0, %pi/2], [%pi, 3*%pi/2]));
@@ -1584,12 +1656,12 @@ File: numerics.info,  Node: Function np_cos a,  Next: Function np_tan a,  Prev: 
 
 * Menu:
 
-     * Examples: Examples 38.
+     * Examples: Examples 40.
 
 
-File: numerics.info,  Node: Examples 38,  Next: Examples 39,  Prev: Examples 37,  Up: Examples
+File: numerics.info,  Node: Examples 40,  Next: Examples 41,  Prev: Examples 39,  Up: Examples
 
-1.3.1.37 Examples
+1.3.1.39 Examples
 .................
 
 (%i1) A : ndarray(matrix([0, %pi/2], [%pi, 2*%pi]));
@@ -1610,12 +1682,12 @@ File: numerics.info,  Node: Function np_tan a,  Next: Function np_asin a,  Prev:
 
 * Menu:
 
-     * Examples: Examples 39.
+     * Examples: Examples 41.
 
 
-File: numerics.info,  Node: Examples 39,  Next: Examples 40,  Prev: Examples 38,  Up: Examples
+File: numerics.info,  Node: Examples 41,  Next: Examples 42,  Prev: Examples 40,  Up: Examples
 
-1.3.1.38 Examples
+1.3.1.40 Examples
 .................
 
 (%i1) A : ndarray(matrix([0, %pi/4]));
@@ -1637,12 +1709,12 @@ File: numerics.info,  Node: Function np_asin a,  Next: Function np_acos a,  Prev
 
 * Menu:
 
-     * Examples: Examples 40.
+     * Examples: Examples 42.
 
 
-File: numerics.info,  Node: Examples 40,  Next: Examples 41,  Prev: Examples 39,  Up: Examples
+File: numerics.info,  Node: Examples 42,  Next: Examples 43,  Prev: Examples 41,  Up: Examples
 
-1.3.1.39 Examples
+1.3.1.41 Examples
 .................
 
 (%i1) A : ndarray([0, 0.5, 1.0], [3]);
@@ -1664,12 +1736,12 @@ File: numerics.info,  Node: Function np_acos a,  Next: Function np_atan a,  Prev
 
 * Menu:
 
-     * Examples: Examples 41.
+     * Examples: Examples 43.
 
 
-File: numerics.info,  Node: Examples 41,  Next: Examples 42,  Prev: Examples 40,  Up: Examples
+File: numerics.info,  Node: Examples 43,  Next: Examples 44,  Prev: Examples 42,  Up: Examples
 
-1.3.1.40 Examples
+1.3.1.42 Examples
 .................
 
 (%i1) A : ndarray([1.0, 0.5, 0], [3]);
@@ -1691,12 +1763,12 @@ File: numerics.info,  Node: Function np_atan a,  Next: Function np_atan2 y x,  P
 
 * Menu:
 
-     * Examples: Examples 42.
+     * Examples: Examples 44.
 
 
-File: numerics.info,  Node: Examples 42,  Next: Examples 43,  Prev: Examples 41,  Up: Examples
+File: numerics.info,  Node: Examples 44,  Next: Examples 45,  Prev: Examples 43,  Up: Examples
 
-1.3.1.41 Examples
+1.3.1.43 Examples
 .................
 
 (%i1) A : ndarray([0, 1.0], [2]);
@@ -1719,12 +1791,12 @@ File: numerics.info,  Node: Function np_atan2 y x,  Next: Function np_log2 a,  P
 
 * Menu:
 
-     * Examples: Examples 43.
+     * Examples: Examples 45.
 
 
-File: numerics.info,  Node: Examples 43,  Next: Examples 44,  Prev: Examples 42,  Up: Examples
+File: numerics.info,  Node: Examples 45,  Next: Examples 46,  Prev: Examples 44,  Up: Examples
 
-1.3.1.42 Examples
+1.3.1.44 Examples
 .................
 
 (%i1) Y : ndarray([1.0, -1.0, -1.0, 1.0], [4]);
@@ -1748,12 +1820,12 @@ File: numerics.info,  Node: Function np_log2 a,  Next: Function np_log10 a,  Pre
 
 * Menu:
 
-     * Examples: Examples 44.
+     * Examples: Examples 46.
 
 
-File: numerics.info,  Node: Examples 44,  Next: Examples 45,  Prev: Examples 43,  Up: Examples
+File: numerics.info,  Node: Examples 46,  Next: Examples 47,  Prev: Examples 45,  Up: Examples
 
-1.3.1.43 Examples
+1.3.1.45 Examples
 .................
 
 (%i1) A : ndarray([1.0, 2.0, 4.0, 8.0], [4]);
@@ -1774,12 +1846,12 @@ File: numerics.info,  Node: Function np_log10 a,  Next: Function np_sign a,  Pre
 
 * Menu:
 
-     * Examples: Examples 45.
+     * Examples: Examples 47.
 
 
-File: numerics.info,  Node: Examples 45,  Next: Examples 46,  Prev: Examples 44,  Up: Examples
+File: numerics.info,  Node: Examples 47,  Next: Examples 48,  Prev: Examples 46,  Up: Examples
 
-1.3.1.44 Examples
+1.3.1.46 Examples
 .................
 
 (%i1) A : ndarray([1.0, 10.0, 100.0, 1000.0], [4]);
@@ -1800,12 +1872,12 @@ File: numerics.info,  Node: Function np_sign a,  Next: Function np_abs a,  Prev:
 
 * Menu:
 
-     * Examples: Examples 46.
+     * Examples: Examples 48.
 
 
-File: numerics.info,  Node: Examples 46,  Next: Examples 47,  Prev: Examples 45,  Up: Examples
+File: numerics.info,  Node: Examples 48,  Next: Examples 49,  Prev: Examples 47,  Up: Examples
 
-1.3.1.45 Examples
+1.3.1.47 Examples
 .................
 
 (%i1) A : ndarray([-3.0, -0.5, 0.0, 0.5, 3.0], [5]);
@@ -1827,12 +1899,12 @@ File: numerics.info,  Node: Function np_abs a,  Next: Function np_neg a,  Prev: 
 
 * Menu:
 
-     * Examples: Examples 47.
+     * Examples: Examples 49.
 
 
-File: numerics.info,  Node: Examples 47,  Next: Examples 48,  Prev: Examples 46,  Up: Examples
+File: numerics.info,  Node: Examples 49,  Next: Examples 50,  Prev: Examples 48,  Up: Examples
 
-1.3.1.46 Examples
+1.3.1.48 Examples
 .................
 
 (%i1) A : ndarray(matrix([-1, 2], [-3, 4]));
@@ -1853,12 +1925,12 @@ File: numerics.info,  Node: Function np_neg a,  Next: Function np_clip a lo hi, 
 
 * Menu:
 
-     * Examples: Examples 48.
+     * Examples: Examples 50.
 
 
-File: numerics.info,  Node: Examples 48,  Next: Examples 49,  Prev: Examples 47,  Up: Examples
+File: numerics.info,  Node: Examples 50,  Next: Examples 51,  Prev: Examples 49,  Up: Examples
 
-1.3.1.47 Examples
+1.3.1.49 Examples
 .................
 
 (%i1) A : np_ones([2, 2]);
@@ -1880,12 +1952,12 @@ File: numerics.info,  Node: Function np_clip a lo hi,  Next: Function np_scale a
 
 * Menu:
 
-     * Examples: Examples 49.
+     * Examples: Examples 51.
 
 
-File: numerics.info,  Node: Examples 49,  Next: Examples 50,  Prev: Examples 48,  Up: Examples
+File: numerics.info,  Node: Examples 51,  Next: Examples 52,  Prev: Examples 50,  Up: Examples
 
-1.3.1.48 Examples
+1.3.1.50 Examples
 .................
 
 (%i1) A : ndarray([1.0, 5.0, 3.0, 8.0, 2.0]);
@@ -1906,12 +1978,12 @@ File: numerics.info,  Node: Function np_scale alpha a,  Next: Function np_map f 
 
 * Menu:
 
-     * Examples: Examples 50.
+     * Examples: Examples 52.
 
 
-File: numerics.info,  Node: Examples 50,  Next: Examples 51,  Prev: Examples 49,  Up: Examples
+File: numerics.info,  Node: Examples 52,  Next: Examples 53,  Prev: Examples 51,  Up: Examples
 
-1.3.1.49 Examples
+1.3.1.51 Examples
 .................
 
 (%i1) A : ndarray(matrix([1, 2], [3, 4]));
@@ -1952,12 +2024,12 @@ File: numerics.info,  Node: Function np_map f a,  Next: Function np_map2 f a b, 
 
 * Menu:
 
-     * Examples: Examples 51.
+     * Examples: Examples 53.
 
 
-File: numerics.info,  Node: Examples 51,  Next: Examples 52,  Prev: Examples 50,  Up: Examples
+File: numerics.info,  Node: Examples 53,  Next: Examples 54,  Prev: Examples 52,  Up: Examples
 
-1.3.1.50 Examples
+1.3.1.52 Examples
 .................
 
 (%i1) f(x) := x^2 + 1$
@@ -2002,12 +2074,12 @@ File: numerics.info,  Node: Function np_map2 f a b,  Next: Function np_where con
 
 * Menu:
 
-     * Examples: Examples 52.
+     * Examples: Examples 54.
 
 
-File: numerics.info,  Node: Examples 52,  Next: Examples 53,  Prev: Examples 51,  Up: Examples
+File: numerics.info,  Node: Examples 54,  Next: Examples 55,  Prev: Examples 53,  Up: Examples
 
-1.3.1.51 Examples
+1.3.1.53 Examples
 .................
 
 (%i1) f(x, y) := x^2 + y^2$
@@ -2044,12 +2116,12 @@ File: numerics.info,  Node: Function np_where condition / np_where condition x y
 
 * Menu:
 
-     * Examples: Examples 53.
+     * Examples: Examples 55.
 
 
-File: numerics.info,  Node: Examples 53,  Next: Examples 54,  Prev: Examples 52,  Up: Examples
+File: numerics.info,  Node: Examples 55,  Next: Examples 56,  Prev: Examples 54,  Up: Examples
 
-1.3.1.52 Examples
+1.3.1.54 Examples
 .................
 
 (%i1) /* Form 1: find nonzero indices */
@@ -2089,12 +2161,12 @@ File: numerics.info,  Node: Function np_greater a b,  Next: Function np_greater_
 
 * Menu:
 
-     * Examples: Examples 54.
+     * Examples: Examples 56.
 
 
-File: numerics.info,  Node: Examples 54,  Next: Examples 55,  Prev: Examples 53,  Up: Examples
+File: numerics.info,  Node: Examples 56,  Next: Examples 57,  Prev: Examples 55,  Up: Examples
 
-1.3.1.53 Examples
+1.3.1.55 Examples
 .................
 
 (%i1) A : ndarray([1, 5, 3, 7, 2], [5]);
@@ -2162,12 +2234,12 @@ File: numerics.info,  Node: Function np_logical_and a b,  Next: Function np_logi
 
 * Menu:
 
-     * Examples: Examples 55.
+     * Examples: Examples 57.
 
 
-File: numerics.info,  Node: Examples 55,  Next: Examples 56,  Prev: Examples 54,  Up: Examples
+File: numerics.info,  Node: Examples 57,  Next: Examples 58,  Prev: Examples 56,  Up: Examples
 
-1.3.1.54 Examples
+1.3.1.56 Examples
 .................
 
 (%i1) A : ndarray([1, 0, 1, 0], [4]);
@@ -2217,12 +2289,12 @@ File: numerics.info,  Node: Function np_test f a,  Next: Function np_extract mas
 
 * Menu:
 
-     * Examples: Examples 56.
+     * Examples: Examples 58.
 
 
-File: numerics.info,  Node: Examples 56,  Next: Examples 57,  Prev: Examples 55,  Up: Examples
+File: numerics.info,  Node: Examples 58,  Next: Examples 59,  Prev: Examples 57,  Up: Examples
 
-1.3.1.55 Examples
+1.3.1.57 Examples
 .................
 
 (%i1) gt3(x) := if x > 3 then 1 else 0$
@@ -2251,12 +2323,12 @@ File: numerics.info,  Node: Function np_extract mask a,  Next: Function np_fft a
 
 * Menu:
 
-     * Examples: Examples 57.
+     * Examples: Examples 59.
 
 
-File: numerics.info,  Node: Examples 57,  Next: Examples 58,  Prev: Examples 56,  Up: Examples
+File: numerics.info,  Node: Examples 59,  Next: Examples 60,  Prev: Examples 58,  Up: Examples
 
-1.3.1.56 Examples
+1.3.1.58 Examples
 .................
 
 (%i1) A : ndarray([10, 20, 30, 40, 50], [5]);
@@ -2294,12 +2366,12 @@ File: numerics.info,  Node: Function np_fft a,  Next: Function np_ifft a,  Prev:
 
 * Menu:
 
-     * Examples: Examples 58.
+     * Examples: Examples 60.
 
 
-File: numerics.info,  Node: Examples 58,  Next: Examples 59,  Prev: Examples 57,  Up: Examples
+File: numerics.info,  Node: Examples 60,  Next: Examples 61,  Prev: Examples 59,  Up: Examples
 
-1.3.1.57 Examples
+1.3.1.59 Examples
 .................
 
 (%i1) /* FFT of a real signal */
@@ -2347,12 +2419,12 @@ File: numerics.info,  Node: Function np_ifft a,  Next: Function np_fft2d a,  Pre
 
 * Menu:
 
-     * Examples: Examples 59.
+     * Examples: Examples 61.
 
 
-File: numerics.info,  Node: Examples 59,  Next: Examples 60,  Prev: Examples 58,  Up: Examples
+File: numerics.info,  Node: Examples 61,  Next: Examples 62,  Prev: Examples 60,  Up: Examples
 
-1.3.1.58 Examples
+1.3.1.60 Examples
 .................
 
 (%i1) /* Frequency-domain filtering */
@@ -2385,12 +2457,12 @@ File: numerics.info,  Node: Function np_fft2d a,  Next: Function np_ifft2d a,  P
 
 * Menu:
 
-     * Examples: Examples 60.
+     * Examples: Examples 62.
 
 
-File: numerics.info,  Node: Examples 60,  Next: Examples 61,  Prev: Examples 59,  Up: Examples
+File: numerics.info,  Node: Examples 62,  Next: Examples 63,  Prev: Examples 61,  Up: Examples
 
-1.3.1.59 Examples
+1.3.1.61 Examples
 .................
 
 (%i1) A : ndarray(matrix([1, 2, 3], [4, 5, 6], [7, 8, 9]));
@@ -2425,12 +2497,12 @@ File: numerics.info,  Node: Function np_ifft2d a,  Next: Function np_convolve a 
 
 * Menu:
 
-     * Examples: Examples 61.
+     * Examples: Examples 63.
 
 
-File: numerics.info,  Node: Examples 61,  Next: Examples 62,  Prev: Examples 60,  Up: Examples
+File: numerics.info,  Node: Examples 63,  Next: Examples 64,  Prev: Examples 62,  Up: Examples
 
-1.3.1.60 Examples
+1.3.1.62 Examples
 .................
 
 (%i1) A : ndarray(matrix([1, 2], [3, 4]));
@@ -2457,12 +2529,12 @@ File: numerics.info,  Node: Function np_convolve a b,  Next: Function np_convolv
 
 * Menu:
 
-     * Examples: Examples 62.
+     * Examples: Examples 64.
 
 
-File: numerics.info,  Node: Examples 62,  Next: Examples 63,  Prev: Examples 61,  Up: Examples
+File: numerics.info,  Node: Examples 64,  Next: Examples 65,  Prev: Examples 63,  Up: Examples
 
-1.3.1.61 Examples
+1.3.1.63 Examples
 .................
 
 (%i1) /* Convolve with impulse: identity operation */
@@ -2500,12 +2572,12 @@ File: numerics.info,  Node: Function np_convolve2d a kernel,  Next: Loading the 
 
 * Menu:
 
-     * Examples: Examples 63.
+     * Examples: Examples 65.
 
 
-File: numerics.info,  Node: Examples 63,  Prev: Examples 62,  Up: Examples
+File: numerics.info,  Node: Examples 65,  Prev: Examples 64,  Up: Examples
 
-1.3.1.62 Examples
+1.3.1.64 Examples
 .................
 
 (%i1) /* Identity convolution with a 1x1 kernel */
@@ -2557,8 +2629,6 @@ File: numerics.info,  Node: Image representation,  Next: Function np_read_image 
 
 * Menu:
 
-* Examples 64::
-* Examples 65::
 * Examples 66::
 * Examples 67::
 * Examples 68::
@@ -2605,6 +2675,8 @@ File: numerics.info,  Node: Image representation,  Next: Function np_read_image 
 * Examples 109::
 * Examples 110::
 * Examples 111::
+* Examples 112::
+* Examples 113::
 
 
 File: numerics.info,  Node: Function np_read_image path,  Next: Function np_write_image a path,  Prev: Image representation,  Up: Conversion
@@ -2618,10 +2690,10 @@ File: numerics.info,  Node: Function np_read_image path,  Next: Function np_writ
 
 * Menu:
 
-     * Examples: Examples 64.
+     * Examples: Examples 66.
 
 
-File: numerics.info,  Node: Examples 64,  Next: Examples 65,  Up: Image representation
+File: numerics.info,  Node: Examples 66,  Next: Examples 67,  Up: Image representation
 
 1.3.3.1 Examples
 ................
@@ -2645,10 +2717,10 @@ File: numerics.info,  Node: Function np_write_image a path,  Next: Function np_i
 
 * Menu:
 
-     * Examples: Examples 65.
+     * Examples: Examples 67.
 
 
-File: numerics.info,  Node: Examples 65,  Next: Examples 66,  Prev: Examples 64,  Up: Image representation
+File: numerics.info,  Node: Examples 67,  Next: Examples 68,  Prev: Examples 66,  Up: Image representation
 
 1.3.3.2 Examples
 ................
@@ -2671,10 +2743,10 @@ File: numerics.info,  Node: Function np_imshow a,  Next: Function np_mandrill,  
 
 * Menu:
 
-     * Examples: Examples 66.
+     * Examples: Examples 68.
 
 
-File: numerics.info,  Node: Examples 66,  Next: Examples 67,  Prev: Examples 65,  Up: Image representation
+File: numerics.info,  Node: Examples 68,  Next: Examples 69,  Prev: Examples 67,  Up: Image representation
 
 1.3.3.3 Examples
 ................
@@ -2701,10 +2773,10 @@ File: numerics.info,  Node: Function np_mandrill,  Next: Function np_to_image a,
 
 * Menu:
 
-     * Examples: Examples 67.
+     * Examples: Examples 69.
 
 
-File: numerics.info,  Node: Examples 67,  Next: Examples 68,  Prev: Examples 66,  Up: Image representation
+File: numerics.info,  Node: Examples 69,  Next: Examples 70,  Prev: Examples 68,  Up: Image representation
 
 1.3.3.4 Examples
 ................
@@ -2732,10 +2804,10 @@ File: numerics.info,  Node: Function np_to_image a,  Next: Function np_from_imag
 
 * Menu:
 
-     * Examples: Examples 68.
+     * Examples: Examples 70.
 
 
-File: numerics.info,  Node: Examples 68,  Next: Examples 69,  Prev: Examples 67,  Up: Image representation
+File: numerics.info,  Node: Examples 70,  Next: Examples 71,  Prev: Examples 69,  Up: Image representation
 
 1.3.3.5 Examples
 ................
@@ -2758,10 +2830,10 @@ File: numerics.info,  Node: Function np_from_image img,  Next: Function np_sum a
 
 * Menu:
 
-     * Examples: Examples 69.
+     * Examples: Examples 71.
 
 
-File: numerics.info,  Node: Examples 69,  Next: Examples 70,  Prev: Examples 68,  Up: Image representation
+File: numerics.info,  Node: Examples 71,  Next: Examples 72,  Prev: Examples 70,  Up: Image representation
 
 1.3.3.6 Examples
 ................
@@ -2792,10 +2864,10 @@ File: numerics.info,  Node: Function np_sum a,  Next: Function np_mean a,  Prev:
 
 * Menu:
 
-     * Examples: Examples 70.
+     * Examples: Examples 72.
 
 
-File: numerics.info,  Node: Examples 70,  Next: Examples 71,  Prev: Examples 69,  Up: Image representation
+File: numerics.info,  Node: Examples 72,  Next: Examples 73,  Prev: Examples 71,  Up: Image representation
 
 1.3.3.7 Examples
 ................
@@ -2828,10 +2900,10 @@ File: numerics.info,  Node: Function np_mean a,  Next: Function np_min a / np_mi
 
 * Menu:
 
-     * Examples: Examples 71.
+     * Examples: Examples 73.
 
 
-File: numerics.info,  Node: Examples 71,  Next: Examples 72,  Prev: Examples 70,  Up: Image representation
+File: numerics.info,  Node: Examples 73,  Next: Examples 74,  Prev: Examples 72,  Up: Image representation
 
 1.3.3.8 Examples
 ................
@@ -2868,10 +2940,10 @@ File: numerics.info,  Node: Function np_min a / np_min a axis,  Next: Function n
 
 * Menu:
 
-     * Examples: Examples 72.
+     * Examples: Examples 74.
 
 
-File: numerics.info,  Node: Examples 72,  Next: Examples 73,  Prev: Examples 71,  Up: Image representation
+File: numerics.info,  Node: Examples 74,  Next: Examples 75,  Prev: Examples 73,  Up: Image representation
 
 1.3.3.9 Examples
 ................
@@ -2908,10 +2980,10 @@ File: numerics.info,  Node: Function np_max a / np_max a axis,  Next: Function n
 
 * Menu:
 
-     * Examples: Examples 73.
+     * Examples: Examples 75.
 
 
-File: numerics.info,  Node: Examples 73,  Next: Examples 74,  Prev: Examples 72,  Up: Image representation
+File: numerics.info,  Node: Examples 75,  Next: Examples 76,  Prev: Examples 74,  Up: Image representation
 
 1.3.3.10 Examples
 .................
@@ -2948,10 +3020,10 @@ File: numerics.info,  Node: Function np_argmin a / np_argmin a axis,  Next: Func
 
 * Menu:
 
-     * Examples: Examples 74.
+     * Examples: Examples 76.
 
 
-File: numerics.info,  Node: Examples 74,  Next: Examples 75,  Prev: Examples 73,  Up: Image representation
+File: numerics.info,  Node: Examples 76,  Next: Examples 77,  Prev: Examples 75,  Up: Image representation
 
 1.3.3.11 Examples
 .................
@@ -2988,10 +3060,10 @@ File: numerics.info,  Node: Function np_argmax a / np_argmax a axis,  Next: Func
 
 * Menu:
 
-     * Examples: Examples 75.
+     * Examples: Examples 77.
 
 
-File: numerics.info,  Node: Examples 75,  Next: Examples 76,  Prev: Examples 74,  Up: Image representation
+File: numerics.info,  Node: Examples 77,  Next: Examples 78,  Prev: Examples 76,  Up: Image representation
 
 1.3.3.12 Examples
 .................
@@ -3026,10 +3098,10 @@ File: numerics.info,  Node: Function np_var a / np_var a axis,  Next: Function n
 
 * Menu:
 
-     * Examples: Examples 76.
+     * Examples: Examples 78.
 
 
-File: numerics.info,  Node: Examples 76,  Next: Examples 77,  Prev: Examples 75,  Up: Image representation
+File: numerics.info,  Node: Examples 78,  Next: Examples 79,  Prev: Examples 77,  Up: Image representation
 
 1.3.3.13 Examples
 .................
@@ -3065,10 +3137,10 @@ File: numerics.info,  Node: Function np_std a / np_std a axis,  Next: Function n
 
 * Menu:
 
-     * Examples: Examples 77.
+     * Examples: Examples 79.
 
 
-File: numerics.info,  Node: Examples 77,  Next: Examples 78,  Prev: Examples 76,  Up: Image representation
+File: numerics.info,  Node: Examples 79,  Next: Examples 80,  Prev: Examples 78,  Up: Image representation
 
 1.3.3.14 Examples
 .................
@@ -3095,10 +3167,10 @@ File: numerics.info,  Node: Function np_cumsum a,  Next: Function np_dot a b,  P
 
 * Menu:
 
-     * Examples: Examples 78.
+     * Examples: Examples 80.
 
 
-File: numerics.info,  Node: Examples 78,  Next: Examples 79,  Prev: Examples 77,  Up: Image representation
+File: numerics.info,  Node: Examples 80,  Next: Examples 81,  Prev: Examples 79,  Up: Image representation
 
 1.3.3.15 Examples
 .................
@@ -3123,10 +3195,10 @@ File: numerics.info,  Node: Function np_dot a b,  Next: Function np_sort a / np_
 
 * Menu:
 
-     * Examples: Examples 79.
+     * Examples: Examples 81.
 
 
-File: numerics.info,  Node: Examples 79,  Next: Examples 80,  Prev: Examples 78,  Up: Image representation
+File: numerics.info,  Node: Examples 81,  Next: Examples 82,  Prev: Examples 80,  Up: Image representation
 
 1.3.3.16 Examples
 .................
@@ -3164,10 +3236,10 @@ File: numerics.info,  Node: Function np_sort a / np_sort a axis,  Next: Function
 
 * Menu:
 
-     * Examples: Examples 80.
+     * Examples: Examples 82.
 
 
-File: numerics.info,  Node: Examples 80,  Next: Examples 81,  Prev: Examples 79,  Up: Image representation
+File: numerics.info,  Node: Examples 82,  Next: Examples 83,  Prev: Examples 81,  Up: Image representation
 
 1.3.3.17 Examples
 .................
@@ -3207,10 +3279,10 @@ File: numerics.info,  Node: Function np_argsort a / np_argsort a axis,  Next: Fu
 
 * Menu:
 
-     * Examples: Examples 81.
+     * Examples: Examples 83.
 
 
-File: numerics.info,  Node: Examples 81,  Next: Examples 82,  Prev: Examples 80,  Up: Image representation
+File: numerics.info,  Node: Examples 83,  Next: Examples 84,  Prev: Examples 82,  Up: Image representation
 
 1.3.3.18 Examples
 .................
@@ -3246,10 +3318,10 @@ File: numerics.info,  Node: Function np_trapz y / np_trapz y x,  Next: Function 
 
 * Menu:
 
-     * Examples: Examples 82.
+     * Examples: Examples 84.
 
 
-File: numerics.info,  Node: Examples 82,  Next: Examples 83,  Prev: Examples 81,  Up: Image representation
+File: numerics.info,  Node: Examples 84,  Next: Examples 85,  Prev: Examples 83,  Up: Image representation
 
 1.3.3.19 Examples
 .................
@@ -3278,10 +3350,10 @@ File: numerics.info,  Node: Function np_diff a,  Next: Function np_cov a,  Prev:
 
 * Menu:
 
-     * Examples: Examples 83.
+     * Examples: Examples 85.
 
 
-File: numerics.info,  Node: Examples 83,  Next: Examples 84,  Prev: Examples 82,  Up: Image representation
+File: numerics.info,  Node: Examples 85,  Next: Examples 86,  Prev: Examples 84,  Up: Image representation
 
 1.3.3.20 Examples
 .................
@@ -3309,10 +3381,10 @@ File: numerics.info,  Node: Function np_cov a,  Next: Function np_corrcoef a,  P
 
 * Menu:
 
-     * Examples: Examples 84.
+     * Examples: Examples 86.
 
 
-File: numerics.info,  Node: Examples 84,  Next: Examples 85,  Prev: Examples 83,  Up: Image representation
+File: numerics.info,  Node: Examples 86,  Next: Examples 87,  Prev: Examples 85,  Up: Image representation
 
 1.3.3.21 Examples
 .................
@@ -3341,10 +3413,10 @@ File: numerics.info,  Node: Function np_corrcoef a,  Next: Function np_minimize 
 
 * Menu:
 
-     * Examples: Examples 85.
+     * Examples: Examples 87.
 
 
-File: numerics.info,  Node: Examples 85,  Next: Examples 86,  Prev: Examples 84,  Up: Image representation
+File: numerics.info,  Node: Examples 87,  Next: Examples 88,  Prev: Examples 86,  Up: Image representation
 
 1.3.3.22 Examples
 .................
@@ -3419,10 +3491,10 @@ File: numerics.info,  Node: Function np_minimize f grad x0 tolerance max_iter,  
 
 * Menu:
 
-     * Examples: Examples 86.
+     * Examples: Examples 88.
 
 
-File: numerics.info,  Node: Examples 86,  Next: Examples 87,  Prev: Examples 85,  Up: Image representation
+File: numerics.info,  Node: Examples 88,  Next: Examples 89,  Prev: Examples 87,  Up: Image representation
 
 1.3.3.23 Examples
 .................
@@ -3581,10 +3653,10 @@ File: numerics.info,  Node: Function np_minimize_cobyla f vars x0 constraints rh
 
 * Menu:
 
-     * Examples: Examples 87.
+     * Examples: Examples 89.
 
 
-File: numerics.info,  Node: Examples 87,  Next: Examples 88,  Prev: Examples 86,  Up: Image representation
+File: numerics.info,  Node: Examples 89,  Next: Examples 90,  Prev: Examples 88,  Up: Image representation
 
 1.3.3.24 Examples
 .................
@@ -3659,10 +3731,10 @@ File: numerics.info,  Node: Function np_fsolve f x0 tolerance,  Next: Function n
 
 * Menu:
 
-     * Examples: Examples 88.
+     * Examples: Examples 90.
 
 
-File: numerics.info,  Node: Examples 88,  Next: Examples 89,  Prev: Examples 87,  Up: Image representation
+File: numerics.info,  Node: Examples 90,  Next: Examples 91,  Prev: Examples 89,  Up: Image representation
 
 1.3.3.25 Examples
 .................
@@ -3740,10 +3812,10 @@ File: numerics.info,  Node: Function np_lsq_nonlinear f x0 tolerance,  Next: Fun
 
 * Menu:
 
-     * Examples: Examples 89.
+     * Examples: Examples 91.
 
 
-File: numerics.info,  Node: Examples 89,  Next: Examples 90,  Prev: Examples 88,  Up: Image representation
+File: numerics.info,  Node: Examples 91,  Next: Examples 92,  Prev: Examples 90,  Up: Image representation
 
 1.3.3.26 Examples
 .................
@@ -3828,10 +3900,10 @@ File: numerics.info,  Node: Function np_odeint f_func y0 tspan rtol atol method,
 
 * Menu:
 
-     * Examples: Examples 90.
+     * Examples: Examples 92.
 
 
-File: numerics.info,  Node: Examples 90,  Next: Examples 91,  Prev: Examples 89,  Up: Image representation
+File: numerics.info,  Node: Examples 92,  Next: Examples 93,  Prev: Examples 91,  Up: Image representation
 
 1.3.3.27 Examples
 .................
@@ -3909,10 +3981,10 @@ File: numerics.info,  Node: Function np_matmul a b,  Next: Function np_inv a,  P
 
 * Menu:
 
-     * Examples: Examples 91.
+     * Examples: Examples 93.
 
 
-File: numerics.info,  Node: Examples 91,  Next: Examples 92,  Prev: Examples 90,  Up: Image representation
+File: numerics.info,  Node: Examples 93,  Next: Examples 94,  Prev: Examples 92,  Up: Image representation
 
 1.3.3.28 Examples
 .................
@@ -3939,10 +4011,10 @@ File: numerics.info,  Node: Function np_inv a,  Next: Function np_det a,  Prev: 
 
 * Menu:
 
-     * Examples: Examples 92.
+     * Examples: Examples 94.
 
 
-File: numerics.info,  Node: Examples 92,  Next: Examples 93,  Prev: Examples 91,  Up: Image representation
+File: numerics.info,  Node: Examples 94,  Next: Examples 95,  Prev: Examples 93,  Up: Image representation
 
 1.3.3.29 Examples
 .................
@@ -3969,10 +4041,10 @@ File: numerics.info,  Node: Function np_det a,  Next: Function np_solve a b,  Pr
 
 * Menu:
 
-     * Examples: Examples 93.
+     * Examples: Examples 95.
 
 
-File: numerics.info,  Node: Examples 93,  Next: Examples 94,  Prev: Examples 92,  Up: Image representation
+File: numerics.info,  Node: Examples 95,  Next: Examples 96,  Prev: Examples 94,  Up: Image representation
 
 1.3.3.30 Examples
 .................
@@ -3998,10 +4070,10 @@ File: numerics.info,  Node: Function np_solve a b,  Next: Function np_svd a,  Pr
 
 * Menu:
 
-     * Examples: Examples 94.
+     * Examples: Examples 96.
 
 
-File: numerics.info,  Node: Examples 94,  Next: Examples 95,  Prev: Examples 93,  Up: Image representation
+File: numerics.info,  Node: Examples 96,  Next: Examples 97,  Prev: Examples 95,  Up: Image representation
 
 1.3.3.31 Examples
 .................
@@ -4036,10 +4108,10 @@ File: numerics.info,  Node: Function np_svd a,  Next: Function np_eig a,  Prev: 
 
 * Menu:
 
-     * Examples: Examples 95.
+     * Examples: Examples 97.
 
 
-File: numerics.info,  Node: Examples 95,  Next: Examples 96,  Prev: Examples 94,  Up: Image representation
+File: numerics.info,  Node: Examples 97,  Next: Examples 98,  Prev: Examples 96,  Up: Image representation
 
 1.3.3.32 Examples
 .................
@@ -4078,10 +4150,10 @@ File: numerics.info,  Node: Function np_eig a,  Next: Function np_qr a,  Prev: F
 
 * Menu:
 
-     * Examples: Examples 96.
+     * Examples: Examples 98.
 
 
-File: numerics.info,  Node: Examples 96,  Next: Examples 97,  Prev: Examples 95,  Up: Image representation
+File: numerics.info,  Node: Examples 98,  Next: Examples 99,  Prev: Examples 97,  Up: Image representation
 
 1.3.3.33 Examples
 .................
@@ -4114,10 +4186,10 @@ File: numerics.info,  Node: Function np_qr a,  Next: Function np_lu a,  Prev: Fu
 
 * Menu:
 
-     * Examples: Examples 97.
+     * Examples: Examples 99.
 
 
-File: numerics.info,  Node: Examples 97,  Next: Examples 98,  Prev: Examples 96,  Up: Image representation
+File: numerics.info,  Node: Examples 99,  Next: Examples 100,  Prev: Examples 98,  Up: Image representation
 
 1.3.3.34 Examples
 .................
@@ -4148,10 +4220,10 @@ File: numerics.info,  Node: Function np_lu a,  Next: Function np_norm a / np_nor
 
 * Menu:
 
-     * Examples: Examples 98.
+     * Examples: Examples 100.
 
 
-File: numerics.info,  Node: Examples 98,  Next: Examples 99,  Prev: Examples 97,  Up: Image representation
+File: numerics.info,  Node: Examples 100,  Next: Examples 101,  Prev: Examples 99,  Up: Image representation
 
 1.3.3.35 Examples
 .................
@@ -4191,10 +4263,10 @@ File: numerics.info,  Node: Function np_norm a / np_norm a ord,  Next: Function 
 
 * Menu:
 
-     * Examples: Examples 99.
+     * Examples: Examples 101.
 
 
-File: numerics.info,  Node: Examples 99,  Next: Examples 100,  Prev: Examples 98,  Up: Image representation
+File: numerics.info,  Node: Examples 101,  Next: Examples 102,  Prev: Examples 100,  Up: Image representation
 
 1.3.3.36 Examples
 .................
@@ -4230,10 +4302,10 @@ File: numerics.info,  Node: Function np_rank a,  Next: Function np_trace a,  Pre
 
 * Menu:
 
-     * Examples: Examples 100.
+     * Examples: Examples 102.
 
 
-File: numerics.info,  Node: Examples 100,  Next: Examples 101,  Prev: Examples 99,  Up: Image representation
+File: numerics.info,  Node: Examples 102,  Next: Examples 103,  Prev: Examples 101,  Up: Image representation
 
 1.3.3.37 Examples
 .................
@@ -4258,10 +4330,10 @@ File: numerics.info,  Node: Function np_trace a,  Next: Function np_transpose a,
 
 * Menu:
 
-     * Examples: Examples 101.
+     * Examples: Examples 103.
 
 
-File: numerics.info,  Node: Examples 101,  Next: Examples 102,  Prev: Examples 100,  Up: Image representation
+File: numerics.info,  Node: Examples 103,  Next: Examples 104,  Prev: Examples 102,  Up: Image representation
 
 1.3.3.38 Examples
 .................
@@ -4286,10 +4358,10 @@ File: numerics.info,  Node: Function np_transpose a,  Next: Function np_conj a, 
 
 * Menu:
 
-     * Examples: Examples 102.
+     * Examples: Examples 104.
 
 
-File: numerics.info,  Node: Examples 102,  Next: Examples 103,  Prev: Examples 101,  Up: Image representation
+File: numerics.info,  Node: Examples 104,  Next: Examples 105,  Prev: Examples 103,  Up: Image representation
 
 1.3.3.39 Examples
 .................
@@ -4316,10 +4388,10 @@ File: numerics.info,  Node: Function np_conj a,  Next: Function np_ctranspose a,
 
 * Menu:
 
-     * Examples: Examples 103.
+     * Examples: Examples 105.
 
 
-File: numerics.info,  Node: Examples 103,  Next: Examples 104,  Prev: Examples 102,  Up: Image representation
+File: numerics.info,  Node: Examples 105,  Next: Examples 106,  Prev: Examples 104,  Up: Image representation
 
 1.3.3.40 Examples
 .................
@@ -4346,10 +4418,10 @@ File: numerics.info,  Node: Function np_ctranspose a,  Next: Function np_real a,
 
 * Menu:
 
-     * Examples: Examples 104.
+     * Examples: Examples 106.
 
 
-File: numerics.info,  Node: Examples 104,  Next: Examples 105,  Prev: Examples 103,  Up: Image representation
+File: numerics.info,  Node: Examples 106,  Next: Examples 107,  Prev: Examples 105,  Up: Image representation
 
 1.3.3.41 Examples
 .................
@@ -4372,10 +4444,10 @@ File: numerics.info,  Node: Function np_real a,  Next: Function np_imag a,  Prev
 
 * Menu:
 
-     * Examples: Examples 105.
+     * Examples: Examples 107.
 
 
-File: numerics.info,  Node: Examples 105,  Next: Examples 106,  Prev: Examples 104,  Up: Image representation
+File: numerics.info,  Node: Examples 107,  Next: Examples 108,  Prev: Examples 106,  Up: Image representation
 
 1.3.3.42 Examples
 .................
@@ -4398,10 +4470,10 @@ File: numerics.info,  Node: Function np_imag a,  Next: Function np_angle a,  Pre
 
 * Menu:
 
-     * Examples: Examples 106.
+     * Examples: Examples 108.
 
 
-File: numerics.info,  Node: Examples 106,  Next: Examples 107,  Prev: Examples 105,  Up: Image representation
+File: numerics.info,  Node: Examples 108,  Next: Examples 109,  Prev: Examples 107,  Up: Image representation
 
 1.3.3.43 Examples
 .................
@@ -4425,10 +4497,10 @@ File: numerics.info,  Node: Function np_angle a,  Next: Function np_expm a,  Pre
 
 * Menu:
 
-     * Examples: Examples 107.
+     * Examples: Examples 109.
 
 
-File: numerics.info,  Node: Examples 107,  Next: Examples 108,  Prev: Examples 106,  Up: Image representation
+File: numerics.info,  Node: Examples 109,  Next: Examples 110,  Prev: Examples 108,  Up: Image representation
 
 1.3.3.44 Examples
 .................
@@ -4459,10 +4531,10 @@ File: numerics.info,  Node: Function np_expm a,  Next: Function np_lstsq a b,  P
 
 * Menu:
 
-     * Examples: Examples 108.
+     * Examples: Examples 110.
 
 
-File: numerics.info,  Node: Examples 108,  Next: Examples 109,  Prev: Examples 107,  Up: Image representation
+File: numerics.info,  Node: Examples 110,  Next: Examples 111,  Prev: Examples 109,  Up: Image representation
 
 1.3.3.45 Examples
 .................
@@ -4515,10 +4587,10 @@ File: numerics.info,  Node: Function np_lstsq a b,  Next: Function np_pinv a,  P
 
 * Menu:
 
-     * Examples: Examples 109.
+     * Examples: Examples 111.
 
 
-File: numerics.info,  Node: Examples 109,  Next: Examples 110,  Prev: Examples 108,  Up: Image representation
+File: numerics.info,  Node: Examples 111,  Next: Examples 112,  Prev: Examples 110,  Up: Image representation
 
 1.3.3.46 Examples
 .................
@@ -4557,10 +4629,10 @@ File: numerics.info,  Node: Function np_pinv a,  Next: Function np_outer a b,  P
 
 * Menu:
 
-     * Examples: Examples 110.
+     * Examples: Examples 112.
 
 
-File: numerics.info,  Node: Examples 110,  Next: Examples 111,  Prev: Examples 109,  Up: Image representation
+File: numerics.info,  Node: Examples 112,  Next: Examples 113,  Prev: Examples 111,  Up: Image representation
 
 1.3.3.47 Examples
 .................
@@ -4591,10 +4663,10 @@ File: numerics.info,  Node: Function np_outer a b,  Prev: Function np_pinv a,  U
 
 * Menu:
 
-     * Examples: Examples 111.
+     * Examples: Examples 113.
 
 
-File: numerics.info,  Node: Examples 111,  Prev: Examples 110,  Up: Image representation
+File: numerics.info,  Node: Examples 113,  Prev: Examples 112,  Up: Image representation
 
 1.3.3.48 Examples
 .................
@@ -4653,6 +4725,7 @@ Appendix A Function and variable index
                                                                 (line 3)
 * np_cos:                                Function np_cos a.     (line 3)
 * np_cov:                                Function np_cov a.     (line 3)
+* np_cross:                              Function np_cross a b. (line 3)
 * np_ctranspose:                         Function np_ctranspose a.
                                                                 (line 3)
 * np_cumsum:                             Function np_cumsum a.  (line 3)
@@ -4748,6 +4821,7 @@ Appendix A Function and variable index
                                                                 (line 3)
 * np_minimize_cobyla <1>:                Function np_minimize_cobyla f vars x0 constraints rhobeg rhoend maxfun.
                                                                 (line 3)
+* np_mod:                                Function np_mod a b.   (line 3)
 * np_mul:                                Function np_mul a b.   (line 3)
 * np_neg:                                Function np_neg a.     (line 3)
 * np_norm:                               Function np_norm a / np_norm a ord.
@@ -4837,252 +4911,256 @@ Node: Linear algebra3576
 Node: Converting back to Maxima4039
 Node: Definitions for numerics4515
 Node: Conversion4705
-Node: Function ndarray a / ndarray a complex9109
-Node: Examples10587
-Node: Function ndarray_p x12278
-Node: Examples 212616
-Node: Function np_to_matrix a12947
-Node: Examples 313408
-Node: Function np_to_list a13914
-Node: Examples 414570
-Node: Function np_zeros shape / np_zeros shape dtype15060
-Node: Examples 515571
-Node: Function np_ones shape / np_ones shape dtype16123
-Node: Examples 616647
-Node: Function np_eye n / np_eye n m / np_eye n m dtype17195
-Node: Examples 717985
-Node: Function np_rand shape18464
-Node: Examples 818898
-Node: Function np_randn shape19301
-Node: Examples 919808
-Node: Function np_arange stop / np_arange start stop / np_arange start stop step20111
-Node: Examples 1020948
-Node: Function np_linspace start stop n21435
-Node: Examples 1121979
-Node: Function np_full shape val / np_full shape val dtype22378
-Node: Examples 1222916
-Node: Function np_empty shape / np_empty shape dtype23437
-Node: Examples 1324051
-Node: Function np_diag list / np_diag list dtype24446
-Node: Examples 1425001
-Node: Function np_copy a25521
-Node: Examples 1525914
-Node: Function np_logspace start stop n26428
-Node: Examples 1626888
-Node: Function np_ref a i27386
-Node: Examples 1727957
-Node: Function np_set a i j val28475
-Node: Examples 1829114
-Node: Function np_row a i29680
-Node: Examples 1930034
-Node: Function np_col a j30462
-Node: Examples 2030841
-Node: Function np_slice a spec0 spec1 ... specN31265
-Node: Examples 2132370
-Node: Function np_reshape a shape33781
-Node: Examples 2234231
-Node: Function np_flatten a34694
-Node: Examples 2335025
-Node: Function np_hstack a b35456
-Node: Examples 2435883
-Node: Function np_vstack a b36369
-Node: Examples 2536789
-Node: Function np_shape a37271
-Node: Examples 2637624
-Node: Function np_size a38018
-Node: Examples 2738264
-Node: Function np_dtype a38633
-Node: Examples 2838988
-Node: Function np_add a b39435
-Node: Examples 2939772
-Node: Function np_sub a b40276
-Node: Examples 3040602
-Node: Function np_mul a b41119
-Node: Examples 3141604
-Node: Function np_div a b42044
-Node: Examples 3242367
-Node: Function np_pow a p42870
-Node: Examples 3343254
-Node: Function np_sqrt a43694
-Node: Examples 3444025
-Node: Function np_exp a44367
-Node: Examples 3544713
-Node: Function np_log a45178
-Node: Examples 3645539
-Node: Function np_sin a45903
-Node: Examples 3746226
-Node: Function np_cos a46634
-Node: Examples 3846961
-Node: Function np_tan a47301
-Node: Examples 3947631
-Node: Function np_asin a47957
-Node: Examples 4048376
-Node: Function np_acos a48737
-Node: Examples 4149157
-Node: Function np_atan a49518
-Node: Examples 4249917
-Node: Function np_atan2 y x50276
-Node: Examples 4350784
-Node: Function np_log2 a51289
-Node: Examples 4451662
-Node: Function np_log10 a52000
-Node: Examples 4552373
-Node: Function np_sign a52717
-Node: Examples 4653041
-Node: Function np_abs a53373
-Node: Examples 4753788
-Node: Function np_neg a54116
-Node: Examples 4854418
-Node: Function np_clip a lo hi54742
-Node: Examples 4955158
-Node: Function np_scale alpha a55509
-Node: Examples 5055860
-Node: Function np_map f a56287
-Node: Examples 5157492
-Node: Function np_map2 f a b58367
-Node: Examples 5259041
-Node: Function np_where condition / np_where condition x y59562
-Node: Examples 5360488
-Node: Function np_greater a b61544
-Node: Examples 5462059
-Node: Function np_greater_equal a b62596
-Node: Function np_less a b62949
-Node: Function np_less_equal a b63283
-Node: Function np_equal a b63625
-Node: Function np_not_equal a b63925
-Node: Function np_logical_and a b64227
-Node: Examples 5564528
-Node: Function np_logical_or a b64961
-Node: Function np_logical_not a65274
-Node: Function np_test f a65574
-Node: Examples 5666465
-Node: Function np_extract mask a66983
-Node: Examples 5767544
-Node: Function np_fft a68407
-Node: Examples 5869002
-Node: Function np_ifft a69973
-Node: Examples 5970638
-Node: Function np_fft2d a71106
-Node: Examples 6071804
-Node: Function np_ifft2d a72418
-Node: Examples 6173122
-Node: Function np_convolve a b73631
-Node: Examples 6274129
-Node: Function np_convolve2d a kernel75006
-Node: Examples 6375703
-Node: Loading the module76984
-Node: Image representation77203
-Node: Function np_read_image path78465
-Node: Examples 6478936
-Node: Function np_write_image a path79278
-Node: Examples 6579740
-Node: Function np_imshow a80049
-Node: Examples 6680517
-Node: Function np_mandrill80941
-Node: Examples 6781422
-Node: Function np_to_image a81884
-Node: Examples 6882386
-Node: Function np_from_image img82663
-Node: Examples 6983122
-Node: Function np_sum a83456
-Node: Examples 7084161
-Node: Function np_mean a84629
-Node: Examples 7185249
-Node: Function np_min a / np_min a axis85729
-Node: Examples 7286537
-Node: Function np_max a / np_max a axis87004
-Node: Examples 7387834
-Node: Function np_argmin a / np_argmin a axis88303
-Node: Examples 7489158
-Node: Function np_argmax a / np_argmax a axis89635
-Node: Examples 7590490
-Node: Function np_var a / np_var a axis90967
-Node: Examples 7691751
-Node: Function np_std a / np_std a axis92218
-Node: Examples 7793033
-Node: Function np_cumsum a93507
-Node: Examples 7893891
-Node: Function np_dot a b94287
-Node: Examples 7994644
-Node: Function np_sort a / np_sort a axis95077
-Node: Examples 8095960
-Node: Function np_argsort a / np_argsort a axis96571
-Node: Examples 8197465
-Node: Function np_trapz y / np_trapz y x98079
-Node: Examples 8298785
-Node: Function np_diff a99403
-Node: Examples 8399807
-Node: Function np_cov a100294
-Node: Examples 84100767
-Node: Function np_corrcoef a101389
-Node: Examples 85101913
-Node: Function np_minimize expr vars x0102928
-Node: Function np_minimize expr vars x0 tolerance max_iter103146
-Node: Function np_minimize f grad x0103393
-Node: Function np_minimize f grad x0 tolerance max_iter103632
-Node: Examples 86105219
-Node: Function np_compile_gradient expr vars108106
-Node: Function np_minimize_cobyla f vars x0 constraints110239
-Node: Function np_minimize_cobyla f vars x0 constraints rhobeg rhoend maxfun110524
-Node: Examples 87112052
-Node: Function np_fsolve fcns vars x0112996
-Node: Function np_fsolve fcns vars x0 jacobian tolerance113256
-Node: Function np_fsolve f x0113490
-Node: Function np_fsolve f x0 tolerance113696
-Node: Examples 88115273
-Node: Function np_lsq_nonlinear fcns vars x0116480
-Node: Function np_lsq_nonlinear fcns vars x0 jacobian tolerance116724
-Node: Function np_lsq_nonlinear f x0116986
-Node: Function np_lsq_nonlinear f x0 tolerance117220
-Node: Examples 89118738
-Node: Function np_odeint f vars y0 tspan120124
-Node: Function np_odeint f vars y0 tspan rtol atol method120362
-Node: Function np_odeint f_func y0 tspan120614
-Node: Function np_odeint f_func y0 tspan rtol atol method120862
-Node: Examples 90122449
-Node: Function np_matmul a b124997
-Node: Examples 91125425
-Node: Function np_inv a125950
-Node: Examples 92126314
-Node: Function np_det a126854
-Node: Examples 93127166
-Node: Function np_solve a b127555
-Node: Examples 94127991
-Node: Function np_svd a128501
-Node: Examples 95129310
-Node: Function np_eig a130038
-Node: Examples 96130750
-Node: Function np_qr a131376
-Node: Examples 97131958
-Node: Function np_lu a132414
-Node: Examples 98132979
-Node: Function np_norm a / np_norm a ord133513
-Node: Examples 99134539
-Node: Function np_rank a135253
-Node: Examples 100135678
-Node: Function np_trace a136075
-Node: Examples 101136428
-Node: Function np_transpose a136824
-Node: Examples 102137195
-Node: Function np_conj a137676
-Node: Examples 103138191
-Node: Function np_ctranspose a138733
-Node: Examples 104139143
-Node: Function np_real a139512
-Node: Examples 105139888
-Node: Function np_imag a140264
-Node: Examples 106140627
-Node: Function np_angle a141003
-Node: Examples 107141420
-Node: Function np_expm a141813
-Node: Examples 108142600
-Node: Function np_lstsq a b143539
-Node: Examples 109144735
-Node: Function np_pinv a145443
-Node: Examples 110146156
-Node: Function np_outer a b146893
-Node: Examples 111147219
-Node: Function and variable index147807
+Node: Function ndarray a / ndarray a complex9159
+Node: Examples10637
+Node: Function ndarray_p x12360
+Node: Examples 212698
+Node: Function np_to_matrix a13029
+Node: Examples 313490
+Node: Function np_to_list a13996
+Node: Examples 414652
+Node: Function np_zeros shape / np_zeros shape dtype15142
+Node: Examples 515653
+Node: Function np_ones shape / np_ones shape dtype16205
+Node: Examples 616729
+Node: Function np_eye n / np_eye n m / np_eye n m dtype17277
+Node: Examples 718067
+Node: Function np_rand shape18546
+Node: Examples 818980
+Node: Function np_randn shape19383
+Node: Examples 919890
+Node: Function np_arange stop / np_arange start stop / np_arange start stop step20193
+Node: Examples 1021030
+Node: Function np_linspace start stop n21517
+Node: Examples 1122061
+Node: Function np_full shape val / np_full shape val dtype22460
+Node: Examples 1222998
+Node: Function np_empty shape / np_empty shape dtype23519
+Node: Examples 1324133
+Node: Function np_diag list / np_diag list dtype24528
+Node: Examples 1425083
+Node: Function np_copy a25603
+Node: Examples 1525996
+Node: Function np_logspace start stop n26510
+Node: Examples 1626970
+Node: Function np_ref a i27468
+Node: Examples 1728039
+Node: Function np_set a i j val28557
+Node: Examples 1829196
+Node: Function np_row a i29762
+Node: Examples 1930116
+Node: Function np_col a j30544
+Node: Examples 2030923
+Node: Function np_slice a spec0 spec1 ... specN31347
+Node: Examples 2132452
+Node: Function np_reshape a shape33863
+Node: Examples 2234313
+Node: Function np_flatten a34776
+Node: Examples 2335107
+Node: Function np_hstack a b35538
+Node: Examples 2435965
+Node: Function np_vstack a b36451
+Node: Examples 2536871
+Node: Function np_shape a37353
+Node: Examples 2637706
+Node: Function np_size a38100
+Node: Examples 2738346
+Node: Function np_dtype a38715
+Node: Examples 2839070
+Node: Function np_add a b39517
+Node: Examples 2939854
+Node: Function np_sub a b40358
+Node: Examples 3040684
+Node: Function np_mul a b41201
+Node: Examples 3141686
+Node: Function np_div a b42126
+Node: Examples 3242449
+Node: Function np_pow a p42952
+Node: Examples 3343337
+Node: Function np_mod a b43777
+Node: Examples 3444298
+Node: Function np_cross a b44797
+Node: Examples 3545333
+Node: Function np_sqrt a45867
+Node: Examples 3646200
+Node: Function np_exp a46542
+Node: Examples 3746888
+Node: Function np_log a47353
+Node: Examples 3847714
+Node: Function np_sin a48078
+Node: Examples 3948401
+Node: Function np_cos a48809
+Node: Examples 4049136
+Node: Function np_tan a49476
+Node: Examples 4149806
+Node: Function np_asin a50132
+Node: Examples 4250551
+Node: Function np_acos a50912
+Node: Examples 4351332
+Node: Function np_atan a51693
+Node: Examples 4452092
+Node: Function np_atan2 y x52451
+Node: Examples 4552959
+Node: Function np_log2 a53464
+Node: Examples 4653837
+Node: Function np_log10 a54175
+Node: Examples 4754548
+Node: Function np_sign a54892
+Node: Examples 4855216
+Node: Function np_abs a55548
+Node: Examples 4955963
+Node: Function np_neg a56291
+Node: Examples 5056593
+Node: Function np_clip a lo hi56917
+Node: Examples 5157333
+Node: Function np_scale alpha a57684
+Node: Examples 5258035
+Node: Function np_map f a58462
+Node: Examples 5359667
+Node: Function np_map2 f a b60542
+Node: Examples 5461216
+Node: Function np_where condition / np_where condition x y61737
+Node: Examples 5562663
+Node: Function np_greater a b63719
+Node: Examples 5664234
+Node: Function np_greater_equal a b64771
+Node: Function np_less a b65124
+Node: Function np_less_equal a b65458
+Node: Function np_equal a b65800
+Node: Function np_not_equal a b66100
+Node: Function np_logical_and a b66402
+Node: Examples 5766703
+Node: Function np_logical_or a b67136
+Node: Function np_logical_not a67449
+Node: Function np_test f a67749
+Node: Examples 5868640
+Node: Function np_extract mask a69158
+Node: Examples 5969719
+Node: Function np_fft a70582
+Node: Examples 6071177
+Node: Function np_ifft a72148
+Node: Examples 6172813
+Node: Function np_fft2d a73281
+Node: Examples 6273979
+Node: Function np_ifft2d a74593
+Node: Examples 6375297
+Node: Function np_convolve a b75806
+Node: Examples 6476304
+Node: Function np_convolve2d a kernel77181
+Node: Examples 6577878
+Node: Loading the module79159
+Node: Image representation79378
+Node: Function np_read_image path80642
+Node: Examples 6681113
+Node: Function np_write_image a path81455
+Node: Examples 6781917
+Node: Function np_imshow a82226
+Node: Examples 6882694
+Node: Function np_mandrill83118
+Node: Examples 6983599
+Node: Function np_to_image a84061
+Node: Examples 7084563
+Node: Function np_from_image img84840
+Node: Examples 7185299
+Node: Function np_sum a85633
+Node: Examples 7286338
+Node: Function np_mean a86806
+Node: Examples 7387426
+Node: Function np_min a / np_min a axis87906
+Node: Examples 7488714
+Node: Function np_max a / np_max a axis89181
+Node: Examples 7590011
+Node: Function np_argmin a / np_argmin a axis90480
+Node: Examples 7691335
+Node: Function np_argmax a / np_argmax a axis91812
+Node: Examples 7792667
+Node: Function np_var a / np_var a axis93144
+Node: Examples 7893928
+Node: Function np_std a / np_std a axis94395
+Node: Examples 7995210
+Node: Function np_cumsum a95684
+Node: Examples 8096068
+Node: Function np_dot a b96464
+Node: Examples 8196821
+Node: Function np_sort a / np_sort a axis97254
+Node: Examples 8298137
+Node: Function np_argsort a / np_argsort a axis98748
+Node: Examples 8399642
+Node: Function np_trapz y / np_trapz y x100256
+Node: Examples 84100962
+Node: Function np_diff a101580
+Node: Examples 85101984
+Node: Function np_cov a102471
+Node: Examples 86102944
+Node: Function np_corrcoef a103566
+Node: Examples 87104090
+Node: Function np_minimize expr vars x0105105
+Node: Function np_minimize expr vars x0 tolerance max_iter105323
+Node: Function np_minimize f grad x0105570
+Node: Function np_minimize f grad x0 tolerance max_iter105809
+Node: Examples 88107396
+Node: Function np_compile_gradient expr vars110283
+Node: Function np_minimize_cobyla f vars x0 constraints112416
+Node: Function np_minimize_cobyla f vars x0 constraints rhobeg rhoend maxfun112701
+Node: Examples 89114229
+Node: Function np_fsolve fcns vars x0115173
+Node: Function np_fsolve fcns vars x0 jacobian tolerance115433
+Node: Function np_fsolve f x0115667
+Node: Function np_fsolve f x0 tolerance115873
+Node: Examples 90117450
+Node: Function np_lsq_nonlinear fcns vars x0118657
+Node: Function np_lsq_nonlinear fcns vars x0 jacobian tolerance118901
+Node: Function np_lsq_nonlinear f x0119163
+Node: Function np_lsq_nonlinear f x0 tolerance119397
+Node: Examples 91120915
+Node: Function np_odeint f vars y0 tspan122301
+Node: Function np_odeint f vars y0 tspan rtol atol method122539
+Node: Function np_odeint f_func y0 tspan122791
+Node: Function np_odeint f_func y0 tspan rtol atol method123039
+Node: Examples 92124626
+Node: Function np_matmul a b127174
+Node: Examples 93127602
+Node: Function np_inv a128127
+Node: Examples 94128491
+Node: Function np_det a129031
+Node: Examples 95129343
+Node: Function np_solve a b129732
+Node: Examples 96130168
+Node: Function np_svd a130678
+Node: Examples 97131487
+Node: Function np_eig a132215
+Node: Examples 98132927
+Node: Function np_qr a133553
+Node: Examples 99134135
+Node: Function np_lu a134592
+Node: Examples 100135158
+Node: Function np_norm a / np_norm a ord135694
+Node: Examples 101136721
+Node: Function np_rank a137437
+Node: Examples 102137862
+Node: Function np_trace a138260
+Node: Examples 103138613
+Node: Function np_transpose a139009
+Node: Examples 104139380
+Node: Function np_conj a139861
+Node: Examples 105140376
+Node: Function np_ctranspose a140918
+Node: Examples 106141328
+Node: Function np_real a141697
+Node: Examples 107142073
+Node: Function np_imag a142449
+Node: Examples 108142812
+Node: Function np_angle a143188
+Node: Examples 109143605
+Node: Function np_expm a143998
+Node: Examples 110144785
+Node: Function np_lstsq a b145724
+Node: Examples 111146920
+Node: Function np_pinv a147628
+Node: Examples 112148341
+Node: Function np_outer a b149078
+Node: Examples 113149404
+Node: Function and variable index149992
 
 End Tag Table
 

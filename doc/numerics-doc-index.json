@@ -657,6 +657,35 @@
       ],
       "section": "Aggregation"
     },
+    "np_cross": {
+      "type": "Function",
+      "signature": "np_cross(a, b)",
+      "summary": "3D cross product.",
+      "body_md": "3D cross product.\n\nBoth `a` and `b` must be 1D ndarrays of length 3. Returns a 1D ndarray of length 3 perpendicular to both inputs. The result satisfies `np_dot(a, np_cross(a, b)) = 0`.\n\nEssential for orbital mechanics (angular momentum `L = r x v`), electromagnetic fields, and 3D geometry.\n\n#### Examples\n\n```maxima\n(%i1) A : ndarray([1.0, 0.0, 0.0], [3]);\n(%o1)            ndarray([3], DOUBLE-FLOAT)\n(%i2) B : ndarray([0.0, 1.0, 0.0], [3]);\n(%o2)            ndarray([3], DOUBLE-FLOAT)\n(%i3) np_to_list(np_cross(A, B));  /* i x j = k */\n(%o3)                  [0.0, 0.0, 1.0]\n(%i4) np_to_list(np_cross(B, A));  /* anti-commutative */\n(%o4)                 [0.0, 0.0, -1.0]\n```\n\nSee also: `np_dot`, `np_matmul`",
+      "examples": [
+        {
+          "input": "A : ndarray([1.0, 0.0, 0.0], [3]);",
+          "output": "ndarray([3], DOUBLE-FLOAT)"
+        },
+        {
+          "input": "B : ndarray([0.0, 1.0, 0.0], [3]);",
+          "output": "ndarray([3], DOUBLE-FLOAT)"
+        },
+        {
+          "input": "np_to_list(np_cross(A, B));  /* i x j = k */",
+          "output": "[0.0, 0.0, 1.0]"
+        },
+        {
+          "input": "np_to_list(np_cross(B, A));  /* anti-commutative */",
+          "output": "[0.0, 0.0, -1.0]"
+        }
+      ],
+      "see_also": [
+        "np_dot",
+        "np_matmul"
+      ],
+      "section": "Element-wise Operations"
+    },
     "np_ctranspose": {
       "type": "Function",
       "signature": "np_ctranspose(a)",
@@ -2098,6 +2127,34 @@
         "np_minimize"
       ],
       "section": "Optimization and Root Finding"
+    },
+    "np_mod": {
+      "type": "Function",
+      "signature": "np_mod(a, b)",
+      "summary": "Element-wise modulo (remainder after division).",
+      "body_md": "Element-wise modulo (remainder after division).\n\nReturns a new ndarray where each element is `mod(a, b)`, with the sign of the divisor. Supports ndarray + ndarray, ndarray + scalar, and scalar + ndarray.\n\nUseful for angle wrapping (e.g., `np_mod(angle, 2*%pi)` maps to `[0, 2*pi)`).\n\n#### Examples\n\n```maxima\n(%i1) A : ndarray([7, 10, 13], [3]);\n(%o1)            ndarray([3], DOUBLE-FLOAT)\n(%i2) np_to_list(np_mod(A, 5));\n(%o2)                  [2.0, 0.0, 3.0]\n(%i3) /* Wrap angles to [0, 2*pi) */\n      angles : ndarray([0, 7.0, -1.0, 13.0], [4])$\n(%i4) np_to_list(np_mod(angles, 2*float(%pi)));\n(%o4)       [0.0, 0.7168..., 5.2831..., 0.4336...]\n```\n\nSee also: `np_div`",
+      "examples": [
+        {
+          "input": "A : ndarray([7, 10, 13], [3]);",
+          "output": "ndarray([3], DOUBLE-FLOAT)"
+        },
+        {
+          "input": "np_to_list(np_mod(A, 5));",
+          "output": "[2.0, 0.0, 3.0]"
+        },
+        {
+          "input": "/* Wrap angles to [0, 2*pi) */\n      angles : ndarray([0, 7.0, -1.0, 13.0], [4])$",
+          "output": ""
+        },
+        {
+          "input": "np_to_list(np_mod(angles, 2*float(%pi)));",
+          "output": "[0.0, 0.7168..., 5.2831..., 0.4336...]"
+        }
+      ],
+      "see_also": [
+        "np_div"
+      ],
+      "section": "Element-wise Operations"
     },
     "np_mul": {
       "type": "Function",
