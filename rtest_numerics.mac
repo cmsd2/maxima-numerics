@@ -34,6 +34,12 @@ true;
 
 batch("tests/test_integrate.mac");
 
+/* RL/Learn tests require numerics-learn */
+(load("numerics-learn"), true);
+true;
+
+batch("tests/test_learn.mac");
+
 /* Cross-validation tests require lapack */
 (load("lapack"), true);
 true;

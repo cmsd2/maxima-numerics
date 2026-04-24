@@ -82,6 +82,22 @@
     :components
     ((:file "ode")))))
 
+;; RL algorithm shells (core only, no external deps)
+(defsystem "numerics/learn"
+  :description "RL algorithm shells for numerics ndarrays"
+  :version "0.1.0"
+  :license "MIT"
+  :depends-on ("numerics/core")
+  :serial t
+  :components
+  ((:module "learn"
+    :serial t
+    :components
+    ((:file "options")
+     (:file "cem")
+     (:file "rollout")
+     (:file "qlearn")))))
+
 ;; Image I/O system (core + opticl)
 (defsystem "numerics/image"
   :description "Image I/O and opticl interop for numerics"

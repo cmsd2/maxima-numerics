@@ -1,0 +1,240 @@
+/* Tests for numerics-learn (RL algorithm shells) */
+
+(load("numerics-learn"), load("tests/test_helpers"), true);
+true;
+
+/* ============================================================ */
+/* np_cem tests                                                  */
+/* ============================================================ */
+
+/* === 1. Sphere function converges near origin === */
+
+(
+  np_seed(42),
+  sphere(x) := np_sum(np_pow(x, 2)),
+  result : np_cem(sphere, 2, n_samples=50, n_elites=10, n_gens=30),
+  best : result[1],
+  hist : result[2],
+  true
+);
+true;
+
+/* Best params near zero */
+is(abs(np_ref(best, 0)) < 0.5);
+true;
+
+is(abs(np_ref(best, 1)) < 0.5);
+true;
+
+/* Best cost is small */
+is(sphere(best) < 0.5);
+true;
+
+/* Cost history shape matches n_gens */
+np_shape(hist);
+[30];
+
+/* Cost history is generally decreasing (last < first) */
+is(np_ref(hist, 29) <= np_ref(hist, 0));
+true;
+
+/* === 2. Shifted quadratic converges near target === */
+
+(
+  np_seed(42),
+  shifted(x) := np_sum(np_pow(np_sub(x, ndarray([3.0, 5.0])), 2)),
+  result2 : np_cem(shifted, 2, n_samples=80, n_elites=15, n_gens=50, sigma0=2.0),
+  best2 : result2[1],
+  is(abs(np_ref(best2, 0) - 3.0) < 1.0 and abs(np_ref(best2, 1) - 5.0) < 1.0)
+);
+true;
+
+/* === 3. Lambda cost function works === */
+
+(
+  np_seed(42),
+  result3 : np_cem(lambda([x], np_sum(np_pow(x, 2))), 2,
+                   n_samples=50, n_elites=10, n_gens=25),
+  best3 : result3[1],
+  is(np_sum(np_pow(best3, 2)) < 1.0)
+);
+true;
+
+/* === 4. Custom mu0 respected === */
+
+(
+  np_seed(42),
+  mu_init : ndarray([10.0, 10.0]),
+  result4 : np_cem(sphere, 2, n_samples=50, n_elites=10, n_gens=5, mu0=mu_init),
+  best4 : result4[1],
+  /* After only 5 generations starting from [10,10], should be closer to origin than [10,10] */
+  is(np_sum(np_pow(best4, 2)) < 200.0)
+);
+true;
+
+/* === 5. Return shapes correct === */
+
+(
+  np_seed(42),
+  result5 : np_cem(sphere, 3, n_samples=20, n_elites=5, n_gens=10),
+  np_shape(result5[1])
+);
+[3];
+
+/* === 6. Error on non-callable cost_fn === */
+
+errcatch(np_cem(42, 2));
+[];
+
+/* ============================================================ */
+/* np_rollout tests                                              */
+/* ============================================================ */
+
+/* === 7. Linear walk with terminal state === */
+
+(
+  /* State moves by action, reward = -state^2, done when |state| > 5 */
+  walk_step(s, a) := [s + a, -s^2, is(abs(s + a) > 5)],
+  walk_policy(s) := 1.0,
+  result6 : np_rollout(walk_step, walk_policy, 0.0, 100),
+  states6  : result6[1],
+  actions6 : result6[2],
+  rewards6 : result6[3],
+  len6     : result6[4],
+  true
+);
+true;
+
+/* Terminates before horizon (|state| > 5 after ~6 steps) */
+is(len6 < 100);
+true;
+
+/* States list length = len + 1 (includes initial state) */
+is(length(states6) = len6 + 1);
+true;
+
+/* First state is 0.0 */
+closeto(states6[1], 0.0);
+true;
+
+/* Actions list length = len */
+is(length(actions6) = len6);
+true;
+
+/* Rewards is an ndarray */
+is(np_size(rewards6) = len6);
+true;
+
+/* === 8. Horizon truncation when no terminal === */
+
+(
+  /* Step never terminates */
+  no_end_step(s, a) := [s + a, 1.0, false],
+  result7 : np_rollout(no_end_step, walk_policy, 0.0, 10),
+  result7[4]
+);
+10;
+
+/* === 9. Lambda step/policy work === */
+
+(
+  result8 : np_rollout(
+    lambda([s, a], [s + a, -1.0, is(s > 3)]),
+    lambda([s], 1.0),
+    0.0, 20),
+  is(result8[4] > 0 and result8[4] <= 20)
+);
+true;
+
+/* === 10. Rewards feed into np_discount === */
+
+(
+  result9 : np_rollout(no_end_step, walk_policy, 0.0, 5),
+  rew : result9[3],
+  returns : np_discount(rew, 0.99),
+  /* All rewards are 1.0, so first discounted return should be > last */
+  is(np_ref(returns, 0) > np_ref(returns, np_size(returns) - 1))
+);
+true;
+
+/* === 11. Error on non-callable step_fn === */
+
+errcatch(np_rollout(42, walk_policy, 0.0, 10));
+[];
+
+/* ============================================================ */
+/* np_qlearn tests                                               */
+/* ============================================================ */
+
+/* === 12. Trivial 2-state MDP: state 0 → action 0 → reward 1.0 (done) === */
+
+(
+  np_seed(42),
+  trivial_step(s, a) := [0, if s = 0 and a = 0 then 1.0 else 0.0, true],
+  result10 : np_qlearn(trivial_step, 2, 2,
+                        n_episodes=200, alpha=0.1, discount=0.99, max_steps=1),
+  Q : result10[1],
+  /* Q[0,0] should be positive (learned the reward) */
+  is(np_ref(Q, 0, 0) > 0.0)
+);
+true;
+
+/* === 13. 3-state chain: 0→1→2(goal), action 0 = right === */
+
+(
+  np_seed(42),
+  chain_step(s, a) := block([ns, r, d],
+    ns : if a = 0 then min(s + 1, 2) else max(s - 1, 0),
+    r  : if ns = 2 then 10.0 else -0.1,
+    d  : is(ns = 2),
+    [ns, r, d]),
+  result11 : np_qlearn(chain_step, 3, 2,
+                        n_episodes=300, alpha=0.2, discount=0.9),
+  Q2 : result11[1],
+  /* State 0: action 0 (right) should be better than action 1 (left) */
+  is(np_ref(Q2, 0, 0) > np_ref(Q2, 0, 1))
+);
+true;
+
+/* === 14. Q-table shape is [n_states, n_actions] === */
+
+np_shape(Q2);
+[3, 2];
+
+/* === 15. Episode rewards shape matches n_episodes === */
+
+np_shape(result11[2]);
+[300];
+
+/* === 16. Episode lengths shape matches n_episodes === */
+
+np_shape(result11[3]);
+[300];
+
+/* === 17. Callable s0 works === */
+
+(
+  np_seed(42),
+  /* Always start from state 0 via callable */
+  start_fn() := 0,
+  result12 : np_qlearn(trivial_step, 2, 2,
+                        n_episodes=50, max_steps=1, start_state=start_fn),
+  is(np_ref(result12[1], 0, 0) > 0)
+);
+true;
+
+/* === 18. Custom hyperparameters respected (epsilon=0 means greedy from start) === */
+
+(
+  np_seed(42),
+  result13 : np_qlearn(trivial_step, 2, 2,
+                        n_episodes=100, epsilon=0.0, max_steps=1),
+  /* With epsilon=0, purely greedy — Q[0,0] may not learn if initial Q=0 gives action 0 by default */
+  is(np_shape(result13[1]) = [2, 2])
+);
+true;
+
+/* === 19. Error on non-callable step_fn === */
+
+errcatch(np_qlearn(42, 5, 2));
+[];

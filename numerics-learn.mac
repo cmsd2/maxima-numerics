@@ -1,0 +1,7 @@
+/* numerics-learn — RL algorithm shells for Maxima ndarrays */
+/* Requires numerics to be loaded first: load("numerics")$ */
+
+if not fboundp('np_zeros) then
+  error("numerics-learn requires numerics. Load it first: load(\"numerics\")$")$
+
+load("numerics-learn-loader.lisp")$
