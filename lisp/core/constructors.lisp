@@ -183,7 +183,7 @@
      (numerics:make-ndarray
       (magicl:from-list vals dims :type 'double-float :layout :column-major)))))
 
-(defun $np_choice (a n &optional replace-arg)
+(defun $np_choice (a n &optional (replace-arg '$not_supplied))
   "Sample n elements from a 1D ndarray.
    np_choice(a, 5)        — 5 samples with replacement (default)
    np_choice(a, 5, true)  — 5 samples with replacement
@@ -193,9 +193,11 @@
          (flat (numerics-flat-array tensor))
          (m (length flat))
          (k (truncate n))
-         (with-replacement (or (null replace-arg)
-                               (eq replace-arg t)
-                               (and (numberp replace-arg) (not (zerop replace-arg))))))
+         ;; Maxima false = Lisp NIL, so we use a sentinel default to
+         ;; distinguish "not supplied" from explicit false/NIL.
+         (with-replacement (if (eq replace-arg '$not_supplied)
+                               t  ;; default: with replacement
+                               (not (null replace-arg)))))
     (when (and (not with-replacement) (> k m))
       (merror "np_choice: cannot sample ~D from array of size ~D without replacement" k m))
     (let ((vals (if with-replacement
