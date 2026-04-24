@@ -105,4 +105,5 @@ All element-wise functions support ndarray-ndarray and ndarray-scalar combinatio
 <!-- include: aggregation.md -->
 <!-- include: optimize.md -->
 <!-- include: integrate.md -->
+<!-- include: learn.md -->
 <!-- include: linalg.md -->
