@@ -1,7 +1,5 @@
 /* Tests for 2D FFT: np_fft2d, np_ifft2d */
 
-(load("tests/test_helpers"), true);
-true;
 
 /* === Round-trip: ifft2d(fft2d(A)) ≈ A === */
 

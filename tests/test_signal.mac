@@ -1,7 +1,5 @@
 /* Tests for signal processing: np_fft, np_ifft, np_convolve, np_clip */
 
-(load("tests/test_helpers"), true);
-true;
 
 /* === np_clip === */
 

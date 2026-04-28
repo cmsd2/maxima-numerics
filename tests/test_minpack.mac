@@ -1,7 +1,5 @@
 /* Tests for np_fsolve and np_lsq_nonlinear (MINPACK wrappers) */
 
-(load("numerics-optimize"), load("tests/test_helpers"), true);
-true;
 
 /* ======================== np_fsolve ======================== */
 

@@ -1,7 +1,5 @@
 /* Tests for indexing, slicing, and concatenation */
 
-(load("tests/test_helpers"), true);
-true;
 
 /* === Row and column extraction === */
 

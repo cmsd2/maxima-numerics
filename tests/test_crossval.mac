@@ -1,11 +1,5 @@
-/* Cross-validation tests: numerics vs LAPACK and Maxima builtins */
-
-(load("tests/test_helpers"), true);
-true;
-
-/* lapack is needed for cross-validation */
-(load("lapack"), true);
-true;
+/* Cross-validation tests: numerics vs LAPACK and Maxima builtins.
+ * numerics, lapack and test_helpers are loaded by rtest_numerics.mac. */
 
 /* === Solve: np_solve vs dgesv === */
 

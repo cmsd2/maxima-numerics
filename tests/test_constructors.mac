@@ -1,7 +1,5 @@
 /* Tests for constructors, conversion, and shape operations */
 
-(load("tests/test_helpers"), true);
-true;
 
 /* === Constructors === */
 

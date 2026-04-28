@@ -1,7 +1,5 @@
 /* Tests for np_odeint (ODE integration via ODEPACK) */
 
-(load("numerics-integrate"), load("tests/test_helpers"), true);
-true;
 
 /* === 1. Exponential decay: dy/dt = -y, y(0) = 1 === */
 /* Exact solution: y(t) = exp(-t) */

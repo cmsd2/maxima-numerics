@@ -1,7 +1,5 @@
 /* Tests for np_minimize (L-BFGS optimization) */
 
-(load("numerics-optimize"), load("tests/test_helpers"), true);
-true;
 
 /* === 1. Simple quadratic: f(x) = x1^2 + x2^2, minimum at origin === */
 

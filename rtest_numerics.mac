@@ -1,47 +1,69 @@
-/* Tests for numerics -- run with: maxima --very-quiet -b rtest_numerics.mac */
+/* Tests for numerics -- run with: maxima --very-quiet -b rtest_numerics.mac
+ *
+ * Test files are run under snapshot/rollback isolation so user-namespace
+ * state from one file does not leak into the next.  See
+ * tests/test_harness.mac for the mechanics.
+ *
+ * When batched in test mode, every form is paired with the following form
+ * as its expected result.  We therefore wrap each mxpm_run_tests call as
+ * `(mxpm_run_tests(...), true); true;' so each one counts as a valid
+ * input/expected pair.  Sub-file pass/fail totals are emitted by the
+ * nested batch() calls inside mxpm_run_tests and picked up separately.
+ */
 
 /* === Loading === */
 
 (load("numerics"), true);
 true;
 
-/* Float comparison helpers */
 (load("tests/test_helpers"), true);
 true;
 
-/* === Test suites === */
+(load("tests/test_harness"), true);
+true;
 
-batch("tests/test_constructors.mac");
-batch("tests/test_linalg.mac");
-batch("tests/test_elementwise.mac");
-batch("tests/test_signal.mac");
-batch("tests/test_fft2d.mac");
-batch("tests/test_slicing.mac");
-batch("tests/test_aggregation.mac");
-batch("tests/test_complex.mac");
+/* === Core test suites === */
 
-/* Optimization tests require numerics-optimize */
+(mxpm_run_tests("tests/test_constructors.mac",
+                "tests/test_linalg.mac",
+                "tests/test_elementwise.mac",
+                "tests/test_signal.mac",
+                "tests/test_fft2d.mac",
+                "tests/test_slicing.mac",
+                "tests/test_aggregation.mac",
+                "tests/test_complex.mac"), true);
+true;
+
+/* === Optimization (requires numerics-optimize) === */
+
 (load("numerics-optimize"), true);
 true;
 
-batch("tests/test_optimize.mac");
-batch("tests/test_cobyla.mac");
-batch("tests/test_minpack.mac");
+(mxpm_run_tests("tests/test_optimize.mac",
+                "tests/test_cobyla.mac",
+                "tests/test_minpack.mac"), true);
+true;
 
-/* Integration tests require numerics-integrate */
+/* === Integration (requires numerics-integrate) === */
+
 (load("numerics-integrate"), true);
 true;
 
-batch("tests/test_integrate.mac");
+(mxpm_run_tests("tests/test_integrate.mac"), true);
+true;
 
-/* RL/Learn tests require numerics-learn */
+/* === RL/Learn (requires numerics-learn) === */
+
 (load("numerics-learn"), true);
 true;
 
-batch("tests/test_learn.mac");
+(mxpm_run_tests("tests/test_learn.mac"), true);
+true;
 
-/* Cross-validation tests require lapack */
+/* === Cross-validation (requires lapack) === */
+
 (load("lapack"), true);
 true;
 
-batch("tests/test_crossval.mac");
+(mxpm_run_tests("tests/test_crossval.mac"), true);
+true;

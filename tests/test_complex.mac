@@ -1,7 +1,5 @@
 /* Tests for complex number support */
 
-(load("tests/test_helpers"), true);
-true;
 
 /* === Complex array creation === */
 

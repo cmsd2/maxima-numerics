@@ -1,7 +1,5 @@
 /* Tests for linear algebra operations */
 
-(load("tests/test_helpers"), true);
-true;
 
 /* === Basic linear algebra === */
 

@@ -1,7 +1,5 @@
 /* Tests for numerics-learn (RL algorithm shells) */
 
-(load("numerics-learn"), load("tests/test_helpers"), true);
-true;
 
 /* ============================================================ */
 /* np_cem tests                                                  */

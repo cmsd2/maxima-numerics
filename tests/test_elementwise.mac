@@ -1,7 +1,5 @@
 /* Tests for element-wise operations, comparisons, logical ops, and mapping */
 
-(load("tests/test_helpers"), true);
-true;
 
 /* === Basic element-wise operations === */
 

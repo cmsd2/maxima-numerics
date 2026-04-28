@@ -1,7 +1,5 @@
 /* Tests for aggregation functions */
 
-(load("tests/test_helpers"), true);
-true;
 
 /* === Basic aggregation === */
 

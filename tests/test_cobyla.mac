@@ -1,7 +1,5 @@
 /* Tests for np_minimize_cobyla (COBYLA constrained optimization) */
 
-(load("numerics-optimize"), load("tests/test_helpers"), true);
-true;
 
 /* === 1. Minimize u1*u2 on unit circle: u1^2+u2^2 <= 1 === */
 /* Optimum: u1 = 1/sqrt(2), u2 = -1/sqrt(2), f = -0.5 */
