@@ -1751,6 +1751,48 @@
       "see_also": [],
       "section": "Constructors"
     },
+    "np_lqr": {
+      "type": "Function",
+      "signature": "np_lqr(a, b, q, r)",
+      "summary": "Continuous-time linear-quadratic regulator.",
+      "body_md": "Continuous-time linear-quadratic regulator.\n\nReturns the optimal feedback gain matrix `K` such that the control law `u = -K x` minimises the cost functional\n\n$$J = \\int_0^\\infty \\left( x^\\top Q\\, x + u^\\top R\\, u \\right) dt$$\n\nfor the linear time-invariant system $\\dot x = A x + B u$.\n\n**Arguments:**\n- `a` — `n x n` state matrix (ndarray)\n- `b` — `n x m` input matrix (ndarray)\n- `q` — `n x n` symmetric positive-semidefinite state-penalty matrix (ndarray)\n- `r` — `m x m` symmetric positive-definite input-penalty matrix (ndarray)\n\n**Returns:** `m x n` ndarray containing the gain matrix $K = R^{-1} B^\\top P$, where $P$ is the unique stabilising solution of the continuous-time algebraic Riccati equation $A^\\top P + P A - P B R^{-1} B^\\top P + Q = 0$.\n\n**Method.** Forms the Hamiltonian\n$$H = \\begin{bmatrix} A & -B R^{-1} B^\\top \\\\ -Q & -A^\\top \\end{bmatrix}$$\n(size $2n \\times 2n$), eigendecomposes it, selects the $n$ eigenvectors whose eigenvalues have negative real parts, partitions $V = [V_{\\text{top}};\\, V_{\\text{bot}}]$, and computes $P = V_{\\text{bot}} V_{\\text{top}}^{-1}$.\n\n**Numerical note.** This eigenvalue method is straightforward but can lose digits on near-singular Hamiltonians. The standard robust alternative is the Hamiltonian Schur form, which requires a real Schur decomposition primitive that `numerics` does not yet provide. For well-conditioned hobbyist-scale problems the eigenvalue method is fine; if your closed-loop eigenvalues come out clearly far from the imaginary axis, you can trust the result.\n\n`np_lqr` errors out if the Hamiltonian doesn't have exactly $n$ eigenvalues with strictly negative real parts — typically a sign that $(A, B)$ is not stabilisable or $(A, \\sqrt{Q})$ is not detectable, or that $Q$ or $R$ is ill-formed.\n\n#### Examples\n\nDouble integrator with unit weights — closed-form $K = [1,\\, \\sqrt 3]$, closed-loop poles at $-\\sqrt 3/2 \\pm j/2$:\n\n```maxima\n(%i1) A : ndarray(matrix([0.0, 1.0], [0.0, 0.0]));\n(%o1)            ndarray([2, 2], DOUBLE-FLOAT)\n(%i2) B : ndarray(matrix([0.0], [1.0]));\n(%o2)            ndarray([2, 1], DOUBLE-FLOAT)\n(%i3) K : np_lqr(A, B, ndarray(matrix([1.0,0.0],[0.0,1.0])),\n                       ndarray(matrix([1.0])));\n(%o3)            ndarray([1, 2], DOUBLE-FLOAT)\n(%i4) np_to_list(np_reshape(K, [2]));\n(%o4)         [1.0, 1.7320508075688772]\n```\n\nStable plant with `Q = 0` — optimal control is to do nothing, so $K = 0$:\n\n```maxima\n(%i1) A : ndarray(matrix([-1.0, 0.0], [0.0, -2.0]));\n(%o1)            ndarray([2, 2], DOUBLE-FLOAT)\n(%i2) B : ndarray(matrix([1.0, 0.0], [0.0, 1.0]));\n(%o2)            ndarray([2, 2], DOUBLE-FLOAT)\n(%i3) K : np_lqr(A, B, np_zeros([2,2]), B);\n(%o3)            ndarray([2, 2], DOUBLE-FLOAT)\n(%i4) np_norm(K);\n(%o4)                  0.0\n```\n\n#### See also\n`np_eig` — used internally to factor the Hamiltonian.",
+      "examples": [
+        {
+          "input": "A : ndarray(matrix([0.0, 1.0], [0.0, 0.0]));",
+          "output": "ndarray([2, 2], DOUBLE-FLOAT)"
+        },
+        {
+          "input": "B : ndarray(matrix([0.0], [1.0]));",
+          "output": "ndarray([2, 1], DOUBLE-FLOAT)"
+        },
+        {
+          "input": "K : np_lqr(A, B, ndarray(matrix([1.0,0.0],[0.0,1.0])),\n                       ndarray(matrix([1.0])));",
+          "output": "ndarray([1, 2], DOUBLE-FLOAT)"
+        },
+        {
+          "input": "np_to_list(np_reshape(K, [2]));",
+          "output": "[1.0, 1.7320508075688772]"
+        },
+        {
+          "input": "A : ndarray(matrix([-1.0, 0.0], [0.0, -2.0]));",
+          "output": "ndarray([2, 2], DOUBLE-FLOAT)"
+        },
+        {
+          "input": "B : ndarray(matrix([1.0, 0.0], [0.0, 1.0]));",
+          "output": "ndarray([2, 2], DOUBLE-FLOAT)"
+        },
+        {
+          "input": "K : np_lqr(A, B, np_zeros([2,2]), B);",
+          "output": "ndarray([2, 2], DOUBLE-FLOAT)"
+        },
+        {
+          "input": "np_norm(K);",
+          "output": "0.0"
+        }
+      ],
+      "see_also": [],
+      "section": "Control Systems"
+    },
     "np_lsq_nonlinear": {
       "type": "Function",
       "signature": "np_lsq_nonlinear(f, x0, tolerance)",
@@ -3799,6 +3841,10 @@
         },
         {
           "title": "Linear Algebra",
+          "body_md": ""
+        },
+        {
+          "title": "Control Systems",
           "body_md": ""
         }
       ]

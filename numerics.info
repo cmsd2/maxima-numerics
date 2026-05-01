@@ -4413,6 +4413,7 @@ lines of user code.  ## Linear Algebra
 * Function np_lstsq a b::
 * Function np_pinv a::
 * Function np_outer a b::
+* Function np_lqr a b q r::
 
 
 File: numerics.info,  Node: Function np_matmul a b,  Next: Function np_inv a,  Up: Design Notes
@@ -4466,6 +4467,8 @@ See also: ‘np_dot’, ‘np_inv’, ‘np_solve’
 * Examples 122::
 * Examples 123::
 * Examples 124::
+* Examples 125::
+* See also::
 
 
 File: numerics.info,  Node: Function np_inv a,  Next: Function np_det a,  Prev: Function np_matmul a b,  Up: Design Notes
@@ -5120,7 +5123,7 @@ File: numerics.info,  Node: Examples 123,  Next: Examples 124,  Prev: Examples 1
 See also: ‘np_inv’, ‘np_lstsq’, ‘np_svd’
 
 
-File: numerics.info,  Node: Function np_outer a b,  Prev: Function np_pinv a,  Up: Design Notes
+File: numerics.info,  Node: Function np_outer a b,  Next: Function np_lqr a b q r,  Prev: Function np_pinv a,  Up: Design Notes
 
  -- Function: np_outer (A, B)
      Outer product of two 1D ndarrays.
@@ -5133,7 +5136,7 @@ File: numerics.info,  Node: Function np_outer a b,  Prev: Function np_pinv a,  U
      * Examples: Examples 124.
 
 
-File: numerics.info,  Node: Examples 124,  Prev: Examples 123,  Up: Examples 104
+File: numerics.info,  Node: Examples 124,  Next: Examples 125,  Prev: Examples 123,  Up: Examples 104
 
 1.6.1.20 Examples
 .................
@@ -5148,7 +5151,93 @@ File: numerics.info,  Node: Examples 124,  Prev: Examples 123,  Up: Examples 104
 (%i4) np_det(np_outer(v, v));
 (%o4)                          0.0
 
-See also: ‘np_matmul’, ‘np_dot’
+See also: ‘np_matmul’, ‘np_dot’ ## Control Systems
+
+
+File: numerics.info,  Node: Function np_lqr a b q r,  Prev: Function np_outer a b,  Up: Design Notes
+
+ -- Function: np_lqr (A, B, Q, R)
+     Continuous-time linear-quadratic regulator.
+
+     Returns the optimal feedback gain matrix ‘K’ such that the control
+     law ‘u = -K x’ minimises the cost functional
+
+     J = \int_0^\infty \left( x^\top Q\, x + u^\top R\, u \right) dt
+
+     for the linear time-invariant system \dot x = A x + B u.
+
+     *Arguments:* - ‘a’ -- ‘n x n’ state matrix (ndarray) - ‘b’ -- ‘n x
+     m’ input matrix (ndarray) - ‘q’ -- ‘n x n’ symmetric
+     positive-semidefinite state-penalty matrix (ndarray) - ‘r’ -- ‘m x
+     m’ symmetric positive-definite input-penalty matrix (ndarray)
+
+     *Returns:* ‘m x n’ ndarray containing the gain matrix K = R^{-1}
+     B^\top P, where P is the unique stabilising solution of the
+     continuous-time algebraic Riccati equation A^\top P + P A - P B
+     R^{-1} B^\top P + Q = 0.
+
+     *Method.*  Forms the Hamiltonian H = \begin{bmatrix} A & -B R^{-1}
+     B^\top \\ -Q & -A^\top \end{bmatrix} (size 2n \times 2n),
+     eigendecomposes it, selects the n eigenvectors whose eigenvalues
+     have negative real parts, partitions V = [V_{\text{top}};\,
+     V_{\text{bot}}], and computes P = V_{\text{bot}}
+     V_{\text{top}}^{-1}.
+
+     *Numerical note.*  This eigenvalue method is straightforward but
+     can lose digits on near-singular Hamiltonians.  The standard robust
+     alternative is the Hamiltonian Schur form, which requires a real
+     Schur decomposition primitive that ‘numerics’ does not yet provide.
+     For well-conditioned hobbyist-scale problems the eigenvalue method
+     is fine; if your closed-loop eigenvalues come out clearly far from
+     the imaginary axis, you can trust the result.
+
+     ‘np_lqr’ errors out if the Hamiltonian doesn't have exactly n
+     eigenvalues with strictly negative real parts -- typically a sign
+     that (A, B) is not stabilisable or (A, \sqrt{Q}) is not detectable,
+     or that Q or R is ill-formed.
+
+* Menu:
+
+     * Examples: Examples 125.
+     * See also::
+
+
+File: numerics.info,  Node: Examples 125,  Next: See also,  Prev: Examples 124,  Up: Examples 104
+
+1.6.1.21 Examples
+.................
+
+Double integrator with unit weights -- closed-form K = [1,\, \sqrt 3],
+closed-loop poles at -\sqrt 3/2 \pm j/2:
+
+(%i1) A : ndarray(matrix([0.0, 1.0], [0.0, 0.0]));
+(%o1)            ndarray([2, 2], DOUBLE-FLOAT)
+(%i2) B : ndarray(matrix([0.0], [1.0]));
+(%o2)            ndarray([2, 1], DOUBLE-FLOAT)
+(%i3) K : np_lqr(A, B, ndarray(matrix([1.0,0.0],[0.0,1.0])),
+                       ndarray(matrix([1.0])));
+(%o3)            ndarray([1, 2], DOUBLE-FLOAT)
+(%i4) np_to_list(np_reshape(K, [2]));
+(%o4)         [1.0, 1.7320508075688772]
+
+Stable plant with ‘Q = 0’ -- optimal control is to do nothing, so K = 0:
+
+(%i1) A : ndarray(matrix([-1.0, 0.0], [0.0, -2.0]));
+(%o1)            ndarray([2, 2], DOUBLE-FLOAT)
+(%i2) B : ndarray(matrix([1.0, 0.0], [0.0, 1.0]));
+(%o2)            ndarray([2, 2], DOUBLE-FLOAT)
+(%i3) K : np_lqr(A, B, np_zeros([2,2]), B);
+(%o3)            ndarray([2, 2], DOUBLE-FLOAT)
+(%i4) np_norm(K);
+(%o4)                  0.0
+
+
+File: numerics.info,  Node: See also,  Prev: Examples 125,  Up: Examples 104
+
+1.6.1.22 See also
+.................
+
+‘np_eig’ -- used internally to factor the Hamiltonian.
 
 
 File: numerics.info,  Node: Function and variable index,  Prev: Package numerics,  Up: Top
@@ -5259,6 +5348,8 @@ Appendix A Function and variable index
 * np_logical_or:                         Function np_logical_or a b.
                                                                 (line 3)
 * np_logspace:                           Function np_logspace start stop n.
+                                                                (line 3)
+* np_lqr:                                Function np_lqr a b q r.
                                                                 (line 3)
 * np_lsq_nonlinear:                      Function np_lsq_nonlinear fcns vars x0.
                                                                 (line 3)
@@ -5627,49 +5718,52 @@ Node: np_rolloutstep_fn policy_fn s0 horizon --- Episode Collection137192
 Node: np_qlearnstep_fn n_states n_actions --- Tabular Q-Learning138293
 Node: Option Syntax139842
 Node: Design Notes140136
-Node: Function np_matmul a b141194
-Node: Examples 104141565
-Node: Function np_inv a142387
-Node: Examples 105142754
-Node: Function np_det a143266
-Node: Examples 106143581
-Node: Function np_solve a b143963
-Node: Examples 107144402
-Node: Function np_svd a144905
-Node: Examples 108145717
-Node: Function np_eig a146438
-Node: Examples 109147153
-Node: Function np_qr a147772
-Node: Examples 110148357
-Node: Function np_lu a148806
-Node: Examples 111149374
-Node: Function np_norm a / np_norm a ord149901
-Node: Examples 112150930
-Node: Function np_rank a151636
-Node: Examples 113152063
-Node: Function np_trace a152451
-Node: Examples 114152806
-Node: Function np_transpose a153194
-Node: Examples 115153567
-Node: Function np_conj a154040
-Node: Examples 116154557
-Node: Function np_ctranspose a155091
-Node: Examples 117155503
-Node: Function np_real a155864
-Node: Examples 118156242
-Node: Function np_imag a156610
-Node: Examples 119156975
-Node: Function np_angle a157343
-Node: Examples 120157762
-Node: Function np_expm a158147
-Node: Examples 121158936
-Node: Function np_lstsq a b159867
-Node: Examples 122161065
-Node: Function np_pinv a161765
-Node: Examples 123162480
-Node: Function np_outer a b163209
-Node: Examples 124163537
-Node: Function and variable index164117
+Node: Function np_matmul a b141222
+Node: Examples 104141593
+Node: Function np_inv a142445
+Node: Examples 105142812
+Node: Function np_det a143324
+Node: Examples 106143639
+Node: Function np_solve a b144021
+Node: Examples 107144460
+Node: Function np_svd a144963
+Node: Examples 108145775
+Node: Function np_eig a146496
+Node: Examples 109147211
+Node: Function np_qr a147830
+Node: Examples 110148415
+Node: Function np_lu a148864
+Node: Examples 111149432
+Node: Function np_norm a / np_norm a ord149959
+Node: Examples 112150988
+Node: Function np_rank a151694
+Node: Examples 113152121
+Node: Function np_trace a152509
+Node: Examples 114152864
+Node: Function np_transpose a153252
+Node: Examples 115153625
+Node: Function np_conj a154098
+Node: Examples 116154615
+Node: Function np_ctranspose a155149
+Node: Examples 117155561
+Node: Function np_real a155922
+Node: Examples 118156300
+Node: Function np_imag a156668
+Node: Examples 119157033
+Node: Function np_angle a157401
+Node: Examples 120157820
+Node: Function np_expm a158205
+Node: Examples 121158994
+Node: Function np_lstsq a b159925
+Node: Examples 122161123
+Node: Function np_pinv a161823
+Node: Examples 123162538
+Node: Function np_outer a b163267
+Node: Examples 124163627
+Node: Function np_lqr a b q r164247
+Node: Examples 125166387
+Node: See also167472
+Node: Function and variable index167649
 
 End Tag Table
 
