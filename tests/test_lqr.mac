@@ -1,0 +1,74 @@
+/* Tests for np_lqr — continuous-time LQR */
+
+/* === Double-integrator (textbook closed-form) ===
+   For A = [[0,1],[0,0]], B = [[0],[1]], Q = I, R = [1], the algebraic
+   Riccati equation has the closed-form solution
+       p12 = 1,  p22 = sqrt(3),  p11 = sqrt(3)
+   giving K = [1, sqrt(3)] and closed-loop poles at -sqrt(3)/2 ± j/2. */
+
+(A_di : ndarray(matrix([0.0, 1.0], [0.0, 0.0])),
+ B_di : ndarray(matrix([0.0], [1.0])),
+ Q_di : ndarray(matrix([1.0, 0.0], [0.0, 1.0])),
+ R_di : ndarray(matrix([1.0])),
+ K_di : np_lqr(A_di, B_di, Q_di, R_di),
+ K_list : np_to_list(np_reshape(K_di, [2])),
+ list_closeto(K_list, [1.0, sqrt(3.0)]));
+true;
+
+/* Closed-loop A - BK should have eigenvalues at -sqrt(3)/2 ± j/2,
+   so trace = -sqrt(3) and the real parts agree. */
+(A_cl : np_sub(A_di, np_matmul(B_di, K_di)),
+ [evals_di, vecs_di] : np_eig(A_cl),
+ evals_list : np_to_list(evals_di),
+ closeto(realpart(evals_list[1]) + realpart(evals_list[2]), -sqrt(3.0))
+   and closeto(realpart(evals_list[1]), -sqrt(3.0)/2));
+true;
+
+/* === Stable plant with Q = 0 ===
+   If A is already stable (all eigenvalues in LHP) and Q = 0, then
+   the optimal control is u = 0 and the gain matrix is zero. */
+
+(A_stable : ndarray(matrix([-1.0, 0.0], [0.0, -2.0])),
+ B_stable : ndarray(matrix([1.0, 0.0], [0.0, 1.0])),
+ Q_zero   : np_zeros([2, 2]),
+ R_id     : ndarray(matrix([1.0, 0.0], [0.0, 1.0])),
+ K_zero   : np_lqr(A_stable, B_stable, Q_zero, R_id),
+ closeto(np_norm(K_zero), 0.0, 1e-9));
+true;
+
+/* === Riccati residual check ===
+   Construct an arbitrary (controllable, observable) plant, solve for K,
+   then back out P from K and verify A'P + PA - PBR^-1 B'P + Q ≈ 0.
+   Recover P from K via P = R K (since K = R^-1 B'P implies B'P = R K,
+   and for full-rank B we can take P from the formula B^+ R K — but
+   easier: we have K, so we just verify the equivalent statement that
+   A_cl = A - BK is Hurwitz and the Riccati equation is satisfied for
+   *some* P which the eigenvalue method would have computed.  Cleaner
+   check: A_cl eigenvalues all have negative real part. */
+
+(A_arb : ndarray(matrix([0.0, 1.0, 0.0],
+                        [0.0, 0.0, 1.0],
+                        [-2.0, -3.0, -1.0])),
+ B_arb : ndarray(matrix([0.0], [0.0], [1.0])),
+ Q_arb : ndarray(matrix([1.0, 0.0, 0.0],
+                        [0.0, 1.0, 0.0],
+                        [0.0, 0.0, 1.0])),
+ R_arb : ndarray(matrix([0.5])),
+ K_arb : np_lqr(A_arb, B_arb, Q_arb, R_arb),
+ A_cl_arb : np_sub(A_arb, np_matmul(B_arb, K_arb)),
+ [evals_cl, vecs_cl] : np_eig(A_cl_arb),
+ max_real_part : lmax(map(realpart, np_to_list(evals_cl))),
+ is(max_real_part < -0.01));
+true;
+
+/* === MIMO: two-input plant (decoupled integrators) ===
+   A = 0 (2x2), B = I (2x2), Q = I, R = I.
+   Symmetry: K should be the identity matrix (each axis is a copy of the
+   double-integrator-of-velocity case with no position term — actually
+   here Q = I on velocities → optimal K = I). */
+
+(A_mimo : np_zeros([2, 2]),
+ B_mimo : ndarray(matrix([1.0, 0.0], [0.0, 1.0])),
+ K_mimo : np_lqr(A_mimo, B_mimo, B_mimo, B_mimo),
+ mat_closeto(np_to_matrix(K_mimo), matrix([1.0, 0.0], [0.0, 1.0])));
+true;

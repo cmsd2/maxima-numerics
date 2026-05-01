@@ -150,6 +150,115 @@
               ,(numerics-wrap (numerics:make-ndarray v-vec :dtype out-dtype))
               ,(numerics-wrap (numerics:make-ndarray out-vecs :dtype out-dtype)))))))))
 
+(defun $np_lqr (a b q r)
+  "Continuous-time LQR: np_lqr(A, B, Q, R) => K such that u = -K*x
+   minimises J = integral of (x'Qx + u'Ru) dt for the linear system
+   dx/dt = A*x + B*u.
+
+   Solves the algebraic Riccati equation
+       A'P + PA - PB R^-1 B'P + Q = 0
+   by selecting the stable invariant subspace of the Hamiltonian
+       H = [A,  -B R^-1 B';  -Q,  -A']
+   (size 2n x 2n).  If V = [V_top; V_bot] is a basis for that subspace,
+   then P = V_bot * V_top^-1 and K = R^-1 B' P.
+
+   The eigenvalue method used here is fine for well-conditioned
+   hobbyist-scale problems, but can lose digits on near-singular
+   Hamiltonians.  The robust alternative (Hamiltonian Schur form)
+   needs a real Schur decomposition primitive that numerics does not
+   yet provide.
+
+   Errors out if the Hamiltonian doesn't have exactly n stable
+   eigenvalues (typically a sign that (A, B) is not stabilisable or
+   (A, sqrt(Q)) is not detectable)."
+  (let* ((ta (numerics:ndarray-tensor (numerics-unwrap a)))
+         (tb (numerics:ndarray-tensor (numerics-unwrap b)))
+         (tq (numerics:ndarray-tensor (numerics-unwrap q)))
+         (tr (numerics:ndarray-tensor (numerics-unwrap r)))
+         (n (magicl:nrows ta))
+         (m (magicl:ncols tb)))
+    ;; Shape validation.
+    (unless (= (magicl:nrows ta) (magicl:ncols ta))
+      (merror "np_lqr: A must be square, got ~Dx~D"
+              (magicl:nrows ta) (magicl:ncols ta)))
+    (unless (= (magicl:nrows tb) n)
+      (merror "np_lqr: B must have ~D rows to match A, got ~D"
+              n (magicl:nrows tb)))
+    (unless (and (= (magicl:nrows tq) n) (= (magicl:ncols tq) n))
+      (merror "np_lqr: Q must be ~Dx~D, got ~Dx~D"
+              n n (magicl:nrows tq) (magicl:ncols tq)))
+    (unless (and (= (magicl:nrows tr) m) (= (magicl:ncols tr) m))
+      (merror "np_lqr: R must be ~Dx~D, got ~Dx~D"
+              m m (magicl:nrows tr) (magicl:ncols tr)))
+    ;; Build the 2n x 2n Hamiltonian.
+    (let* ((r-inv     (numerics-with-lapack (magicl:inv tr)))
+           (b-r-inv   (numerics-with-lapack (magicl:@ tb r-inv)))
+           (b-r-inv-bt
+            (numerics-with-lapack
+             (magicl:@ b-r-inv (magicl:transpose tb))))
+           (h (magicl:zeros (list (* 2 n) (* 2 n))
+                            :type 'double-float
+                            :layout :column-major)))
+      (dotimes (i n)
+        (dotimes (j n)
+          (setf (magicl:tref h i j)
+                (magicl:tref ta i j))
+          (setf (magicl:tref h i (+ j n))
+                (- (magicl:tref b-r-inv-bt i j)))
+          (setf (magicl:tref h (+ i n) j)
+                (- (magicl:tref tq i j)))
+          (setf (magicl:tref h (+ i n) (+ j n))
+                (- (magicl:tref ta j i)))))
+      ;; Eigendecompose.  vals is a CL list (possibly complex);
+      ;; vecs is a magicl tensor (real if all vals real, complex
+      ;; otherwise).
+      (multiple-value-bind (vals vecs)
+          (numerics-with-lapack (magicl:eig h))
+        (let* ((stable-cols
+                (loop for v in vals
+                      for i from 0
+                      when (< (realpart v) -1.0d-12)
+                      collect i)))
+          (unless (= (length stable-cols) n)
+            (merror "np_lqr: Hamiltonian has ~D eigenvalues with ~
+                     negative real part; expected ~D.  Plant may be ~
+                     unstabilisable / undetectable, or Q/R ill-formed."
+                    (length stable-cols) n))
+          ;; Promote eigenvectors to complex and pull out the n stable
+          ;; columns into V_top, V_bot (each n x n complex).
+          (let* ((ctype '(complex double-float))
+                 (v-top (magicl:empty (list n n) :type ctype
+                                                  :layout :column-major))
+                 (v-bot (magicl:empty (list n n) :type ctype
+                                                  :layout :column-major)))
+            (loop for col-out from 0
+                  for col-in in stable-cols
+                  do (dotimes (i n)
+                       (setf (magicl:tref v-top i col-out)
+                             (coerce (magicl:tref vecs i col-in) ctype))
+                       (setf (magicl:tref v-bot i col-out)
+                             (coerce (magicl:tref vecs (+ i n) col-in)
+                                     ctype))))
+            ;; P_complex = V_bot * V_top^-1.  For a real Hamiltonian
+            ;; with stable spectrum, P_complex is real (up to roundoff).
+            (let* ((v-top-inv (numerics-with-lapack (magicl:inv v-top)))
+                   (p-complex (numerics-with-lapack
+                               (magicl:@ v-bot v-top-inv)))
+                   (p (magicl:empty (list n n)
+                                    :type 'double-float
+                                    :layout :column-major)))
+              (dotimes (i n)
+                (dotimes (j n)
+                  (setf (magicl:tref p i j)
+                        (coerce (realpart (magicl:tref p-complex i j))
+                                'double-float))))
+              ;; K = R^-1 B' P.
+              (let* ((bt-p (numerics-with-lapack
+                            (magicl:@ (magicl:transpose tb) p)))
+                     (k (numerics-with-lapack (magicl:@ r-inv bt-p))))
+                (numerics-wrap
+                 (numerics:make-ndarray k :dtype :double-float))))))))))
+
 (defun numerics-qr-householder (a-tensor)
   "QR decomposition via Householder reflections for double-float matrices.
    Works for any m*n matrix including wide (m < n) matrices that magicl's

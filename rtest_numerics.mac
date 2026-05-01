@@ -31,7 +31,8 @@ true;
                 "tests/test_fft2d.mac",
                 "tests/test_slicing.mac",
                 "tests/test_aggregation.mac",
-                "tests/test_complex.mac"), true);
+                "tests/test_complex.mac",
+                "tests/test_lqr.mac"), true);
 true;
 
 /* === Optimization (requires numerics-optimize) === */
