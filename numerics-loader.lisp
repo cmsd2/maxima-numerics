@@ -12,7 +12,7 @@
         (error "Quicklisp not found. Install it:~%~
                 curl -O https://beta.quicklisp.org/quicklisp.lisp~%~
                 sbcl --load quicklisp.lisp ~
-                --eval '(quicklisp-quicklisp:install)' --quit"))))
+                --eval '(quicklisp-quickstart:install)' --quit"))))
 
 ;; Derive the project directory from this file's location
 (let* ((here (make-pathname :directory (pathname-directory *load-truename*))))
