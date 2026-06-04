@@ -32,7 +32,8 @@ true;
                 "tests/test_slicing.mac",
                 "tests/test_aggregation.mac",
                 "tests/test_complex.mac",
-                "tests/test_lqr.mac"), true);
+                "tests/test_lqr.mac",
+                "tests/test_compile_grid.mac"), true);
 true;
 
 /* === Optimization (requires numerics-optimize) === */

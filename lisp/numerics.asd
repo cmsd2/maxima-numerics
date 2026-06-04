@@ -21,7 +21,8 @@
      (:file "elementwise")
      (:file "signal")
      (:file "slicing")
-     (:file "aggregation")))))
+     (:file "aggregation")
+     (:file "compile_grid")))))
 
 ;; Full system (core + Arrow bridge)
 (defsystem "numerics"
@@ -44,7 +45,8 @@
      (:file "elementwise")
      (:file "signal")
      (:file "slicing")
-     (:file "aggregation")))
+     (:file "aggregation")
+     (:file "compile_grid")))
    (:module "arrow"
     :serial t
     :components
