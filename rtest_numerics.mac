@@ -16,10 +16,12 @@
 (load("numerics"), true);
 true;
 
-(load("tests/test_helpers"), true);
+/* "./" keeps file_search from picking up another package's tests/ folder
+   under ~/.maxima (numerics-sundials has its own tests/test_helpers.mac). */
+(load("./tests/test_helpers.mac"), true);
 true;
 
-(load("tests/test_harness"), true);
+(load("./tests/test_harness.mac"), true);
 true;
 
 /* === Core test suites === */
