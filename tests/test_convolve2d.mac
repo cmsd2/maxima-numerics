@@ -1,7 +1,5 @@
 /* Tests for np_convolve2d */
 
-(load("tests/test_helpers"), true);
-true;
 
 /* === np_convolve2d === */
 
@@ -23,7 +21,7 @@ true;
 
 /* 3x3 averaging kernel on 4x4 input → 2x2 output */
 (A : ndarray(matrix([1,2,3,4],[5,6,7,8],[9,10,11,12],[13,14,15,16])),
- K : np_scale(np_ones([3,3]), 1.0/9.0),
+ K : np_scale(1.0/9.0, np_ones([3,3])),
  C : np_convolve2d(A, K),
  is(np_shape(C) = [2, 2]));
 true;
@@ -65,3 +63,17 @@ errcatch(np_convolve2d(np_ones(5), np_ones([3, 3])));
 /* Error: complex input */
 errcatch(np_convolve2d(np_full([3,3], 1+%i, complex), np_ones([2,2])));
 [];
+
+/* The kernel is flipped, as in scipy.signal.convolve2d: an off-centre
+   impulse kernel shifts the image the opposite way to correlation */
+(A : ndarray(matrix([1,2,3],[4,5,6],[7,8,9])),
+ K : ndarray(matrix([1,0],[0,0])),
+ np_to_matrix(np_convolve2d(A, K)));
+matrix([5.0,6.0],[8.0,9.0]);
+
+/* Asymmetric kernel against a hand-computed value:
+   out[0,0] = sum a[ki,kj] * k[1-ki, 2-kj] */
+(A : ndarray(matrix([1,2,3],[4,5,6])),
+ K : ndarray(matrix([1,2,3],[4,5,6])),
+ np_to_matrix(np_convolve2d(A, K)));
+matrix([56.0]);

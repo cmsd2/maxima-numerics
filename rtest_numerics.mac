@@ -30,6 +30,7 @@ true;
                 "tests/test_linalg.mac",
                 "tests/test_elementwise.mac",
                 "tests/test_signal.mac",
+                "tests/test_convolve2d.mac",
                 "tests/test_fft2d.mac",
                 "tests/test_slicing.mac",
                 "tests/test_aggregation.mac",
