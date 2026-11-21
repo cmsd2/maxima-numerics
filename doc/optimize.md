@@ -33,7 +33,7 @@ Minimize a scalar-valued function using gradient-based L-BFGS optimization. Supp
 **Returns:** a list `[x_opt, f_opt, converged]` where:
 - `x_opt` — the optimized ndarray (same shape as `x0`)
 - `f_opt` — the final objective value
-- `converged` — `true` if L-BFGS converged, `false` otherwise
+- `converged` — `true` if L-BFGS met the tolerance, `false` otherwise. `false` also covers a line search that can make no further progress, which near the minimum usually means rounding error, not a bad answer. `x_opt` and `f_opt` are then the best point found. Check the gradient there if the tolerance matters.
 
 In function mode, `f` and `grad` can be named functions or lambda expressions. The shape of `x0` is preserved in the output. In expression mode, the gradient is computed via `diff()` and compiled automatically.
 

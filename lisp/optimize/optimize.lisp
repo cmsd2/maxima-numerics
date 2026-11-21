@@ -37,6 +37,9 @@
          (xtol +flonum-epsilon+)
          (iflag 0)
          (f-val 0.0d0)
+         ;; lowest objective value seen, and where
+         (best-f nil)
+         (best-x (make-array n :element-type 'double-float :initial-element 0.0d0))
          (eps-f (coerce ($float eps) 'double-float))
          (max-iter-i (truncate max-iter)))
     ;; Copy initial point
@@ -47,31 +50,37 @@
     (dotimes (iter max-iter-i)
       ;; Evaluate objective
       (setf f-val (funcall eval-f x))
+      (when (or (null best-f) (< f-val best-f))
+        (setf best-f f-val)
+        (replace best-x x))
       ;; Evaluate gradient
       (let ((g-arr (funcall eval-g x)))
         (replace g g-arr))
-      ;; Call lbfgs core
+      ;; Call lbfgs core.  Its line search prints a banner when it fails;
+      ;; the failure is reported through CONVERGED instead.
       (multiple-value-bind (var-0 var-1 var-2 var-3 var-4 var-5 var-6
                             var-7 var-8 var-9 var-10 var-11 var-12)
-          (common-lisp-user::lbfgs n m x f-val g diagco diag
-                                   iprint eps-f xtol w iflag scache)
+          (let ((*standard-output* (make-broadcast-stream)))
+            (common-lisp-user::lbfgs n m x f-val g diagco diag
+                                     iprint eps-f xtol w iflag scache))
         (declare (ignore var-0 var-1 var-2 var-3 var-4 var-5 var-6
                          var-7 var-8 var-9 var-10 var-12))
         (setf iflag var-11)
-        (when (eql iflag 0) (return))
-        (when (< iflag 0)
-          (merror "np_minimize: L-BFGS failed (iflag=~A). ~
-                   Try different initial point or check gradient." iflag))))
+        ;; iflag < 0: the line search failed.  Near the minimum this is
+        ;; usually rounding stopping further progress (MCSRCH info=6), so
+        ;; return the best point with converged = false, as SciPy does,
+        ;; instead of discarding it.
+        (when (<= iflag 0) (return))))
     ;; Build result
-    (let* ((best (if (eql iflag 0) scache x))
+    (let* ((converged (eql iflag 0))
+           (best (if converged scache best-x))
            (result-tensor (magicl:empty shape :type 'double-float
                                               :layout :column-major))
            (result-storage (numerics-tensor-storage result-tensor)))
       (replace result-storage best)
       (let* ((result-handle (numerics:make-ndarray result-tensor))
-             (result-wrapped (numerics-wrap result-handle))
-             (converged (if (eql iflag 0) t nil)))
-        `((mlist) ,result-wrapped ,f-val ,converged)))))
+             (result-wrapped (numerics-wrap result-handle)))
+        `((mlist) ,result-wrapped ,(if converged f-val best-f) ,converged)))))
 
 (defun np-minimize-function-mode (f-func g-func x0 eps max-iter)
   "Function mode: f and grad are Maxima callables taking ndarrays."
