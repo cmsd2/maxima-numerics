@@ -226,3 +226,16 @@ true;
  np_shuffle(B),
  list_closeto(sort(np_to_list(B), "<"), np_to_list(A)));
 true;
+
+/* === Zero-length arrays are a clear error === */
+errcatch(np_zeros([0]));
+[];
+
+errcatch(np_ones([2,0]));
+[];
+
+errcatch(np_arange(5, 5));
+[];
+
+errcatch(np_linspace(0, 1, 0));
+[];

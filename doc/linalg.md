@@ -400,7 +400,7 @@ Finds x that minimizes ||Ax - b||_2 using SVD. Works for over-determined systems
 
 Returns a Maxima list `[x, residuals, rank, S]` where:
 
-- **x** — n-by-p solution ndarray
+- **x** — n-by-p solution ndarray, or a 1D ndarray of length n when b is 1D
 - **residuals** — 1D ndarray of squared residual norms `||Ax_j - b_j||^2` for each column j of b (always `double-float`). Only non-empty when `m > n` (overdetermined) and A is full rank; otherwise an empty list `[]`.
 - **rank** — effective rank of A (integer)
 - **S** — 1D ndarray of singular values of A (always `double-float`)

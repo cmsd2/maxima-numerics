@@ -638,6 +638,9 @@
          (hb (numerics-unwrap b))
          (ta (numerics:ndarray-tensor ha))
          (tb (numerics:ndarray-tensor hb))
+         ;; A 1D b is one right-hand side, and gives a 1D x, as in NumPy
+         (b-vector (= (length (magicl:shape tb)) 1))
+         (tb (if b-vector (magicl:reshape tb (list (magicl:size tb) 1)) tb))
          (dtype (numerics-result-dtype
                  (numerics:ndarray-dtype ha)
                  (numerics:ndarray-dtype hb)))
@@ -665,7 +668,9 @@
                           (* (/ (coerce 1 et) si) (magicl:tref utb i j))
                           (coerce 0 et))))))
           (let* ((x-tensor (magicl:@ v sinv-utb))
-                 (x-nd (numerics-wrap (numerics:make-ndarray x-tensor :dtype dtype)))
+                 (x-nd (numerics-wrap (numerics:make-ndarray
+                                       (if b-vector (magicl:reshape x-tensor (list n)) x-tensor)
+                                       :dtype dtype)))
                  ;; Singular values as 1D ndarray (always real)
                  (s-vec (magicl:empty (list k) :type 'double-float
                                                :layout :column-major)))

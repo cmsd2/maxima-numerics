@@ -70,19 +70,21 @@
     (let* ((n (max 0 (ceiling (/ (- stop start) step))))
            (vals (loop for i below n
                        collect (+ start (* (coerce i 'double-float) step)))))
-      (if (zerop n)
-          (numerics-wrap
-           (numerics:make-ndarray
-            (magicl:empty (list 0) :type 'double-float :layout :column-major)))
-          (numerics-wrap
-           (numerics:make-ndarray
-            (magicl:from-list vals (list n) :type 'double-float)))))))
+      ;; magicl cannot hold a zero-length tensor
+      (when (zerop n)
+        (merror "np_arange: the range from ~A to ~A with step ~A is empty (zero-length arrays are not supported)"
+                start stop step))
+      (numerics-wrap
+       (numerics:make-ndarray
+        (magicl:from-list vals (list n) :type 'double-float))))))
 
 (defun $np_linspace (start stop n)
   "Create n evenly spaced points [start, stop]: np_linspace(0, 1, 100)"
   (let* ((start-f (coerce ($float start) 'double-float))
          (stop-f  (coerce ($float stop)  'double-float))
-         (n-int   (truncate n))
+         (n-int   (if (and (integerp n) (plusp n))
+                      n
+                      (merror "np_linspace: n must be a positive integer, got ~M" n)))
          (vals (if (= n-int 1)
                    (list start-f)
                    (loop for i below n-int
@@ -137,7 +139,9 @@
    np_logspace(0, 3, 50) => 50 points from 1 to 1000"
   (let* ((start-f (coerce ($float start) 'double-float))
          (stop-f  (coerce ($float stop)  'double-float))
-         (n-int   (truncate n))
+         (n-int   (if (and (integerp n) (plusp n))
+                      n
+                      (merror "np_logspace: n must be a positive integer, got ~M" n)))
          (vals (if (= n-int 1)
                    (list (expt 10.0d0 start-f))
                    (loop for i below n-int

@@ -5,10 +5,15 @@
 (defun maxima-shape-to-list (shape)
   "Convert a Maxima shape argument to a CL list of integers.
    Accepts an integer (for 1D) or a Maxima list like [2,3]."
-  (cond
-    ((integerp shape) (list shape))
-    (($listp shape) (mapcar (lambda (x) (truncate x)) (cdr shape)))
-    (t (merror "Invalid shape: ~M" shape))))
+  (let ((dims (cond
+                ((integerp shape) (list shape))
+                (($listp shape) (mapcar (lambda (x) (truncate x)) (cdr shape)))
+                (t (merror "Invalid shape: ~M" shape)))))
+    ;; magicl rejects zero-length dimensions, so say so here
+    (unless (every #'plusp dims)
+      (merror "Invalid shape ~M: every dimension must be at least 1 (zero-length arrays are not supported)"
+              shape))
+    dims))
 
 (defun maxima-matrix-dims (mat)
   "Return (values nrow ncol) for a Maxima matrix."
@@ -132,6 +137,12 @@
   "True if F is a Maxima function name (symbol) or lambda expression.
    Used to distinguish callable arguments from symbolic expressions."
   (or (symbolp f) (numerics-lambda-p f)))
+
+(defun numerics-require-1d (a op-name)
+  "Signal an error unless the ndarray is one-dimensional."
+  (let ((shape (magicl:shape (numerics:ndarray-tensor (numerics-unwrap a)))))
+    (unless (= (length shape) 1)
+      (merror "~A: expected a 1D ndarray, got shape ~A" op-name shape))))
 
 (defun numerics-require-real (a op-name)
   "Signal an error if the ndarray is complex. Used by comparison/sort/min/max."

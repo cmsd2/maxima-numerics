@@ -449,3 +449,9 @@ true;
   is(lmax(map(abs, flatten(args(QhQ - ident(2))))) < 1e-12),
   is(abs(np_ref(R, 1, 0)) = 0.0)]);
 [[2,2],[2,3],true,true,true];
+
+/* np_lstsq accepts a 1D b and returns a 1D x, as NumPy does */
+(A : ndarray(matrix([1,0],[0,1],[1,1])),
+ [x, res, rk, S] : np_lstsq(A, ndarray([1,2,3],[3])),
+ [np_shape(x), list_closeto(np_to_list(x), [1.0,2.0]), rk]);
+[[2],true,2];
