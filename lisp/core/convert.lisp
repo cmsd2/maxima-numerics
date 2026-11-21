@@ -113,11 +113,6 @@
           (dotimes (i n)
             (push (lisp-to-maxima-number (magicl:tref tensor i)) vals))
           `((mlist simp) ,@(nreverse vals)))
-        ;; 2D+: iterate in row-major order
-        (let* ((nrow (first shape))
-               (ncol (second shape))
-               (vals nil))
-          (dotimes (i nrow)
-            (dotimes (j ncol)
-              (push (lisp-to-maxima-number (magicl:tref tensor i j)) vals)))
-          `((mlist simp) ,@(nreverse vals))))))
+        ;; 2D+: row-major order, for any rank
+        `((mlist simp) ,@(mapcar #'lisp-to-maxima-number
+                                 (numerics-row-major-elements tensor))))))

@@ -112,7 +112,7 @@ See also: `np_min`, `np_argmax`
 
 Index of the minimum element. Signals an error for complex arrays.
 
-Without an axis argument, returns a 0-based integer index into the flattened (column-major) storage. With an axis argument, returns a 1D ndarray of indices along the specified axis.
+Without an axis argument, returns a 0-based integer index into the array flattened in row-major order, as `np_flatten` and `np_to_list` order it. With an axis argument, returns a 1D ndarray of indices along the specified axis.
 
 Calling forms:
 
@@ -139,7 +139,7 @@ See also: `np_argmax`, `np_min`
 
 Index of the maximum element. Signals an error for complex arrays.
 
-Without an axis argument, returns a 0-based integer index into the flattened (column-major) storage. With an axis argument, returns a 1D ndarray of indices along the specified axis.
+Without an axis argument, returns a 0-based integer index into the array flattened in row-major order, as `np_flatten` and `np_to_list` order it. With an axis argument, returns a 1D ndarray of indices along the specified axis.
 
 Calling forms:
 
