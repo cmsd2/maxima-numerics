@@ -67,8 +67,13 @@ true;
 
 /* === Cross-validation (requires lapack) === */
 
-(load("lapack"), true);
+/* Maxima's lapack share package does not build everywhere (SBCL 2.6 on
+   ARM64 crashes compiling zlaqr5.lisp), so skip the cross-validation
+   tests, with a message, when it does not load. */
+(lapack_loaded : is(errcatch(load("lapack")) # []), true);
 true;
 
-(mxpm_run_tests("tests/test_crossval.mac"), true);
+(if lapack_loaded then mxpm_run_tests("tests/test_crossval.mac")
+ else print("Skipping tests/test_crossval.mac: Maxima's lapack package did not load"),
+ true);
 true;
