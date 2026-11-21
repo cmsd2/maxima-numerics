@@ -183,6 +183,8 @@
   "2D convolution: np_convolve2d(A, kernel).
    Both inputs must be 2D real ndarrays. Single-channel only.
    Returns a 2D ndarray of shape (h - kh + 1, w - kw + 1) (valid mode).
+   The kernel is flipped in both axes, as in true convolution and
+   scipy.signal.convolve2d.
    Uses flat storage with manual column-major indexing for performance."
   (let* ((ha (numerics-unwrap a))
          (hk (numerics-unwrap kernel)))
@@ -194,6 +196,11 @@
            (tk (numerics:ndarray-tensor hk))
            (shape-a (magicl:shape ta))
            (shape-k (magicl:shape tk))
+           ;; the flat indexing below assumes column-major storage
+           (ta (if (eq (magicl:layout ta) :column-major) ta
+                   (numerics-reshape-row-major ta shape-a)))
+           (tk (if (eq (magicl:layout tk) :column-major) tk
+                   (numerics-reshape-row-major tk shape-k)))
            (h  (first shape-a))
            (w  (second shape-a))
            (kh (first shape-k))
@@ -211,17 +218,18 @@
         (declare (type (simple-array double-float (*)) fa fk out))
         ;; Column-major flat index: element (row, col) of shape (nrow, ncol)
         ;; is at flat offset row + col * nrow.
-        ;; Direct convolution O(oh * ow * kh * kw)
+        ;; Direct convolution O(oh * ow * kh * kw).  out[i,j] is the sum of
+        ;; a[i+ki, j+kj] * k[kh-1-ki, kw-1-kj]: the kernel is flipped.
         (dotimes (j ow)
           (dotimes (i oh)
             (let ((sum 0d0))
               (declare (type double-float sum))
               (dotimes (kj kw)
                 (let ((a-col-off (* (+ j kj) h))
-                      (k-col-off (* kj kh)))
+                      (k-col-off (* (- kw 1 kj) kh)))
                   (dotimes (ki kh)
                     (incf sum (* (aref fa (+ (+ i ki) a-col-off))
-                                 (aref fk (+ ki k-col-off)))))))
+                                 (aref fk (+ (- kh 1 ki) k-col-off)))))))
               (setf (aref out (+ i (* j oh))) sum))))
         (numerics-wrap (numerics:make-ndarray result))))))
 

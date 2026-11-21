@@ -217,7 +217,8 @@
       (merror "np_reshape: total size ~D does not match new shape ~A"
               (magicl:size tensor) shape-list))
     (numerics-wrap
-     (numerics:make-ndarray (magicl:reshape tensor shape-list) :dtype dtype))))
+     (numerics:make-ndarray (numerics-reshape-row-major tensor shape-list)
+                            :dtype dtype))))
 
 (defun $np_flatten (a)
   "Flatten ndarray to 1D: np_flatten(A)"
@@ -226,7 +227,8 @@
          (dtype (numerics:ndarray-dtype handle))
          (n (magicl:size tensor)))
     (numerics-wrap
-     (numerics:make-ndarray (magicl:reshape tensor (list n)) :dtype dtype))))
+     (numerics:make-ndarray (numerics-reshape-row-major tensor (list n))
+                            :dtype dtype))))
 
 (defun numerics-ensure-2d (tensor)
   "If tensor is 1D of length n, reshape to (n, 1). Otherwise return as-is."

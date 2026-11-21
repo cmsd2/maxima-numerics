@@ -165,6 +165,8 @@ Compute the 2D discrete convolution of a matrix with a kernel ("valid" mode).
 
 Both inputs must be 2D real ndarrays. Returns a 2D ndarray of shape `(h - kh + 1, w - kw + 1)`, where `(h, w)` is the input shape and `(kh, kw)` is the kernel shape. Only positions where the kernel fully overlaps the input are computed (no padding).
 
+The kernel is flipped in both axes, as in true convolution and `scipy.signal.convolve2d`. For cross-correlation, as used in most image filters and CNN layers, pass the kernel flipped in both axes.
+
 Uses direct O(h * w * kh * kw) computation with flat column-major indexing for performance.
 
 #### Examples

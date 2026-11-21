@@ -5,10 +5,15 @@
 (defun maxima-shape-to-list (shape)
   "Convert a Maxima shape argument to a CL list of integers.
    Accepts an integer (for 1D) or a Maxima list like [2,3]."
-  (cond
-    ((integerp shape) (list shape))
-    (($listp shape) (mapcar (lambda (x) (truncate x)) (cdr shape)))
-    (t (merror "Invalid shape: ~M" shape))))
+  (let ((dims (cond
+                ((integerp shape) (list shape))
+                (($listp shape) (mapcar (lambda (x) (truncate x)) (cdr shape)))
+                (t (merror "Invalid shape: ~M" shape)))))
+    ;; magicl rejects zero-length dimensions, so say so here
+    (unless (every #'plusp dims)
+      (merror "Invalid shape ~M: every dimension must be at least 1 (zero-length arrays are not supported)"
+              shape))
+    dims))
 
 (defun maxima-matrix-dims (mat)
   "Return (values nrow ncol) for a Maxima matrix."
@@ -54,6 +59,31 @@
   (ecase dtype
     (:double-float 'double-float)
     (:complex-double-float '(complex double-float))))
+
+(defun numerics-row-major-elements (tensor)
+  "Elements of TENSOR as a list in row-major (C) order, whatever its storage
+   layout.  The last index varies fastest, as in np_to_list."
+  (let* ((shape (magicl:shape tensor))
+         (rank (length shape))
+         (idx (make-list rank :initial-element 0))
+         (out nil))
+    (dotimes (k (magicl:size tensor) (nreverse out))
+      (push (apply #'magicl:tref tensor idx) out)
+      (loop for d from (1- rank) downto 0
+            do (incf (nth d idx))
+               (if (< (nth d idx) (nth d shape))
+                   (return)
+                   (setf (nth d idx) 0))))))
+
+(defun numerics-reshape-row-major (tensor shape &optional (et (magicl:element-type tensor)))
+  "A new column-major tensor of SHAPE and element type ET holding TENSOR's
+   elements in row-major order, as NumPy's reshape does.  magicl:reshape
+   follows storage order instead, which is column-major here."
+  (magicl:from-list (mapcar (lambda (x) (coerce x et)) (numerics-row-major-elements tensor))
+                    shape
+                    :type et
+                    :layout :column-major
+                    :input-layout :row-major))
 
 (defun numerics-result-dtype (a-dtype b-dtype)
   "Compute output dtype from two input dtypes. Complex wins."
@@ -107,6 +137,12 @@
   "True if F is a Maxima function name (symbol) or lambda expression.
    Used to distinguish callable arguments from symbolic expressions."
   (or (symbolp f) (numerics-lambda-p f)))
+
+(defun numerics-require-1d (a op-name)
+  "Signal an error unless the ndarray is one-dimensional."
+  (let ((shape (magicl:shape (numerics:ndarray-tensor (numerics-unwrap a)))))
+    (unless (= (length shape) 1)
+      (merror "~A: expected a 1D ndarray, got shape ~A" op-name shape))))
 
 (defun numerics-require-real (a op-name)
   "Signal an error if the ndarray is complex. Used by comparison/sort/min/max."

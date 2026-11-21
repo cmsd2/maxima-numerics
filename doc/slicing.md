@@ -161,7 +161,7 @@ See also: `np_row`, `np_col`, `np_ref`, `np_reshape`
 
 Reshape an ndarray to new dimensions.
 
-The total number of elements must remain the same. Returns a new ndarray with the specified shape. The `shape` argument is a Maxima list of dimensions.
+The total number of elements must remain the same. Returns a new ndarray with the specified shape. The `shape` argument is a Maxima list of dimensions. Elements keep their row-major order, as in NumPy, `ndarray(list, shape)` and `np_to_list`, so `np_reshape(np_arange(6), [2, 3])` has rows `[0, 1, 2]` and `[3, 4, 5]`.
 
 #### Examples
 
@@ -182,7 +182,7 @@ See also: `np_flatten`, `np_shape`
 
 Flatten an ndarray to 1D.
 
-Returns a new 1D ndarray containing all elements in storage order (column-major).
+Returns a new 1D ndarray containing all elements in row-major order, the same order as `np_to_list`.
 
 #### Examples
 

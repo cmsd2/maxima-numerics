@@ -265,6 +265,7 @@
 
 (defun $np_cumsum (a)
   "Cumulative sum (1D): np_cumsum(A)"
+  (numerics-require-1d a "np_cumsum")
   (let* ((handle (numerics-unwrap a))
          (tensor (numerics:ndarray-tensor handle))
          (dtype (numerics:ndarray-dtype handle))
@@ -363,6 +364,7 @@
 (defun $np_diff (a)
   "First-order finite differences of a 1D ndarray: np_diff(a)
    Returns an ndarray of length n-1 where result[i] = a[i+1] - a[i]."
+  (numerics-require-1d a "np_diff")
   (let* ((handle (numerics-unwrap a))
          (tensor (numerics:ndarray-tensor handle))
          (dtype (numerics:ndarray-dtype handle))

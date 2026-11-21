@@ -81,6 +81,19 @@ true;
  is(np_shape(B) = [2, 3]));
 true;
 
+/* reshape and flatten keep row-major order, as ndarray() and np_to_list do */
+np_to_matrix(np_reshape(np_arange(6), [2,3]));
+matrix([0.0,1.0,2.0],[3.0,4.0,5.0]);
+
+np_to_matrix(np_reshape(ndarray([1,2,3,4,5,6],[2,3]), [3,2]));
+matrix([1.0,2.0],[3.0,4.0],[5.0,6.0]);
+
+np_to_list(np_flatten(ndarray(matrix([1,2,3],[4,5,6]))));
+[1.0,2.0,3.0,4.0,5.0,6.0];
+
+np_to_list(np_flatten(np_transpose(ndarray(matrix([1,2,3],[4,5,6])))));
+[1.0,4.0,2.0,5.0,3.0,6.0];
+
 /* flatten */
 (A : np_ones([2,3]),
  B : np_flatten(A),
@@ -213,3 +226,16 @@ true;
  np_shuffle(B),
  list_closeto(sort(np_to_list(B), "<"), np_to_list(A)));
 true;
+
+/* === Zero-length arrays are a clear error === */
+errcatch(np_zeros([0]));
+[];
+
+errcatch(np_ones([2,0]));
+[];
+
+errcatch(np_arange(5, 5));
+[];
+
+errcatch(np_linspace(0, 1, 0));
+[];

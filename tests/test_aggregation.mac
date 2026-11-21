@@ -266,3 +266,10 @@ true;
  R : np_discount(A, 0.9),
  list_closeto(np_to_list(R), [1.0 + 0.9*(2.0 + 0.9*3.0), 2.0 + 0.9*3.0, 3.0]));
 true;
+
+/* === 1D-only functions reject 2D input with a Maxima error === */
+errcatch(np_cumsum(ndarray(matrix([1,2],[3,4]))));
+[];
+
+errcatch(np_diff(ndarray(matrix([1,2],[3,4]))));
+[];

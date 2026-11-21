@@ -668,3 +668,28 @@ true;
  S : np_softmax(A),
  is(np_max(np_abs(np_sub(S, np_full([5], 0.2)))) < 1e-14));
 true;
+
+/* === Inputs outside the real domain === */
+
+/* a real array whose result would be complex is a Maxima error, not a
+   Lisp type error, and complex input gives the complex result */
+errcatch(np_sqrt(ndarray([1.0,-4.0],[2])));
+[];
+
+errcatch(np_log(ndarray([-1.0],[1])));
+[];
+
+errcatch(np_acos(ndarray([2.0],[1])));
+[];
+
+errcatch(np_pow(ndarray([-8.0],[1]), 0.5));
+[];
+
+errcatch(np_pow(ndarray([-8.0],[1]), ndarray([0.5],[1])));
+[];
+
+np_to_list(np_sqrt(ndarray([-4],[1],complex)));
+[2.0*%i];
+
+np_to_list(np_pow(ndarray([-2.0],[1]), 3));
+[-8.0];

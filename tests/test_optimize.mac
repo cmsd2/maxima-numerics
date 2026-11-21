@@ -168,3 +168,14 @@ true;
   closeto(np_ref(x12, 0), 2.0, 1e-6) and closeto(np_ref(x12, 1), 5.0, 1e-6)
 );
 true;
+
+/* When the line search stops at the minimum because of rounding (L-BFGS
+   iflag = -1), np_minimize returns the best point with converged = false
+   instead of signalling an error.  The minimiser of this quadratic is
+   [-1.26392896..., 1.75256571...] with f = -1.81878220944784. */
+(r : np_minimize(2.4315162791618037*x^2 + 3.1972409179675672*x*y
+                 + 1.6333012074382975*y^2 + 0.5431529040688566*x
+                 - 1.683849978455336*y, [x, y], ndarray([0.0, 0.0])),
+ [list_closeto(np_to_list(r[1]), [-1.2639289748110878, 1.7525657174579687]),
+  closeto(r[2], -1.8187822094478414), is(r[3] = false)]);
+[true, true, true];

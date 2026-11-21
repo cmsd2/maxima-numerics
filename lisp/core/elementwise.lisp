@@ -188,13 +188,27 @@
          :dtype dtype))))
     (t (merror "Expected at least one ndarray argument"))))
 
-(defun numerics-unary-op (a fn)
-  "Apply a unary function element-wise, returning a new ndarray."
+(defun numerics-real-only (fn name)
+  "Wrap FN for a real array: CL's sqrt, log, expt, asin and acos return a
+   complex number outside their real domain, which a double-float array
+   cannot hold.  Signal a Maxima error naming NAME instead."
+  (lambda (&rest args)
+    (let ((r (apply fn args)))
+      (when (complexp r)
+        (merror "~A"
+                (format nil "~A: ~{~A~^, ~} is outside the real domain; for complex results convert the input with ndarray(a, complex)"
+                        name args)))
+      r)))
+
+(defun numerics-unary-op (a fn &optional name)
+  "Apply a unary function element-wise, returning a new ndarray.
+   With NAME, a complex result from a real array is an error naming it."
   (let* ((handle (numerics-unwrap a))
          (tensor (numerics:ndarray-tensor handle))
          (dtype (numerics:ndarray-dtype handle))
          (result (magicl:deep-copy-tensor tensor)))
-    (magicl:map! fn result)
+    (magicl:map! (if (and name (eq dtype :double-float)) (numerics-real-only fn name) fn)
+                 result)
     (numerics-wrap (numerics:make-ndarray result :dtype dtype))))
 
 ;;; Binary operations
@@ -218,11 +232,15 @@
 (defun $np_pow (a p)
   "Element-wise power: np_pow(A, p)"
   (if ($ndarray_p p)
-      (numerics-binary-op a p #'expt)
+      (numerics-binary-op a p
+                          (if (and (eq (numerics:ndarray-dtype (numerics-unwrap a)) :double-float)
+                                   (eq (numerics:ndarray-dtype (numerics-unwrap p)) :double-float))
+                              (numerics-real-only #'expt "np_pow")
+                              #'expt))
       (let* ((ha (numerics-unwrap a))
              (dtype (numerics:ndarray-dtype ha))
              (pf (maxima-to-lisp-number p dtype)))
-        (numerics-unary-op a (lambda (x) (expt x pf))))))
+        (numerics-unary-op a (lambda (x) (expt x pf)) "np_pow"))))
 
 ;;; Unary operations
 
@@ -256,7 +274,7 @@
 
 (defun $np_sqrt (a)
   "Element-wise square root: np_sqrt(A)"
-  (numerics-unary-op a #'cl:sqrt))
+  (numerics-unary-op a #'cl:sqrt "np_sqrt"))
 
 (defun $np_exp (a)
   "Element-wise exponential: np_exp(A)"
@@ -264,7 +282,7 @@
 
 (defun $np_log (a)
   "Element-wise natural log: np_log(A)"
-  (numerics-unary-op a #'cl:log))
+  (numerics-unary-op a #'cl:log "np_log"))
 
 (defun $np_sin (a)
   "Element-wise sine: np_sin(A)"
@@ -280,11 +298,11 @@
 
 (defun $np_asin (a)
   "Element-wise arcsine: np_asin(A)"
-  (numerics-unary-op a #'cl:asin))
+  (numerics-unary-op a #'cl:asin "np_asin"))
 
 (defun $np_acos (a)
   "Element-wise arccosine: np_acos(A)"
-  (numerics-unary-op a #'cl:acos))
+  (numerics-unary-op a #'cl:acos "np_acos"))
 
 (defun $np_atan (a)
   "Element-wise arctangent: np_atan(A)"
@@ -298,11 +316,11 @@
 
 (defun $np_log2 (a)
   "Element-wise base-2 logarithm: np_log2(A)"
-  (numerics-unary-op a (lambda (x) (cl:log x 2.0d0))))
+  (numerics-unary-op a (lambda (x) (cl:log x 2.0d0)) "np_log2"))
 
 (defun $np_log10 (a)
   "Element-wise base-10 logarithm: np_log10(A)"
-  (numerics-unary-op a (lambda (x) (cl:log x 10.0d0))))
+  (numerics-unary-op a (lambda (x) (cl:log x 10.0d0)) "np_log10"))
 
 (defun $np_sign (a)
   "Element-wise sign function: np_sign(A)

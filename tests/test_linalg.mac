@@ -385,3 +385,73 @@ true;
 /* Type error */
 (errcatch(np_inv(42)));
 [];
+
+/* === np_solve with several right-hand sides === */
+
+/* every column of b is solved, not just the first */
+(A : ndarray(matrix([2,1],[1,3])),
+ X : np_solve(A, ndarray(matrix([1,2],[3,4]))),
+ mat_closeto(np_to_matrix(X), matrix([0.0,0.4],[1.0,1.2])));
+true;
+
+/* a vector b gives a vector x */
+(A : ndarray(matrix([2,1],[1,3])),
+ x : np_solve(A, ndarray([1,2],[2])),
+ [np_shape(x), list_closeto(np_to_list(x), [0.2,0.6])]);
+[[2],true];
+
+/* real A with complex b */
+(A : ndarray(matrix([2,1],[1,3])),
+ x : np_solve(A, ndarray([1+%i,2],[2],complex)),
+ v : np_to_list(x),
+ closeto(realpart(v[1]), 0.2) and closeto(imagpart(v[1]), 0.6)
+   and closeto(realpart(v[2]), 0.6) and closeto(imagpart(v[2]), -0.2));
+true;
+
+/* singular A is an error */
+errcatch(np_solve(ndarray(matrix([1,2],[2,4])), ndarray([1,2],[2])));
+[];
+
+/* === Shapes that used to fail === */
+
+/* pinv of a wide matrix: A * pinv(A) = I and pinv(A) * A * pinv(A) = pinv(A) */
+(A : ndarray(matrix([1,2,3],[4,5,7])),
+ P : np_pinv(A),
+ [np_shape(P),
+  mat_closeto(np_to_matrix(np_matmul(A, P)), float(ident(2))),
+  mat_closeto(np_to_matrix(np_matmul(np_matmul(P, A), P)), np_to_matrix(P))]);
+[[3,2],true,true];
+
+/* pinv of a 1x4 row vector */
+(P : np_pinv(ndarray(matrix([1,2,3,4]))),
+ mat_closeto(np_to_matrix(P), transpose(matrix([1,2,3,4]/30.0))));
+true;
+
+/* LU of tall and wide matrices: P*A = L*U with the documented shapes */
+(A : ndarray(matrix([1,2],[3,4],[5,6])),
+ [L, U, P] : np_lu(A),
+ [np_shape(L), np_shape(U), np_shape(P),
+  mat_closeto(np_to_matrix(np_matmul(P, A)), np_to_matrix(np_matmul(L, U)))]);
+[[3,2],[2,2],[3,3],true];
+
+(A : ndarray(matrix([1,2,3],[4,5,6])),
+ [L, U, P] : np_lu(A),
+ [np_shape(L), np_shape(U), np_shape(P),
+  mat_closeto(np_to_matrix(np_matmul(P, A)), np_to_matrix(np_matmul(L, U)))]);
+[[2,2],[2,3],[2,2],true];
+
+/* QR of a complex wide matrix: Q unitary, R upper trapezoidal, QR = A */
+(A : ndarray([1+%i,2,3-%i,4,5*%i,6],[2,3],complex),
+ [Q, R] : np_qr(A),
+ QhQ : np_to_matrix(np_matmul(np_ctranspose(Q), Q)),
+ err : lmax(map(abs, np_to_list(np_sub(np_matmul(Q, R), A)))),
+ [np_shape(Q), np_shape(R), is(err < 1e-12),
+  is(lmax(map(abs, flatten(args(QhQ - ident(2))))) < 1e-12),
+  is(abs(np_ref(R, 1, 0)) = 0.0)]);
+[[2,2],[2,3],true,true,true];
+
+/* np_lstsq accepts a 1D b and returns a 1D x, as NumPy does */
+(A : ndarray(matrix([1,0],[0,1],[1,1])),
+ [x, res, rk, S] : np_lstsq(A, ndarray([1,2,3],[3])),
+ [np_shape(x), list_closeto(np_to_list(x), [1.0,2.0]), rk]);
+[[2],true,2];

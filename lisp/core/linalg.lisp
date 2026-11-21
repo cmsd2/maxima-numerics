@@ -49,18 +49,39 @@
    (numerics-with-lapack (magicl:det (numerics:ndarray-tensor (numerics-unwrap a))))))
 
 (defun $np_solve (a b)
-  "Solve Ax = b: np_solve(A, b)"
+  "Solve Ax = b: np_solve(A, b).  B may be a vector or a matrix of
+   right-hand sides; the result has the same shape as B."
   (let* ((ha (numerics-unwrap a))
          (hb (numerics-unwrap b))
          (ta (numerics:ndarray-tensor ha))
          (tb (numerics:ndarray-tensor hb))
          (dtype (numerics-result-dtype
                  (numerics:ndarray-dtype ha)
-                 (numerics:ndarray-dtype hb))))
-    (handler-case
-        (numerics-wrap (numerics:make-ndarray (numerics-with-lapack (magicl:linear-solve ta tb)) :dtype dtype))
-      (error (e)
-        (merror "np_solve: ~A" e)))))
+                 (numerics:ndarray-dtype hb)))
+         (et (numerics-element-type dtype))
+         (sa (magicl:shape ta))
+         (sb (magicl:shape tb)))
+    (unless (and (= (length sa) 2) (= (first sa) (second sa)))
+      (merror "np_solve: A must be a square matrix, got shape ~A" sa))
+    (unless (and (<= 1 (length sb) 2) (= (first sb) (first sa)))
+      (merror "np_solve: b must have ~D rows, got shape ~A" (first sa) sb))
+    ;; magicl:linear-solve only handles a vector b: it reads a matrix b as
+    ;; one long column.  Factor once and solve every column with lu-solve.
+    ;; Both operands are copied to the common type in column-major layout.
+    (let* ((n (first sa))
+           (amat (numerics-reshape-row-major ta sa et))
+           (bmat (numerics-reshape-row-major tb (list n (if (= (length sb) 1) 1 (second sb))) et))
+           (x (handler-case
+                  (multiple-value-bind (lu ipiv) (numerics-with-lapack (magicl:lu amat))
+                    (if (some (lambda (i) (zerop (magicl:tref lu i i))) (loop for i below n collect i))
+                        :singular
+                        (numerics-with-lapack (magicl:lu-solve lu ipiv bmat))))
+                (error (e) (merror "np_solve: ~A" e)))))
+      (when (eq x :singular)
+        (merror "np_solve: matrix is singular"))
+      (numerics-wrap
+       (numerics:make-ndarray (if (= (length sb) 1) (magicl:reshape x (list n)) x)
+                              :dtype dtype)))))
 
 (defun $np_svd (a)
   "SVD: np_svd(A) => [U, S, Vt]
@@ -259,58 +280,31 @@
                 (numerics-wrap
                  (numerics:make-ndarray k :dtype :double-float))))))))))
 
-(defun numerics-qr-householder (a-tensor)
-  "QR decomposition via Householder reflections for double-float matrices.
-   Works for any m*n matrix including wide (m < n) matrices that magicl's
-   LAPACK wrapper cannot handle.  Returns (values Q R) where Q is m*m
-   orthogonal and R is m*n upper trapezoidal."
+(defun numerics-qr-wide (a-tensor)
+  "QR decomposition of a wide (m < n) matrix, real or complex, which
+   magicl's LAPACK wrapper cannot factor directly.  Factor the leading m*m
+   block as Q*R1, then R = Q^H * A is m*n upper trapezoidal: its first m
+   columns are R1.  Returns (values Q R) with the same conventions as
+   magicl:qr on the square block."
   (let* ((m (magicl:nrows a-tensor))
-         (n (magicl:ncols a-tensor))
-         (p (min m n))
-         (r (magicl:deep-copy-tensor a-tensor))
-         (q (magicl:eye m :type 'double-float :layout :column-major)))
-    (dotimes (k p)
-      (let* ((len (- m k))
-             (v (make-array len :element-type 'double-float
-                                :initial-element 0.0d0)))
-        ;; Extract sub-column R[k:m, k]
-        (dotimes (i len) (setf (aref v i) (magicl:tref r (+ k i) k)))
-        (let ((alpha (sqrt (loop for vi across v sum (* vi vi)))))
-          (when (> alpha (* 100 double-float-epsilon))
-            ;; v[0] += sign(v[0]) * alpha
-            (if (>= (aref v 0) 0.0d0)
-                (incf (aref v 0) alpha)
-                (decf (aref v 0) alpha))
-            ;; Normalize v
-            (let ((nv (sqrt (loop for vi across v sum (* vi vi)))))
-              (dotimes (i len) (setf (aref v i) (/ (aref v i) nv)))
-              ;; H = I - 2*v*v^T; apply to R from left
-              (dotimes (j n)
-                (let ((d 0.0d0))
-                  (dotimes (i len)
-                    (incf d (* (aref v i) (magicl:tref r (+ k i) j))))
-                  (setf d (* 2.0d0 d))
-                  (dotimes (i len)
-                    (decf (magicl:tref r (+ k i) j) (* (aref v i) d)))))
-              ;; Apply to Q from right
-              (dotimes (i m)
-                (let ((d 0.0d0))
-                  (dotimes (j len)
-                    (incf d (* (magicl:tref q i (+ k j)) (aref v j))))
-                  (setf d (* 2.0d0 d))
-                  (dotimes (j len)
-                    (decf (magicl:tref q i (+ k j)) (* d (aref v j)))))))))))
-    ;; Force positive diagonal (match LAPACK/magicl convention)
-    (dotimes (k p)
-      (when (minusp (magicl:tref r k k))
-        (dotimes (j n) (setf (magicl:tref r k j) (- (magicl:tref r k j))))
-        (dotimes (i m) (setf (magicl:tref q i k) (- (magicl:tref q i k))))))
-    (values q r)))
+         (et (magicl:element-type a-tensor))
+         (left (magicl:empty (list m m) :type et :layout :column-major)))
+    (dotimes (i m)
+      (dotimes (j m)
+        (setf (magicl:tref left i j) (magicl:tref a-tensor i j))))
+    (multiple-value-bind (q r1) (magicl:qr left)
+      (let ((r (magicl:@ (magicl:conjugate-transpose q) a-tensor)))
+        ;; Use R1 for the square part, so the entries below the diagonal
+        ;; are exact zeros rather than rounding residue.
+        (dotimes (i m)
+          (dotimes (j m)
+            (setf (magicl:tref r i j) (magicl:tref r1 i j))))
+        (values q r)))))
 
 (defun $np_qr (a)
   "QR decomposition: np_qr(A) => [Q, R]
-   Works for any m*n matrix.  Uses LAPACK for tall/square matrices (m >= n)
-   and Householder reflections for wide matrices (m < n)."
+   Works for any m*n matrix, real or complex.  Uses LAPACK directly for
+   tall/square matrices (m >= n); see numerics-qr-wide for m < n."
   (let* ((ha (numerics-unwrap a))
          (ta (numerics:ndarray-tensor ha))
          (dtype (numerics:ndarray-dtype ha))
@@ -319,7 +313,7 @@
     (multiple-value-bind (q r)
         (if (<= n m)
             (numerics-with-lapack (magicl:qr ta))
-            (numerics-with-lapack (numerics-qr-householder ta)))
+            (numerics-with-lapack (numerics-qr-wide ta)))
       `((mlist simp)
         ,(numerics-wrap (numerics:make-ndarray q :dtype dtype))
         ,(numerics-wrap (numerics:make-ndarray r :dtype dtype))))))
@@ -354,8 +348,10 @@
           (loop for j from i below n do
             (setf (magicl:tref u-mat i j) (magicl:tref lu-packed i j))))
         ;; Build P from ipiv (LAPACK pivot vector, 1-based row swap sequence)
-        ;; ipiv is a magicl tensor of (signed-byte 32) values
-        (let ((prows (magicl:size ipiv)))
+        ;; ipiv is a magicl tensor of (signed-byte 32) values.  magicl sizes
+        ;; it max(m,n) but getrf fills only the first min(m,n) entries; the
+        ;; rest are 0, so read just k of them.
+        (let ((prows (min k (magicl:size ipiv))))
           (dotimes (i prows)
             (let ((swap-row (1- (the fixnum
                                   (round (magicl:tref ipiv i))))))
@@ -642,6 +638,9 @@
          (hb (numerics-unwrap b))
          (ta (numerics:ndarray-tensor ha))
          (tb (numerics:ndarray-tensor hb))
+         ;; A 1D b is one right-hand side, and gives a 1D x, as in NumPy
+         (b-vector (= (length (magicl:shape tb)) 1))
+         (tb (if b-vector (magicl:reshape tb (list (magicl:size tb) 1)) tb))
          (dtype (numerics-result-dtype
                  (numerics:ndarray-dtype ha)
                  (numerics:ndarray-dtype hb)))
@@ -669,7 +668,9 @@
                           (* (/ (coerce 1 et) si) (magicl:tref utb i j))
                           (coerce 0 et))))))
           (let* ((x-tensor (magicl:@ v sinv-utb))
-                 (x-nd (numerics-wrap (numerics:make-ndarray x-tensor :dtype dtype)))
+                 (x-nd (numerics-wrap (numerics:make-ndarray
+                                       (if b-vector (magicl:reshape x-tensor (list n)) x-tensor)
+                                       :dtype dtype)))
                  ;; Singular values as 1D ndarray (always real)
                  (s-vec (magicl:empty (list k) :type 'double-float
                                                :layout :column-major)))
@@ -702,17 +703,18 @@
          (ta (numerics:ndarray-tensor ha))
          (dtype (numerics:ndarray-dtype ha))
          (et (numerics-element-type dtype)))
-    (multiple-value-bind (u sigma vt) (numerics-with-lapack (magicl:svd ta))
+    ;; Reduced SVD: U is m*k, V is n*k, k = min(m,n), so S+ is k*k for any
+    ;; shape.  The full SVD made V n*n, which only fit S+ when n <= m.
+    (multiple-value-bind (u sigma vt) (numerics-with-lapack (magicl:svd ta :reduced t))
       (let* ((v (magicl:conjugate-transpose vt))
              (ut (magicl:conjugate-transpose u))
              (s-arr (numerics-svd-values sigma))
              (tol (* (reduce #'max s-arr) double-float-epsilon
                      (max (first (magicl:shape ta))
                           (second (magicl:shape ta)))))
-             (k (length s-arr))
-             (m (first (magicl:shape ut))))
+             (k (length s-arr)))
         ;; Build diagonal S+ matrix
-        (let ((s-plus (magicl:zeros (list k m) :type et
+        (let ((s-plus (magicl:zeros (list k k) :type et
                                                :layout :column-major)))
           (dotimes (i k)
             (let ((si (aref s-arr i)))
