@@ -411,3 +411,41 @@ true;
 /* singular A is an error */
 errcatch(np_solve(ndarray(matrix([1,2],[2,4])), ndarray([1,2],[2])));
 [];
+
+/* === Shapes that used to fail === */
+
+/* pinv of a wide matrix: A * pinv(A) = I and pinv(A) * A * pinv(A) = pinv(A) */
+(A : ndarray(matrix([1,2,3],[4,5,7])),
+ P : np_pinv(A),
+ [np_shape(P),
+  mat_closeto(np_to_matrix(np_matmul(A, P)), float(ident(2))),
+  mat_closeto(np_to_matrix(np_matmul(np_matmul(P, A), P)), np_to_matrix(P))]);
+[[3,2],true,true];
+
+/* pinv of a 1x4 row vector */
+(P : np_pinv(ndarray(matrix([1,2,3,4]))),
+ mat_closeto(np_to_matrix(P), transpose(matrix([1,2,3,4]/30.0))));
+true;
+
+/* LU of tall and wide matrices: P*A = L*U with the documented shapes */
+(A : ndarray(matrix([1,2],[3,4],[5,6])),
+ [L, U, P] : np_lu(A),
+ [np_shape(L), np_shape(U), np_shape(P),
+  mat_closeto(np_to_matrix(np_matmul(P, A)), np_to_matrix(np_matmul(L, U)))]);
+[[3,2],[2,2],[3,3],true];
+
+(A : ndarray(matrix([1,2,3],[4,5,6])),
+ [L, U, P] : np_lu(A),
+ [np_shape(L), np_shape(U), np_shape(P),
+  mat_closeto(np_to_matrix(np_matmul(P, A)), np_to_matrix(np_matmul(L, U)))]);
+[[2,2],[2,3],[2,2],true];
+
+/* QR of a complex wide matrix: Q unitary, R upper trapezoidal, QR = A */
+(A : ndarray([1+%i,2,3-%i,4,5*%i,6],[2,3],complex),
+ [Q, R] : np_qr(A),
+ QhQ : np_to_matrix(np_matmul(np_ctranspose(Q), Q)),
+ err : lmax(map(abs, np_to_list(np_sub(np_matmul(Q, R), A)))),
+ [np_shape(Q), np_shape(R), is(err < 1e-12),
+  is(lmax(map(abs, flatten(args(QhQ - ident(2))))) < 1e-12),
+  is(abs(np_ref(R, 1, 0)) = 0.0)]);
+[[2,2],[2,3],true,true,true];
