@@ -207,29 +207,6 @@
                          parsed)
           (numerics-wrap (numerics:make-ndarray result :dtype dtype)))))))
 
-(defun numerics-row-major-elements (tensor)
-  "Elements of TENSOR as a list in row-major (C) order, whatever its storage
-   layout.  The last index varies fastest, as in np_to_list."
-  (let* ((shape (magicl:shape tensor))
-         (rank (length shape))
-         (idx (make-list rank :initial-element 0))
-         (out nil))
-    (dotimes (k (magicl:size tensor) (nreverse out))
-      (push (apply #'magicl:tref tensor idx) out)
-      (loop for d from (1- rank) downto 0
-            do (incf (nth d idx))
-               (if (< (nth d idx) (nth d shape))
-                   (return)
-                   (setf (nth d idx) 0))))))
-
-(defun numerics-reshape-row-major (tensor shape)
-  "Reshape TENSOR to SHAPE keeping row-major element order, as NumPy does.
-   magicl:reshape follows storage order, which is column-major here."
-  (magicl:from-list (numerics-row-major-elements tensor) shape
-                    :type (magicl:element-type tensor)
-                    :layout :column-major
-                    :input-layout :row-major))
-
 (defun $np_reshape (a new-shape)
   "Reshape ndarray: np_reshape(A, [m,n])"
   (let* ((handle (numerics-unwrap a))

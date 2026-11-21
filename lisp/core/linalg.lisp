@@ -49,18 +49,39 @@
    (numerics-with-lapack (magicl:det (numerics:ndarray-tensor (numerics-unwrap a))))))
 
 (defun $np_solve (a b)
-  "Solve Ax = b: np_solve(A, b)"
+  "Solve Ax = b: np_solve(A, b).  B may be a vector or a matrix of
+   right-hand sides; the result has the same shape as B."
   (let* ((ha (numerics-unwrap a))
          (hb (numerics-unwrap b))
          (ta (numerics:ndarray-tensor ha))
          (tb (numerics:ndarray-tensor hb))
          (dtype (numerics-result-dtype
                  (numerics:ndarray-dtype ha)
-                 (numerics:ndarray-dtype hb))))
-    (handler-case
-        (numerics-wrap (numerics:make-ndarray (numerics-with-lapack (magicl:linear-solve ta tb)) :dtype dtype))
-      (error (e)
-        (merror "np_solve: ~A" e)))))
+                 (numerics:ndarray-dtype hb)))
+         (et (numerics-element-type dtype))
+         (sa (magicl:shape ta))
+         (sb (magicl:shape tb)))
+    (unless (and (= (length sa) 2) (= (first sa) (second sa)))
+      (merror "np_solve: A must be a square matrix, got shape ~A" sa))
+    (unless (and (<= 1 (length sb) 2) (= (first sb) (first sa)))
+      (merror "np_solve: b must have ~D rows, got shape ~A" (first sa) sb))
+    ;; magicl:linear-solve only handles a vector b: it reads a matrix b as
+    ;; one long column.  Factor once and solve every column with lu-solve.
+    ;; Both operands are copied to the common type in column-major layout.
+    (let* ((n (first sa))
+           (amat (numerics-reshape-row-major ta sa et))
+           (bmat (numerics-reshape-row-major tb (list n (if (= (length sb) 1) 1 (second sb))) et))
+           (x (handler-case
+                  (multiple-value-bind (lu ipiv) (numerics-with-lapack (magicl:lu amat))
+                    (if (some (lambda (i) (zerop (magicl:tref lu i i))) (loop for i below n collect i))
+                        :singular
+                        (numerics-with-lapack (magicl:lu-solve lu ipiv bmat))))
+                (error (e) (merror "np_solve: ~A" e)))))
+      (when (eq x :singular)
+        (merror "np_solve: matrix is singular"))
+      (numerics-wrap
+       (numerics:make-ndarray (if (= (length sb) 1) (magicl:reshape x (list n)) x)
+                              :dtype dtype)))))
 
 (defun $np_svd (a)
   "SVD: np_svd(A) => [U, S, Vt]

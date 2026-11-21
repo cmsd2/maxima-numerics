@@ -55,6 +55,31 @@
     (:double-float 'double-float)
     (:complex-double-float '(complex double-float))))
 
+(defun numerics-row-major-elements (tensor)
+  "Elements of TENSOR as a list in row-major (C) order, whatever its storage
+   layout.  The last index varies fastest, as in np_to_list."
+  (let* ((shape (magicl:shape tensor))
+         (rank (length shape))
+         (idx (make-list rank :initial-element 0))
+         (out nil))
+    (dotimes (k (magicl:size tensor) (nreverse out))
+      (push (apply #'magicl:tref tensor idx) out)
+      (loop for d from (1- rank) downto 0
+            do (incf (nth d idx))
+               (if (< (nth d idx) (nth d shape))
+                   (return)
+                   (setf (nth d idx) 0))))))
+
+(defun numerics-reshape-row-major (tensor shape &optional (et (magicl:element-type tensor)))
+  "A new column-major tensor of SHAPE and element type ET holding TENSOR's
+   elements in row-major order, as NumPy's reshape does.  magicl:reshape
+   follows storage order instead, which is column-major here."
+  (magicl:from-list (mapcar (lambda (x) (coerce x et)) (numerics-row-major-elements tensor))
+                    shape
+                    :type et
+                    :layout :column-major
+                    :input-layout :row-major))
+
 (defun numerics-result-dtype (a-dtype b-dtype)
   "Compute output dtype from two input dtypes. Complex wins."
   (if (or (eq a-dtype :complex-double-float)

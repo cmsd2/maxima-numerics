@@ -385,3 +385,29 @@ true;
 /* Type error */
 (errcatch(np_inv(42)));
 [];
+
+/* === np_solve with several right-hand sides === */
+
+/* every column of b is solved, not just the first */
+(A : ndarray(matrix([2,1],[1,3])),
+ X : np_solve(A, ndarray(matrix([1,2],[3,4]))),
+ mat_closeto(np_to_matrix(X), matrix([0.0,0.4],[1.0,1.2])));
+true;
+
+/* a vector b gives a vector x */
+(A : ndarray(matrix([2,1],[1,3])),
+ x : np_solve(A, ndarray([1,2],[2])),
+ [np_shape(x), list_closeto(np_to_list(x), [0.2,0.6])]);
+[[2],true];
+
+/* real A with complex b */
+(A : ndarray(matrix([2,1],[1,3])),
+ x : np_solve(A, ndarray([1+%i,2],[2],complex)),
+ v : np_to_list(x),
+ closeto(realpart(v[1]), 0.2) and closeto(imagpart(v[1]), 0.6)
+   and closeto(realpart(v[2]), 0.6) and closeto(imagpart(v[2]), -0.2));
+true;
+
+/* singular A is an error */
+errcatch(np_solve(ndarray(matrix([1,2],[2,4])), ndarray([1,2],[2])));
+[];
