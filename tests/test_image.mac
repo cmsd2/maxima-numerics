@@ -97,6 +97,20 @@ true;
 (is(np_mandrill() = M));
 true;
 
+/* Reading prints nothing.  The bundled PNG has an eXIf chunk, which
+   pngload skips with a warning on error output. */
+(load("./tests/capture_output.lisp"), true);
+true;
+
+/* The capture sees error output, so the checks below can fail. */
+captured_all_output(lambda([], ?warn("test warning")));
+"WARNING: test warning
+";
+
+captured_all_output(lambda([], np_read_image(
+  sconcat(?namestring(?\*numerics\-image\-dir\*), "data/mandrill.png"))));
+"";
+
 /* === Error cases === */
 
 /* 1D array should error on write */

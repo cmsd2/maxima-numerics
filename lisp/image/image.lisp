@@ -98,6 +98,15 @@
 ;;; Public Maxima functions
 ;;; ============================================================
 
+(defun numerics-png-warning-p (condition)
+  "True for pngload's warnings about chunks it skips (eXIf, tEXt and
+   other metadata).  pngload does not export the condition type, and
+   opticl reads PNGs with png-read instead on some Lisps, so look the
+   type up when it is needed."
+  (let ((type (and (find-package "PNGLOAD")
+                   (find-symbol "PNG-WARNING" "PNGLOAD"))))
+    (and type (typep condition type))))
+
 (defun $np_read_image (path)
   "Read an image file and return an ndarray.
    np_read_image(path) — path is a string.
@@ -105,7 +114,13 @@
    Pixel values are double-float in range 0.0 to 255.0."
   (let* ((path-str (if (stringp path) path
                        (coerce (mstring path) 'string)))
-         (img (opticl:read-image-file path-str)))
+         ;; The pixels decode fine; the warnings only say that metadata
+         ;; was skipped, and would print on every read of a phone photo.
+         (img (handler-bind ((warning
+                               (lambda (c)
+                                 (when (numerics-png-warning-p c)
+                                   (muffle-warning c)))))
+                (opticl:read-image-file path-str))))
     (image-array-to-ndarray img)))
 
 (defun $np_write_image (a path)
