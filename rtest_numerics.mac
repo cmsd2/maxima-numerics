@@ -66,6 +66,18 @@ true;
 (mxpm_run_tests("tests/test_learn.mac"), true);
 true;
 
+/* === Image I/O (requires numerics-image) === */
+
+/* numerics-image pulls opticl in through Quicklisp, so skip its tests,
+   with a message, when it does not load. */
+(image_loaded : is(errcatch(load("numerics-image")) # []), true);
+true;
+
+(if image_loaded then mxpm_run_tests("tests/test_image.mac")
+ else print("Skipping tests/test_image.mac: numerics-image did not load"),
+ true);
+true;
+
 /* === Cross-validation (requires lapack) === */
 
 /* Maxima's lapack share package does not build everywhere (SBCL 2.6 on
