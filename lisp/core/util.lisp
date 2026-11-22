@@ -15,6 +15,13 @@
               shape))
     dims))
 
+(defmacro with-quiet-rat (&body body)
+  "Run BODY with ratprint bound to false.  diff and jacobian of max or min
+   with float constants compare terms through rat, which otherwise prints
+   a \"rat: replaced\" line for every float."
+  `(let (($ratprint nil))
+     ,@body))
+
 (defun maxima-matrix-dims (mat)
   "Return (values nrow ncol) for a Maxima matrix."
   (let* ((rows (cdr mat))

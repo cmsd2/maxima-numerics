@@ -495,7 +495,7 @@ For complex input, returns the magnitude as a double-float ndarray."
   "Substitute VAL (a Maxima number) for VAR (a symbol) in EXPR,
    then evaluate numerically. Returns a CL number."
   (let* ((substituted (cl:subst val var expr))
-         (evaled ($float (meval* substituted))))
+         (evaled ($float (with-quiet-rat (meval* substituted)))))
     (maxima-to-lisp-number evaled dtype)))
 
 (defun numerics-eval-1var (expr var handle dtype)
@@ -534,7 +534,8 @@ For complex input, returns the magnitude as a double-float ndarray."
                      for val = (lisp-to-maxima-number
                                 (apply #'magicl:tref tensor indices))
                      do (setf substituted (cl:subst val var substituted)))
-               (maxima-to-lisp-number ($float (meval* substituted)) dtype))))
+               (maxima-to-lisp-number ($float (with-quiet-rat (meval* substituted)))
+                                      dtype))))
       (if (= (length shape) 1)
           (dotimes (i (first shape))
             (setf (magicl:tref result i)

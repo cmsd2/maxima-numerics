@@ -126,7 +126,7 @@
     ;; Compute gradient symbolically and compile both
     (let* ((grad-exprs (cons '(mlist)
                              (loop for v in var-list
-                                   collect (meval `(($diff) ,expr ,v)))))
+                                   collect (with-quiet-rat (meval `(($diff) ,expr ,v))))))
            (f-compiled (compile nil (coerce-float-fun expr vars)))
            (g-compiled (compile nil (coerce-float-fun grad-exprs vars))))
       (np-minimize-core

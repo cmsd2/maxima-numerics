@@ -96,7 +96,7 @@
 
     (if use-jacobian
         ;; With Jacobian: use HYBRJ1
-        (let* ((fjac-expr (mfuncall '$jacobian fcns vars))
+        (let* ((fjac-expr (with-quiet-rat (mfuncall '$jacobian fcns vars)))
                (fj (coerce-float-fun fjac-expr vars))
                (fjac (make-array (* n n) :element-type 'double-float))
                (ldfjac n)
@@ -222,7 +222,7 @@
 
       (if use-jacobian
           ;; With Jacobian: use LMDER1
-          (let* ((fjac-expr (meval `(($jacobian) ,fcns ,vars)))
+          (let* ((fjac-expr (with-quiet-rat (meval `(($jacobian) ,fcns ,vars))))
                  (fj (coerce-float-fun fjac-expr vars))
                  (fjac (make-array (* m n) :element-type 'double-float))
                  (ldfjac m)

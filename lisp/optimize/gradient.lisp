@@ -31,7 +31,7 @@
     (let* (;; Compute symbolic gradient: [diff(expr,v1), diff(expr,v2), ...]
            (grad-exprs (cons '(mlist)
                              (loop for v in var-list
-                                   collect (meval `(($diff) ,expr ,v)))))
+                                   collect (with-quiet-rat (meval `(($diff) ,expr ,v))))))
            ;; Compile to efficient Lisp closures
            (f-compiled (compile nil (coerce-float-fun expr vars)))
            (g-compiled (compile nil (coerce-float-fun grad-exprs vars)))
