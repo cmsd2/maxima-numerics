@@ -3,7 +3,7 @@
 ;; Core-only system (no Arrow/DuckDB, fewer native deps)
 (defsystem "numerics/core"
   :description "Core ndarray operations only"
-  :version "0.2.0"
+  :version "0.2.1"
   :license "MIT"
   :depends-on ("magicl" "trivial-garbage" "alexandria")
   :serial t
@@ -27,7 +27,7 @@
 ;; Full system (core + Arrow bridge)
 (defsystem "numerics"
   :description "NumPy-like numerical computing for Maxima"
-  :version "0.2.0"
+  :version "0.2.1"
   :license "MIT"
   :depends-on ("magicl" "cffi" "trivial-garbage" "static-vectors" "alexandria")
   :serial t
@@ -58,7 +58,7 @@
 ;; Optimization system (core + Maxima's lbfgs)
 (defsystem "numerics/optimize"
   :description "L-BFGS optimization for numerics ndarrays"
-  :version "0.2.0"
+  :version "0.2.1"
   :license "MIT"
   :depends-on ("numerics/core")
   :serial t
@@ -74,7 +74,7 @@
 ;; Integration system (core + ODEPACK)
 (defsystem "numerics/integrate"
   :description "ODE integration for numerics ndarrays"
-  :version "0.2.0"
+  :version "0.2.1"
   :license "MIT"
   :depends-on ("numerics/core")
   :serial t
@@ -87,7 +87,7 @@
 ;; RL algorithm shells (core only, no external deps)
 (defsystem "numerics/learn"
   :description "RL algorithm shells for numerics ndarrays"
-  :version "0.2.0"
+  :version "0.2.1"
   :license "MIT"
   :depends-on ("numerics/core")
   :serial t
@@ -103,7 +103,7 @@
 ;; Image I/O system (core + opticl)
 (defsystem "numerics/image"
   :description "Image I/O and opticl interop for numerics"
-  :version "0.2.0"
+  :version "0.2.1"
   :license "MIT"
   :depends-on ("numerics/core" "opticl")
   :serial t

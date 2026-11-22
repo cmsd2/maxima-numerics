@@ -1,6 +1,6 @@
 [package]
 name = "numerics"
-version = "0.2.0"
+version = "0.2.1"
 description = "NumPy-like numerical computing for Maxima (SBCL only)"
 license = "MIT"
 entry = "numerics.mac"
