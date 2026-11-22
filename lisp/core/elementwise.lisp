@@ -977,9 +977,17 @@ For complex input, returns the magnitude as a double-float ndarray."
 
 ;;; --- Activation functions ---
 
+(defun numerics-sigmoid (x)
+  "Logistic sigmoid of X.  For a negative real part 1/(1+exp(-x)) overflows,
+   so use the equal form exp(x)/(1+exp(x)) there."
+  (if (minusp (realpart x))
+      (let ((e (exp x)))
+        (/ e (+ 1.0d0 e)))
+      (/ 1.0d0 (+ 1.0d0 (exp (- x))))))
+
 (defun $np_sigmoid (a)
   "Element-wise logistic sigmoid: np_sigmoid(A) = 1/(1+exp(-x))"
-  (numerics-unary-op a (lambda (x) (/ 1.0d0 (+ 1.0d0 (exp (- x)))))))
+  (numerics-unary-op a #'numerics-sigmoid))
 
 (defun $np_relu (a)
   "Element-wise rectified linear unit: np_relu(A) = max(0, x)"

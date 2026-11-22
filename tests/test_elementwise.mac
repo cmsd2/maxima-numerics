@@ -640,6 +640,19 @@ true;
  is(np_max(np_abs(np_sub(lhs, rhs))) < 1e-14));
 true;
 
+/* np_sigmoid: large inputs saturate instead of overflowing */
+(A : ndarray([-1000.0, -745.0, 0.0, 745.0, 1000.0], [5]),
+ L : np_to_list(np_sigmoid(A)),
+ is(L[1] = 0.0) and is(L[2] >= 0.0 and L[2] < 1e-300)
+   and closeto(L[3], 0.5) and is(L[4] = 1.0) and is(L[5] = 1.0));
+true;
+
+/* np_sigmoid: moderate negative inputs keep full relative precision */
+(A : ndarray([-30.0, -50.0], [2]),
+ L : np_to_list(np_sigmoid(A)),
+ closeto(L[1] / exp(-30.0), 1.0) and closeto(L[2] / exp(-50.0), 1.0));
+true;
+
 /* np_relu: known values */
 (A : ndarray([-2.0, -0.5, 0.0, 0.5, 3.0], [5]),
  L : np_to_list(np_relu(A)),
