@@ -1,0 +1,48 @@
+/* numerics functions that differentiate or re-evaluate a symbolic
+   expression must not print "rat: replaced" lines.  max and min with
+   float constants trigger them: Maxima compares the arguments through
+   rat, which reports every float it converts while ratprint is true.
+   Needs numerics-optimize. */
+
+/* Run F (a function of no arguments) and return what it printed. */
+(captured_output(f) := block([s : make_string_output_stream()],
+   with_stdout(s, f()),
+   get_output_stream_string(s)),
+ has_rat_line(f) := is(ssearch("rat:", captured_output(f)) # false),
+ true);
+true;
+
+/* Build the expressions quietly, then turn ratprint back on.  %pi keeps
+   the max/min arguments symbolic after np_eval substitutes a point, so
+   the comparison goes through rat until float() runs. */
+(ratprint : false,
+ g : max(-5.0, min(5.0, 1.5*x + 0.5*y)) + (x - 1.0)^2 + (y - 2.0)^2,
+ gx : max(-5.0, min(5.0, 1.5*%pi*x + 0.5)),
+ gxy : max(-5.0, min(5.0, 1.5*%pi*x + 0.5*y)),
+ ratprint : true,
+ true);
+true;
+
+/* The capture sees rat lines, so the checks below can fail. */
+has_rat_line(lambda([], max(-5.0, min(5.0, 1.5*x))));
+true;
+
+has_rat_line(lambda([], np_eval(gx, x, np_linspace(0, 1, 5))));
+false;
+
+has_rat_line(lambda([], np_eval(gxy, [x, y], np_linspace(0, 1, 5),
+                                np_linspace(0, 1, 5))));
+false;
+
+/* np_eval still returns the right values. */
+(r : np_to_list(np_eval(gxy, [x, y], ndarray([0.0, 1.0]), ndarray([1.0, 1.0]))),
+ closeto(r[1], 0.5) and closeto(r[2], 5.0));
+true;
+
+/* diff leaves max/min as a noun, but computing it still calls rat. */
+has_rat_line(lambda([], np_compile_gradient(g, [x, y])));
+false;
+
+/* The package binds ratprint rather than setting it. */
+ratprint;
+true;

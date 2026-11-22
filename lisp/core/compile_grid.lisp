@@ -177,16 +177,17 @@
    double-float (NaN if the substituted form doesn't reduce to a
    finite real number)."
   (handler-case
-      (let* ((substed expr))
-        (mapc (lambda (v val)
-                (setf substed
-                      (maxima-substitute (coerce val 'double-float) v substed)))
-              vars vals)
-        (let ((floated (mfuncall '$float substed)))
-          (if (and (numberp floated) (realp floated))
-              (coerce floated 'double-float)
-              ;; Symbolic result, complex result, etc. → NaN
-              *compile-grid-nan*)))
+      (with-quiet-rat
+       (let* ((substed expr))
+         (mapc (lambda (v val)
+                 (setf substed
+                       (maxima-substitute (coerce val 'double-float) v substed)))
+               vars vals)
+         (let ((floated (mfuncall '$float substed)))
+           (if (and (numberp floated) (realp floated))
+               (coerce floated 'double-float)
+               ;; Symbolic result, complex result, etc. → NaN
+               *compile-grid-nan*))))
     (error () *compile-grid-nan*)))
 
 (defun compile-grid-fill-fallback (tensor expr vars axes)

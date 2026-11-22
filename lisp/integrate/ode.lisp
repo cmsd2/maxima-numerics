@@ -117,8 +117,9 @@
            (fjac (when (= mf 21)
                    (compile nil
                             (coerce-float-fun
-                             (meval `(($jacobian) ,f
-                                      ,(list* '(mlist) (cddr vars))))
+                             (with-quiet-rat
+                               (meval `(($jacobian) ,f
+                                        ,(list* '(mlist) (cddr vars)))))
                              vars)))))
       (flet ((fex (neq-arg tt-val y ydot)
                (declare (type double-float tt-val)
